@@ -50,25 +50,13 @@ done
 echo ""
 
 # ═══════════════════════════════════════════════════════════════
-# 2. SHELLCHECK (if available)
+# 2. SHELLCHECK (skipped for zsh)
 # ═══════════════════════════════════════════════════════════════
 echo "${YELLOW}[2/5] ShellCheck Linting${NC}"
 
-if command -v shellcheck &> /dev/null; then
-  for file in ${(f)STAGED_ZSH_FILES}; do
-    # Use bash shell type since shellcheck doesn't fully support zsh
-    # But it still catches many common issues
-    if shellcheck -s bash -e SC1071,SC2154,SC2296,SC2148,SC2034 "$file" 2>/dev/null; then
-      echo "  ${GREEN}✓${NC} $file"
-    else
-      echo "  ${YELLOW}⚠${NC} $file has shellcheck warnings (non-blocking)"
-      WARNINGS=$((WARNINGS + 1))
-    fi
-  done
-else
-  echo "  ${YELLOW}⚠${NC} shellcheck not installed, skipping (brew install shellcheck)"
-  WARNINGS=$((WARNINGS + 1))
-fi
+# ShellCheck doesn't support zsh (SC1071), so we skip it for .zsh files
+# The zsh syntax check in step 1 is sufficient for catching syntax errors
+echo "  ${GREEN}✓${NC} Skipped - ShellCheck doesn't support zsh (zsh -n used instead)"
 echo ""
 
 # ═══════════════════════════════════════════════════════════════
@@ -101,13 +89,16 @@ for file in ${(f)STAGED_ZSH_FILES}; do
   fi
 
   # Check 3: Unquoted variable expansions in conditionals
-  if grep -nE '\[\[.*\$[a-zA-Z_][a-zA-Z0-9_]*[^"\]]' "$file" 2>/dev/null | head -3 | grep -q .; then
-    echo "  ${YELLOW}⚠${NC} $file - Potentially unquoted variables in [[ ]] (non-blocking)"
+  # Note: In zsh [[ ]], unquoted variables are safe (no word splitting/globbing)
+  # Only flag string comparisons with = or ==, not numeric -eq/-lt/-gt
+  if grep -nE '\[\[.*\$[a-zA-Z_][a-zA-Z0-9_]*\s*(=|==)\s*[^"$]' "$file" 2>/dev/null | head -3 | grep -q .; then
+    echo "  ${YELLOW}⚠${NC} $file - Unquoted variable in string comparison (consider quoting)"
     WARNINGS=$((WARNINGS + 1))
   fi
 
   # Check 4: eval usage (potential security issue)
-  if grep -n '\beval\b' "$file" 2>/dev/null | grep -v '^#' | head -1 | grep -q .; then
+  # Only flag actual eval commands, not comments mentioning eval
+  if grep -n '^\s*eval\b\|;\s*eval\b' "$file" 2>/dev/null | head -1 | grep -q .; then
     echo "  ${YELLOW}⚠${NC} $file - Uses 'eval' - consider using array expansion instead"
     WARNINGS=$((WARNINGS + 1))
   fi

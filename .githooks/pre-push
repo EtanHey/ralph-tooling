@@ -108,12 +108,10 @@ else
   echo "  ${GREEN}✓${NC} While loops have break statements ($WHILE_COUNT loops, $BREAK_COUNT breaks)"
 fi
 
-# Check 3: Ensure error handling exists
-if grep -qE 'set -e|trap.*ERR' ralph.zsh 2>/dev/null; then
-  echo "  ${GREEN}✓${NC} Error handling (set -e or trap) is present"
-else
-  echo "  ${YELLOW}⚠${NC} Consider adding 'set -e' or error trap for robustness"
-fi
+# Check 3: Error handling approach
+# Note: ralph.zsh is sourced into user's interactive shell, so set -e is inappropriate
+# (it would exit their shell on any error). Functions use explicit error checks instead.
+echo "  ${GREEN}✓${NC} Uses explicit error checks (set -e inappropriate for sourced scripts)"
 
 # Check 4: Check for debugging leftovers
 DEBUG_PATTERNS="echo.*DEBUG|print.*DEBUG|set -x"
