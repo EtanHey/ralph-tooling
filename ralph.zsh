@@ -384,7 +384,7 @@ The next Ralph is a FRESH instance with NO MEMORY of your work. The ONLY way the
 - Do NOT mark complete in PRD.md
 - Do NOT commit
 - Append failure to progress.txt
-- Create blocker story (US-XXX-A) if infrastructure issue
+- Create blocker story (US-NNN-A) if infrastructure issue
 
 **Remember:** Git commits = audit trail. PRD.md checkboxes = what next Ralph sees.
 
