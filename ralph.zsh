@@ -273,8 +273,9 @@ function ralph() {
         claude_cmd_arr+=(--model sonnet)
       fi
 
-      # Stream output in real-time with tee, also save to temp file
-      "${claude_cmd_arr[@]}" -p "You are Ralph, an autonomous coding agent. Do exactly ONE task per iteration.
+      # Stream output in real-time using script (captures immediately, unlike tee)
+      # Note: script adds some terminal codes, but works for real-time viewing
+      script -q "$RALPH_TMP" "${claude_cmd_arr[@]}" -p "You are Ralph, an autonomous coding agent. Do exactly ONE task per iteration.
 
 ## Meta-Learnings
 Read docs.local/ralph-meta-learnings.md if it exists - contains critical patterns about avoiding loops and state management.
@@ -408,11 +409,10 @@ At the end of EVERY iteration, provide an expressive summary:
 After completing task, check PRD.md:
 - ALL [x]: output <promise>COMPLETE</promise>
 - ALL remaining [ ] are BLOCKED: output <promise>ALL_BLOCKED</promise>
-- Some [ ] actionable: end response (next iteration continues)" 2>&1 | stdbuf -oL tee "$RALPH_TMP"
+- Some [ ] actionable: end response (next iteration continues)"
 
-      # Capture exit code of claude command (not tee)
-      # In zsh, pipestatus is lowercase and 1-indexed
-      local exit_code=${pipestatus[1]}
+      # Capture exit code of script (which returns claude's exit code)
+      local exit_code=$?
 
       # Check for transient API errors (in output OR non-zero exit)
       if grep -qE "No messages returned|EAGAIN|ECONNRESET|fetch failed|API error" "$RALPH_TMP" 2>/dev/null || [[ "$exit_code" -ne 0 ]]; then
