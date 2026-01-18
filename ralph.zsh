@@ -396,8 +396,9 @@ After completing task, check PRD.md:
 - ALL remaining [ ] are BLOCKED: output <promise>ALL_BLOCKED</promise>
 - Some [ ] actionable: end response (next iteration continues)" 2>&1 | tee "$RALPH_TMP"
 
-      # Capture exit code
-      local exit_code=$?
+      # Capture exit code of claude command (not tee)
+      # In zsh, pipestatus is lowercase and 1-indexed
+      local exit_code=${pipestatus[1]}
 
       # Check for transient API errors (in output OR non-zero exit)
       if grep -qE "No messages returned|EAGAIN|ECONNRESET|fetch failed|API error" "$RALPH_TMP" 2>/dev/null || [[ $exit_code -ne 0 ]]; then
