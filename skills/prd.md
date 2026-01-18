@@ -49,22 +49,14 @@ Ask only critical questions where the initial prompt is ambiguous. Focus on:
 - **Figma/Design:** Is there a Figma link or design reference?
 - **Working Directory:** Which app/package should be modified?
 
-### Format Questions Like This:
+### Use the AskUserQuestion Tool
 
-```
-1. What is the primary goal of this feature?
-   A. Improve user onboarding experience
-   B. Increase user retention
-   C. Reduce support burden
-   D. Other: [please specify]
+**Use `AskUserQuestion` tool for clarifying questions.** This provides a proper UI with selectable options instead of manual text responses.
 
-2. Is there a Figma design to follow?
-   A. Yes, I'll share the link
-   B. No, use best judgment
-   C. Partially designed, will share what exists
-```
-
-This lets users respond with "1A, 2C" for quick iteration.
+Example questions to ask:
+- What is the primary goal? (options: onboarding, retention, reduce support)
+- Is there a Figma design? (options: yes, no, partial)
+- Which app/package should be modified?
 
 ---
 
@@ -110,24 +102,6 @@ Stories execute in priority order. Earlier stories must NOT depend on later ones
 
 Each criterion must be something Ralph can CHECK, not something vague.
 
-### 🧠 Add ULTRATHINK to Complex Stories
-
-For stories involving RTL layouts, tricky positioning, or non-obvious logic, add an ULTRATHINK block:
-
-```markdown
-**🧠 ULTRATHINK REQUIRED:** Before coding, analyze:
-- [Specific thing to think about]
-- [Edge case to consider]
-- [RTL implication if applicable]
-```
-
-**When to add ULTRATHINK:**
-- RTL/LTR layout stories (flex order is counterintuitive)
-- Stories fixing previous incorrect implementations
-- Modal state transitions
-- Complex component refactors
-- Anything where "just do it" might lead to wrong solution
-
 ### Good criteria (verifiable):
 - "Add `status` column to tasks table with default 'pending'"
 - "Button appears at END of screen" (use START/END, not DOM order)
@@ -170,12 +144,7 @@ If you see text like "ALL STORIES COMPLETE" or "EPIC COMPLETE" in the middle of 
 
 1. **ONE STORY PER ITERATION**: Complete exactly ONE user story, then STOP. Do not continue to the next story.
 
-2. **🧠 USE ULTRATHINK**: Before writing code, use extended thinking to:
-   - Parse the acceptance criteria carefully
-   - Plan the exact implementation
-   - Consider edge cases
-
-3. **TYPECHECK IS MANDATORY**: Run typecheck BEFORE marking complete.
+2. **TYPECHECK IS MANDATORY**: Run typecheck BEFORE marking complete.
 
 4. **VERIFY BEFORE MARKING COMPLETE**: Check visually in browser.
 
@@ -633,8 +602,7 @@ A browser instance should be open with:
 Do NOT output `<promise>COMPLETE</promise>` until ALL V-* stories are done.
 
 1. **ONE STORY PER ITERATION**: Complete exactly ONE user story, then STOP.
-2. **🧠 USE ULTRATHINK**: Think through implementation before coding.
-3. **TYPECHECK IS MANDATORY**: Run before marking complete.
+2. **TYPECHECK IS MANDATORY**: Run before marking complete.
 4. **VERIFY VISUALLY**: Check in browser before marking complete.
 5. **DO NOT BATCH**: Each story is a SEPARATE iteration.
 6. **V-* STORIES ARE MANDATORY**: Must execute ALL verification stories.
@@ -684,10 +652,6 @@ Do NOT output `<promise>COMPLETE</promise>` until ALL V-* stories are done.
 **Description:** [What and why]
 
 **Figma Reference:** Node `XXX-YYY` (if applicable)
-
-**🧠 ULTRATHINK REQUIRED:** (include for complex stories)
-- [What to analyze before coding]
-- [RTL implications if applicable]
 
 **Acceptance Criteria:**
 - [ ] [Specific, verifiable criterion]

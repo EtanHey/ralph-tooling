@@ -273,9 +273,8 @@ function ralph() {
         claude_cmd_arr+=(--model sonnet)
       fi
 
-      # Stream output in real-time using script with -F for immediate flush
-      # Note: script adds some terminal codes, but works for real-time viewing
-      script -q -F "$RALPH_TMP" "${claude_cmd_arr[@]}" -p "You are Ralph, an autonomous coding agent. Do exactly ONE task per iteration.
+      # Run Claude with output capture (tee for checking promises)
+      "${claude_cmd_arr[@]}" -p "You are Ralph, an autonomous coding agent. Do exactly ONE task per iteration.
 
 ## Meta-Learnings
 Read docs.local/ralph-meta-learnings.md if it exists - contains critical patterns about avoiding loops and state management.
@@ -409,10 +408,18 @@ At the end of EVERY iteration, provide an expressive summary:
 After completing task, check PRD.md:
 - ALL [x]: output <promise>COMPLETE</promise>
 - ALL remaining [ ] are BLOCKED: output <promise>ALL_BLOCKED</promise>
-- Some [ ] actionable: end response (next iteration continues)"
+- Some [ ] actionable: end response (next iteration continues)" 2>&1 | tee "$RALPH_TMP"
 
-      # Capture exit code of script (which returns claude's exit code)
-      local exit_code=$?
+      # Capture exit code of Claude (PIPESTATUS[0] gets first command in pipe)
+      local exit_code=${PIPESTATUS[0]}
+
+      # Check for Ctrl+C (exit code 130 = SIGINT)
+      if [[ "$exit_code" -eq 130 ]]; then
+        echo ""
+        echo "🛑 Ralph stopped."
+        rm -f "$RALPH_TMP"
+        return 130
+      fi
 
       # Check for transient API errors (in output OR non-zero exit)
       if grep -qE "No messages returned|EAGAIN|ECONNRESET|fetch failed|API error" "$RALPH_TMP" 2>/dev/null || [[ "$exit_code" -ne 0 ]]; then
