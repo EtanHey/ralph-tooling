@@ -73,10 +73,10 @@ function ralph() {
       *)
         # Positional args: numbers for MAX/SLEEP
         if [[ "$1" =~ ^[0-9]+$ ]]; then
-          if [[ $MAX -eq 10 ]]; then
-            MAX=$1
+          if [[ "$MAX" -eq 10 ]]; then
+            MAX="$1"
           else
-            SLEEP=$1
+            SLEEP="$1"
           fi
         fi
         shift
@@ -207,7 +207,7 @@ function ralph() {
       echo ""
       read -q "REPLY?Continue anyway? (y/n) "
       echo ""
-      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
         return 1
       fi
     fi
@@ -266,8 +266,8 @@ function ralph() {
     local retry_count=0
     local claude_success=false
 
-    while [[ $retry_count -lt $max_retries ]]; do
-      # Build claude command as array (avoids eval parsing issues)
+    while [[ "$retry_count" -lt "$max_retries" ]]; do
+      # Build claude command as array (safer than string concatenation)
       local -a claude_cmd_arr=(claude --chrome --dangerously-skip-permissions)
       if $use_sonnet; then
         claude_cmd_arr+=(--model sonnet)
@@ -415,9 +415,9 @@ After completing task, check PRD.md:
       local exit_code=${pipestatus[1]}
 
       # Check for transient API errors (in output OR non-zero exit)
-      if grep -qE "No messages returned|EAGAIN|ECONNRESET|fetch failed|API error" "$RALPH_TMP" 2>/dev/null || [[ $exit_code -ne 0 ]]; then
+      if grep -qE "No messages returned|EAGAIN|ECONNRESET|fetch failed|API error" "$RALPH_TMP" 2>/dev/null || [[ "$exit_code" -ne 0 ]]; then
         retry_count=$((retry_count + 1))
-        if [[ $retry_count -lt $max_retries ]]; then
+        if [[ "$retry_count" -lt "$max_retries" ]]; then
           echo ""
           echo "  ⚠️  Error detected (exit code: $exit_code) - Retrying ($retry_count/$max_retries)..."
           echo "  ⏳ Waiting 10 seconds before retry..."
@@ -662,7 +662,7 @@ function ralph-learnings() {
       local lines=$(wc -l < "$file" | tr -d ' ')
       total_lines=$((total_lines + lines))
 
-      if [[ $lines -gt $max_lines_per_file ]]; then
+      if [[ "$lines" -gt "$max_lines_per_file" ]]; then
         echo "  ⚠️  $basename: $lines lines (over $max_lines_per_file)"
         large_files+=("$file")
       else
