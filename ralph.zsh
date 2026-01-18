@@ -502,17 +502,161 @@ After completing task, check PRD.md:
   return 1
 }
 
-# Ralph cancel - stop any running ralph loops
-alias ralph-stop='pkill -f "claude --dangerously-skip-permissions"'
-
 # ═══════════════════════════════════════════════════════════════════
 # Ralph Helper Commands
 # ═══════════════════════════════════════════════════════════════════
+
+# ralph-stop - Stop any running Ralph loops
+function ralph-stop() {
+  local YELLOW='\033[1;33m'
+  local GREEN='\033[0;32m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+
+  echo "${YELLOW}🛑 Stopping Ralph processes...${NC}"
+
+  local count=$(pgrep -f "claude --dangerously-skip-permissions" 2>/dev/null | wc -l | tr -d ' ')
+
+  if [[ "$count" -eq 0 ]]; then
+    echo "${GREEN}✓ No Ralph processes running${NC}"
+    return 0
+  fi
+
+  pkill -f "claude --dangerously-skip-permissions" 2>/dev/null
+  sleep 1
+
+  local remaining=$(pgrep -f "claude --dangerously-skip-permissions" 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "$remaining" -eq 0 ]]; then
+    echo "${GREEN}✓ Stopped $count Ralph process(es)${NC}"
+  else
+    echo "${RED}⚠ $remaining process(es) still running. Try: pkill -9 -f 'claude'${NC}"
+  fi
+}
+
+# ralph-help - Show all Ralph commands
+function ralph-help() {
+  local CYAN='\033[0;36m'
+  local BOLD='\033[1m'
+  local GRAY='\033[0;90m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "${CYAN}${BOLD}Ralph Commands${NC}"
+  echo ""
+  echo "  ${BOLD}ralph [N] [sleep]${NC}     Run N iterations (default 10) on PRD.md"
+  echo "  ${BOLD}ralph <app> N${NC}         Run on apps/<app>/PRD.md with auto branch"
+  echo ""
+  echo "  ${BOLD}ralph-init [app]${NC}      Create PRD template (root or apps/<app>/)"
+  echo "  ${BOLD}ralph-archive [app]${NC}   Archive completed stories to docs.local/"
+  echo "  ${BOLD}ralph-status${NC}          Show PRD progress, blocked stories, next story"
+  echo "  ${BOLD}ralph-learnings${NC}       Manage learnings in docs.local/learnings/"
+  echo "  ${BOLD}ralph-watch${NC}           Live tail of current Ralph output"
+  echo "  ${BOLD}ralph-stop${NC}            Kill all running Ralph processes"
+  echo ""
+  echo "${GRAY}Flags:${NC}"
+  echo "  ${BOLD}-QN${NC}                   Enable ntfy notifications"
+  echo "  ${BOLD}-S${NC}                    Use Sonnet model (faster)"
+  echo ""
+}
+
+# ralph-watch - Live tail of current Ralph iteration output
+function ralph-watch() {
+  local CYAN='\033[0;36m'
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[1;33m'
+  local RED='\033[0;31m'
+  local GRAY='\033[0;90m'
+  local BOLD='\033[1m'
+  local NC='\033[0m'
+
+  # Find the most recent ralph output file
+  local ralph_files=$(ls -t /tmp/ralph_output_*.txt 2>/dev/null | head -5)
+
+  if [[ -z "$ralph_files" ]]; then
+    echo "${YELLOW}No Ralph output files found in /tmp/${NC}"
+    echo "${GRAY}Start a Ralph loop first: ralph 10${NC}"
+    return 1
+  fi
+
+  # Show available files
+  echo "${CYAN}${BOLD}📺 Ralph Watch${NC}"
+  echo ""
+
+  local has_running=false
+  local latest_running=""
+
+  echo "${GRAY}Available output files:${NC}"
+  local i=1
+  echo "$ralph_files" | while read -r file; do
+    [[ -z "$file" ]] && continue
+    local pid=$(basename "$file" | sed 's/ralph_output_//' | sed 's/.txt//')
+    local size=$(wc -c < "$file" 2>/dev/null | tr -d ' ')
+    local size_human="$(( size / 1024 ))KB"
+    [[ "$size" -lt 1024 ]] && size_human="${size}B"
+    local modified=$(stat -f "%Sm" -t "%H:%M:%S" "$file" 2>/dev/null || stat -c "%y" "$file" 2>/dev/null | cut -d' ' -f2 | cut -d'.' -f1)
+    local status_str=""
+    if ps -p "$pid" > /dev/null 2>&1; then
+      status_str="${GREEN}● RUNNING${NC}"
+    else
+      status_str="${GRAY}○ finished${NC}"
+    fi
+    echo "   ${BOLD}[$i]${NC} PID $pid  $status_str  ${GRAY}${size_human}  $modified${NC}"
+    i=$((i + 1))
+  done
+  echo ""
+
+  # Check if any Ralph is currently running (look for tee writing to ralph output)
+  local running_pid=$(pgrep -f "tee /tmp/ralph_output" 2>/dev/null | head -1)
+  local latest=$(echo "$ralph_files" | head -1)
+  local latest_pid=$(basename "$latest" | sed 's/ralph_output_//' | sed 's/.txt//')
+  local latest_size=$(wc -c < "$latest" 2>/dev/null | tr -d ' ')
+
+  if [[ -z "$running_pid" ]]; then
+    echo "${YELLOW}⚠ No Ralph process currently running${NC}"
+    echo ""
+    if [[ "$latest_size" -gt 0 ]]; then
+      echo "${GRAY}Last output (final 30 lines):${NC}"
+      echo "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+      tail -30 "$latest"
+    else
+      echo "${GRAY}Output file is empty${NC}"
+    fi
+    return 0
+  fi
+
+  echo "${GREEN}✓ Ralph is running (PID: $running_pid)${NC}"
+  echo "${CYAN}Watching:${NC} $latest"
+  echo "${GRAY}Press Ctrl+C to stop${NC}"
+  echo ""
+  echo "${CYAN}─────────────────────────────────────────────────────────────${NC}"
+
+  # Tail the file with follow
+  tail -f "$latest" 2>/dev/null
+}
 
 # ralph-init [app] - Create PRD from template for an app
 function ralph-init() {
   local app="$1"
   local prd_path
+
+  # Help text
+  if [[ "$app" == "-h" || "$app" == "--help" ]]; then
+    echo "Usage: ralph-init [app]"
+    echo ""
+    echo "Create a PRD template file."
+    echo "  No args:     Creates PRD.md in current directory"
+    echo "  With app:    Creates apps/<app>/PRD.md"
+    echo ""
+    echo "Example: ralph-init frontend"
+    return 0
+  fi
+
+  # Validate app name
+  if [[ -n "$app" && "$app" =~ ^- ]]; then
+    echo "❌ Invalid app name: $app"
+    echo "   App names cannot start with a dash"
+    return 1
+  fi
 
   if [[ -n "$app" ]]; then
     prd_path="apps/$app/PRD.md"
@@ -628,58 +772,106 @@ function ralph-archive() {
   fi
 }
 
-# ralph-learnings - Show status of learnings in docs.local/learnings/
+# ralph-learnings - Show detailed status of learnings in docs.local/learnings/
 function ralph-learnings() {
+  local BLUE='\033[0;34m'
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[1;33m'
+  local RED='\033[0;31m'
+  local CYAN='\033[0;36m'
+  local GRAY='\033[0;90m'
+  local BOLD='\033[1m'
+  local NC='\033[0m'
+
   local learnings_dir="docs.local/learnings"
   local archive_dir="docs.local/learnings-archive"
   local max_lines_per_file=200
 
+  echo ""
+  echo "${BLUE}╔═══════════════════════════════════════════════════════════════╗${NC}"
+  echo "${BLUE}║${NC}                    📚 ${BOLD}Ralph Learnings${NC}                         ${BLUE}║${NC}"
+  echo "${BLUE}╚═══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+
   # Check if learnings directory exists
   if [[ ! -d "$learnings_dir" ]]; then
-    echo "ℹ️  No learnings directory found at $learnings_dir"
+    echo "${YELLOW}ℹ️  No learnings directory found${NC}"
     echo ""
     echo "   Create structure with:"
-    echo "   mkdir -p docs.local/learnings"
-    echo "   touch docs.local/learnings/example-topic.md"
+    echo "   ${GRAY}mkdir -p docs.local/learnings${NC}"
+    echo "   ${GRAY}touch docs.local/learnings/example-topic.md${NC}"
     echo ""
-    echo "   Or run '/prd' skill which creates this automatically"
+    echo "   Or run ${CYAN}/prd${NC} skill which creates this automatically"
     return 0
   fi
 
   # Count files and total lines
   local file_count=$(find "$learnings_dir" -name "*.md" -type f | wc -l | tr -d ' ')
   local total_lines=0
+  local total_tags=0
   local large_files=()
+  local all_tags=()
 
-  echo "📚 Learnings Status: $learnings_dir/"
-  echo "═══════════════════════════════════════════════════════════════"
-  echo ""
-
-  # List all learning files with line counts
+  # Process each file
   for file in "$learnings_dir"/*.md(N); do
     if [[ -f "$file" ]]; then
       local basename=$(basename "$file")
+      local title="${basename%.md}"
       local lines=$(wc -l < "$file" | tr -d ' ')
+      local modified=$(stat -f "%Sm" -t "%Y-%m-%d" "$file" 2>/dev/null || stat -c "%y" "$file" 2>/dev/null | cut -d' ' -f1)
       total_lines=$((total_lines + lines))
 
+      # Extract tags (#tag format)
+      local tags=$(grep -oE '#[a-zA-Z0-9_-]+' "$file" 2>/dev/null | sort -u | tr '\n' ' ')
+      local tag_count=$(echo "$tags" | wc -w | tr -d ' ')
+      total_tags=$((total_tags + tag_count))
+
+      # Extract first heading or first non-empty line as description
+      local desc=$(grep -E '^#+ ' "$file" 2>/dev/null | head -1 | sed 's/^#* //')
+      [[ -z "$desc" ]] && desc=$(grep -v '^$' "$file" 2>/dev/null | head -1 | cut -c1-50)
+
+      # Status icon
+      local status_icon="${GREEN}✓${NC}"
       if [[ "$lines" -gt "$max_lines_per_file" ]]; then
-        echo "  ⚠️  $basename: $lines lines (over $max_lines_per_file)"
+        status_icon="${YELLOW}⚠${NC}"
         large_files+=("$file")
-      else
-        echo "  ✓ $basename: $lines lines"
       fi
+
+      # Display file info
+      echo "$status_icon ${CYAN}${BOLD}$title${NC}"
+      echo "   ${GRAY}$lines lines${NC} │ ${GRAY}modified: $modified${NC}"
+      [[ -n "$tags" ]] && echo "   ${YELLOW}$tags${NC}"
+      [[ -n "$desc" ]] && echo "   ${GRAY}\"$desc\"${NC}"
+      echo ""
+
+      # Collect all tags
+      for tag in $(echo "$tags"); do
+        all_tags+=("$tag")
+      done
     fi
   done
 
-  echo ""
-  echo "───────────────────────────────────────────────────────────────"
-  echo "  📁 Total files: $file_count"
-  echo "  📝 Total lines: $total_lines"
+  # Summary section
+  echo "${BLUE}───────────────────────────────────────────────────────────────${NC}"
+  echo "${CYAN}📊 Summary${NC}"
+  echo "   📁 Files: ${BOLD}$file_count${NC}"
+  echo "   📝 Lines: ${BOLD}$total_lines${NC}"
+  echo "   🏷️  Tags:  ${BOLD}$total_tags${NC}"
   echo ""
 
-  # If there are large files, offer to archive
+  # Show unique tags across all files
+  if [[ ${#all_tags[@]} -gt 0 ]]; then
+    local unique_tags=$(printf '%s\n' "${all_tags[@]}" | sort -u | tr '\n' ' ')
+    echo "${CYAN}🏷️  All Tags:${NC}"
+    echo "   ${YELLOW}$unique_tags${NC}"
+    echo ""
+    echo "   ${GRAY}Search: grep -r \"#tagname\" docs.local/learnings/${NC}"
+    echo ""
+  fi
+
+  # Archive prompt for large files
   if [[ ${#large_files[@]} -gt 0 ]]; then
-    echo "  ⚠️  ${#large_files[@]} file(s) exceed $max_lines_per_file lines"
+    echo "${YELLOW}⚠️  ${#large_files[@]} file(s) exceed $max_lines_per_file lines${NC}"
     echo ""
     read -q "REPLY?Archive large files? (y/n) "
     echo ""
@@ -691,11 +883,8 @@ function ralph-learnings() {
       for file in "${large_files[@]}"; do
         local basename=$(basename "$file")
         local archive_file="$archive_dir/${month}-${basename}"
-
-        # Archive the file
         cp "$file" "$archive_file"
 
-        # Keep only last 50 lines in original
         local keep_lines=50
         echo "# ${basename%.md}" > "$file.new"
         echo "" >> "$file.new"
@@ -706,47 +895,376 @@ function ralph-learnings() {
         tail -n $keep_lines "$file" >> "$file.new"
         mv "$file.new" "$file"
 
-        echo "  ✅ Archived: $basename → $archive_file"
+        echo "  ${GREEN}✅${NC} Archived: $basename → $archive_file"
       done
     fi
   else
-    echo "  ✅ All files within limits"
+    echo "${GREEN}✅ All files within limits${NC}"
   fi
-}
-
-# ralph-status - Show status of all Ralph PRDs
-function ralph-status() {
-  echo "📋 Ralph PRD Status"
-  echo "═══════════════════════════════════════════════════════════════"
   echo ""
 
+  # Interactive menu
+  echo "${BLUE}───────────────────────────────────────────────────────────────${NC}"
+  echo "${CYAN}🎛️  Actions:${NC}"
+  echo "   ${BOLD}[a]${NC} Analyze with Claude (find patterns, suggest CLAUDE.md promotions)"
+  echo "   ${BOLD}[s]${NC} Search by tag"
+  echo "   ${BOLD}[p]${NC} Promote a learning to CLAUDE.md"
+  echo "   ${BOLD}[q]${NC} Quit"
+  echo ""
+  read -k1 "action?Choose action: "
+  echo ""
+
+  case "$action" in
+    a|A)
+      echo ""
+      echo "${CYAN}🤖 Analyzing learnings with Claude...${NC}"
+      echo ""
+      ralph-learnings-analyze
+      ;;
+    s|S)
+      echo ""
+      read "tag?Enter tag to search (without #): "
+      echo ""
+      echo "${CYAN}🔍 Searching for #$tag...${NC}"
+      echo ""
+      grep -rn --color=always "#$tag" "$learnings_dir" 2>/dev/null || echo "${YELLOW}No matches found${NC}"
+      echo ""
+      ;;
+    p|P)
+      echo ""
+      echo "${CYAN}📤 Promote learning to CLAUDE.md${NC}"
+      echo ""
+      echo "Available files:"
+      local i=1
+      for file in "$learnings_dir"/*.md(N); do
+        echo "   ${BOLD}[$i]${NC} $(basename "$file")"
+        i=$((i + 1))
+      done
+      echo ""
+      read "choice?Select file number: "
+      local files=("$learnings_dir"/*.md(N))
+      if [[ "$choice" -gt 0 && "$choice" -le ${#files[@]} ]]; then
+        local selected_file="${files[$choice]}"
+        echo ""
+        echo "${CYAN}Opening $selected_file for review...${NC}"
+        echo "${GRAY}Add relevant content to CLAUDE.md manually, then mark as [PROMOTED] in the learning file.${NC}"
+        echo ""
+        cat "$selected_file"
+      fi
+      ;;
+    q|Q|*)
+      ;;
+  esac
+}
+
+# ralph-learnings-analyze - Run Claude to analyze learnings and suggest promotions
+function ralph-learnings-analyze() {
+  local learnings_dir="docs.local/learnings"
+  local claude_md="CLAUDE.md"
+  local CYAN='\033[0;36m'
+  local YELLOW='\033[1;33m'
+  local NC='\033[0m'
+
+  if [[ ! -d "$learnings_dir" ]]; then
+    echo "${YELLOW}No learnings directory found at $learnings_dir${NC}"
+    return 1
+  fi
+
+  local file_count=$(find "$learnings_dir" -name '*.md' -type f | wc -l | tr -d ' ')
+  echo "${CYAN}📚 Analyzing $file_count learning file(s)...${NC}"
+  echo ""
+
+  # Build the full prompt directly (avoid sed issues with special chars)
+  local prompt_file=$(mktemp)
+
+  # Write header
+  cat > "$prompt_file" << 'EOF'
+You are analyzing project learnings to help organize and promote important patterns.
+
+## Your Task
+
+1. **Find Patterns**: Look for repeated learnings across files (same problem solved multiple times)
+2. **Identify Promotions**: Which learnings are important enough to add to CLAUDE.md as permanent rules?
+3. **Suggest Consolidation**: Which learnings files could be merged or reorganized?
+4. **Flag Stale Content**: Any learnings that seem outdated or superseded?
+
+## Current CLAUDE.md Content
+```
+EOF
+
+  # Append CLAUDE.md content safely
+  if [[ -f "$claude_md" ]]; then
+    cat "$claude_md" >> "$prompt_file"
+  else
+    echo "(No CLAUDE.md found)" >> "$prompt_file"
+  fi
+
+  # Continue prompt
+  cat >> "$prompt_file" << 'EOF'
+```
+
+## Learnings Files
+
+EOF
+
+  # Append each learning file
+  for file in "$learnings_dir"/*.md(N); do
+    if [[ -f "$file" ]]; then
+      local basename=$(basename "$file")
+      echo "=== FILE: $basename ===" >> "$prompt_file"
+      cat "$file" >> "$prompt_file"
+      echo "" >> "$prompt_file"
+    fi
+  done
+
+  # Add output format
+  cat >> "$prompt_file" << 'EOF'
+
+## Output Format
+
+### 🔄 Repeated Patterns Found
+- [pattern]: found in [files]
+
+### 📤 Recommended for CLAUDE.md Promotion
+1. **[Learning Name]** from [file]
+   - Why: [reason]
+   - Suggested CLAUDE.md section: [section name]
+   - Content to add:
+   ```
+   [exact text to add]
+   ```
+
+### 🗂️ Consolidation Suggestions
+- Merge [file1] and [file2] because [reason]
+
+### 🗑️ Potentially Stale
+- [file]: [reason it might be outdated]
+
+### ✅ Summary
+- X learnings analyzed
+- X recommended for promotion
+- X consolidation opportunities
+EOF
+
+  # Run Claude with the full prompt file
+  cat "$prompt_file" | claude --print "Analyze these project learnings and suggest which should be promoted to CLAUDE.md. Look for patterns, repetition, and important rules that should be permanent."
+
+  rm -f "$prompt_file"
+}
+
+# ralph-status - Show detailed status of all Ralph PRDs
+function ralph-status() {
+  local BLUE='\033[0;34m'
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[1;33m'
+  local RED='\033[0;31m'
+  local CYAN='\033[0;36m'
+  local GRAY='\033[0;90m'
+  local BOLD='\033[1m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "${BLUE}╔═══════════════════════════════════════════════════════════════╗${NC}"
+  echo "${BLUE}║${NC}                    📋 ${BOLD}Ralph PRD Status${NC}                        ${BLUE}║${NC}"
+  echo "${BLUE}╚═══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+
+  # Helper function to show PRD status for a single file
+  _ralph_show_prd() {
+    local prd_file="$1"
+    local label="$2"
+
+    [[ ! -f "$prd_file" ]] && return
+
+    local pending=$(grep -c '\- \[ \]' "$prd_file" 2>/dev/null || echo 0)
+    local done=$(grep -c '\- \[x\]' "$prd_file" 2>/dev/null || echo 0)
+    local total=$((pending + done))
+    local percent=0
+    [[ "$total" -gt 0 ]] && percent=$((done * 100 / total))
+
+    # Progress bar (30 chars)
+    local bar_filled=$((percent * 30 / 100))
+    local bar_empty=$((30 - bar_filled))
+    local progress_bar="${GREEN}"
+    for ((i=0; i<bar_filled; i++)); do progress_bar+="█"; done
+    progress_bar+="${GRAY}"
+    for ((i=0; i<bar_empty; i++)); do progress_bar+="░"; done
+    progress_bar+="${NC}"
+
+    echo "${CYAN}${BOLD}$label${NC}"
+    echo "   ${progress_bar} ${BOLD}${percent}%${NC}"
+    echo "   ${GREEN}✅ $done${NC} completed  │  ${YELLOW}⏳ $pending${NC} pending  │  📊 $total total"
+    echo ""
+
+    # Count stories (not just criteria)
+    local story_count=$(grep -cE '^### (US|V)-' "$prd_file" 2>/dev/null || echo 0)
+
+    # Find BLOCKED stories
+    local blocked_stories=()
+    while IFS= read -r line; do
+      [[ -n "$line" ]] && blocked_stories+=("$line")
+    done < <(grep -B3 'BLOCKED' "$prd_file" 2>/dev/null | grep -oE '(US|V)-[A-Z0-9-]+' | sort -u | head -5)
+
+    if [[ ${#blocked_stories[@]} -gt 0 ]]; then
+      echo "   ${RED}🚫 BLOCKED (${#blocked_stories[@]}):${NC}"
+      for story in "${blocked_stories[@]}"; do
+        echo "      ${RED}•${NC} $story"
+      done
+      echo ""
+    fi
+
+    # Find next story (first with pending criteria, not blocked)
+    local next_found=0
+    while IFS= read -r story_line; do
+      local story_id=$(echo "$story_line" | sed 's/^### //' | cut -d: -f1)
+      # Get story section and check for pending + not blocked
+      local has_pending=$(sed -n "/^### ${story_id}:/,/^### /p" "$prd_file" 2>/dev/null | grep -c '\- \[ \]')
+      local is_blocked=$(sed -n "/^### ${story_id}:/,/^### /p" "$prd_file" 2>/dev/null | grep -c 'BLOCKED')
+      if [[ "$has_pending" -gt 0 && "$is_blocked" -eq 0 ]]; then
+        local story_title=$(echo "$story_line" | sed 's/^### //')
+        echo "   ${GREEN}▶ NEXT STORY:${NC}"
+        echo "      ${BOLD}$story_title${NC}"
+        local criteria_pending=$(sed -n "/^### ${story_id}:/,/^### /p" "$prd_file" 2>/dev/null | grep -c '\- \[ \]')
+        echo "      ${GRAY}($criteria_pending acceptance criteria remaining)${NC}"
+        echo ""
+        next_found=1
+        break
+      fi
+    done < <(grep -E '^### (US|V)-' "$prd_file" 2>/dev/null)
+
+    # List pending stories (up to 8)
+    echo "   ${YELLOW}📝 Pending Stories:${NC}"
+    local story_num=0
+    while IFS= read -r story_line; do
+      local story_id=$(echo "$story_line" | sed 's/^### //' | cut -d: -f1)
+      local has_pending=$(sed -n "/^### ${story_id}:/,/^### /p" "$prd_file" 2>/dev/null | grep -c '\- \[ \]')
+      local is_blocked=$(sed -n "/^### ${story_id}:/,/^### /p" "$prd_file" 2>/dev/null | grep -c 'BLOCKED')
+      if [[ "$has_pending" -gt 0 ]]; then
+        story_num=$((story_num + 1))
+        local story_title=$(echo "$story_line" | sed 's/^### //' | cut -d: -f2- | sed 's/^ *//')
+        local prefix="${GRAY}$story_num.${NC}"
+        if [[ "$is_blocked" -gt 0 ]]; then
+          prefix="${RED}⏹${NC}"
+          story_title="${GRAY}$story_title (BLOCKED)${NC}"
+        fi
+        if [[ "$story_num" -le 8 ]]; then
+          echo "      $prefix $story_id: $story_title ${GRAY}[$has_pending]${NC}"
+        fi
+      fi
+    done < <(grep -E '^### (US|V)-' "$prd_file" 2>/dev/null)
+
+    if [[ "$story_num" -gt 8 ]]; then
+      echo "      ${GRAY}... and $((story_num - 8)) more pending stories${NC}"
+    fi
+    [[ "$story_num" -eq 0 ]] && echo "      ${GREEN}🎉 All stories complete!${NC}"
+    echo ""
+  }
+
   # Check root PRD
+  _ralph_show_prd "PRD.md" "📁 Root PRD.md"
+
+  # Check app-specific PRDs
+  for app in expo public admin frontend backend mobile; do
+    if [[ -f "apps/$app/PRD.md" ]]; then
+      local branch_info=""
+      if git show-ref --verify --quiet "refs/heads/feat/${app}-work" 2>/dev/null; then
+        branch_info="  ${GREEN}🌿 feat/${app}-work${NC}"
+      fi
+      _ralph_show_prd "apps/$app/PRD.md" "📱 apps/$app/PRD.md$branch_info"
+    fi
+  done
+
+  # Current Iteration - find story with progress OR show next if Ralph is running
+  echo "${BLUE}───────────────────────────────────────────────────────────────${NC}"
+
+  # Check if Ralph is currently running
+  local ralph_running=$(pgrep -f "tee /tmp/ralph_output" 2>/dev/null | head -1)
+
   if [[ -f "PRD.md" ]]; then
-    local root_pending=$(grep -c '\- \[ \]' PRD.md 2>/dev/null || echo 0)
-    local root_done=$(grep -c '\- \[x\]' PRD.md 2>/dev/null || echo 0)
-    echo "📁 Root PRD.md:"
-    echo "   ✅ Completed: $root_done"
-    echo "   ⏳ Pending: $root_pending"
+    local current_story=""
+    local current_done=0
+    local current_pending=0
+    local show_as_running=false
+
+    # First, find story that's in progress (has both [x] and [ ])
+    while IFS= read -r story_line; do
+      local story_id=$(echo "$story_line" | sed 's/^### //' | cut -d: -f1)
+      local story_section=$(sed -n "/^### ${story_id}:/,/^### /p" PRD.md 2>/dev/null)
+      local done_count=$(echo "$story_section" | grep '\- \[x\]' | wc -l | tr -d ' ')
+      local pending_count=$(echo "$story_section" | grep '\- \[ \]' | wc -l | tr -d ' ')
+      local is_blocked=$(echo "$story_section" | grep -c 'BLOCKED' | tr -d ' ')
+
+      # In progress = has some done AND some pending, not blocked
+      if [[ "$done_count" -gt 0 && "$pending_count" -gt 0 && "$is_blocked" -eq 0 ]]; then
+        current_story="$story_id"
+        current_done="$done_count"
+        current_pending="$pending_count"
+        show_as_running=true
+        break
+      fi
+    done < <(grep -E '^### (US|V)-' PRD.md 2>/dev/null)
+
+    # If no in-progress story but Ralph is running, show next story
+    if [[ -z "$current_story" && -n "$ralph_running" ]]; then
+      while IFS= read -r story_line; do
+        local story_id=$(echo "$story_line" | sed 's/^### //' | cut -d: -f1)
+        local story_section=$(sed -n "/^### ${story_id}:/,/^### /p" PRD.md 2>/dev/null)
+        local pending_count=$(echo "$story_section" | grep '\- \[ \]' | wc -l | tr -d ' ')
+        local is_blocked=$(echo "$story_section" | grep -c 'BLOCKED' | tr -d ' ')
+
+        if [[ "$pending_count" -gt 0 && "$is_blocked" -eq 0 ]]; then
+          current_story="$story_id"
+          current_done=0
+          current_pending="$pending_count"
+          show_as_running=true
+          break
+        fi
+      done < <(grep -E '^### (US|V)-' PRD.md 2>/dev/null)
+    fi
+
+    if [[ -n "$current_story" && "$show_as_running" == "true" ]]; then
+      local current_total=$((current_done + current_pending))
+      local story_title=$(grep "^### ${current_story}:" PRD.md | sed 's/^### //')
+      local story_section=$(sed -n "/^### ${current_story}:/,/^### /p" PRD.md 2>/dev/null)
+
+      # Get last completed task and next pending task
+      local last_done=$(echo "$story_section" | grep '\- \[x\]' | tail -1 | sed 's/.*\[x\] //')
+      local next_pending=$(echo "$story_section" | grep '\- \[ \]' | head -1 | sed 's/.*\[ \] //')
+
+      echo "${CYAN}🔄 Current Iteration:${NC} ${GREEN}● Ralph running${NC}"
+      echo "   ${YELLOW}${BOLD}$current_story${NC} ${YELLOW}$current_done/$current_total done${NC} ${GRAY}(updates on commit)${NC}"
+      [[ -n "$last_done" ]] && echo "   ${GREEN}✓ $last_done${NC}"
+      [[ -n "$next_pending" ]] && echo "   ${GRAY}○ $next_pending${NC}"
+      echo ""
+    fi
+  fi
+
+  # Last completed (from git)
+  local last_story=$(git log --oneline -n 20 2>/dev/null | grep -oE '(US|V)-[A-Z0-9-]+' | head -1)
+  if [[ -n "$last_story" ]]; then
+    local last_commit=$(git log --oneline -n 20 2>/dev/null | grep "$last_story" | head -1)
+    local last_hash=$(echo "$last_commit" | cut -d' ' -f1)
+    local last_msg=$(echo "$last_commit" | cut -d' ' -f2-)
+    local last_time=$(git log -1 --format="%ar" "$last_hash" 2>/dev/null)
+    echo "${CYAN}✅ Last Completed:${NC}"
+    echo "   ${GREEN}${BOLD}$last_story${NC} ${GRAY}($last_time)${NC}"
+    echo "   ${GRAY}$last_msg${NC}"
     echo ""
   fi
 
-  # Check app-specific PRDs
-  for app in expo public admin; do
-    if [[ -f "apps/$app/PRD.md" ]]; then
-      local pending=$(grep -c '\- \[ \]' "apps/$app/PRD.md" 2>/dev/null || echo 0)
-      local done=$(grep -c '\- \[x\]' "apps/$app/PRD.md" 2>/dev/null || echo 0)
-      echo "📱 apps/$app/PRD.md:"
-      echo "   ✅ Completed: $done"
-      echo "   ⏳ Pending: $pending"
-
-      # Check if branch exists
-      if git show-ref --verify --quiet "refs/heads/feat/${app}-work" 2>/dev/null; then
-        echo "   🌿 Branch: feat/${app}-work (exists)"
-      else
-        echo "   🌱 Branch: feat/${app}-work (will be created)"
-      fi
-      echo ""
-    fi
+  # Recently completed stories (from commits with story IDs)
+  echo "${CYAN}✅ Recently Completed:${NC}"
+  local completed_lines=$(git log --oneline -n 20 2>/dev/null | grep -E '(US|V)-[A-Z0-9-]+' | head -5)
+  echo "$completed_lines" | while read -r line; do
+    [[ -z "$line" ]] && continue
+    local hash=$(echo "$line" | cut -d' ' -f1)
+    local story_id=$(echo "$line" | grep -oE '(US|V)-[A-Z0-9-]+' | head -1)
+    local msg=$(echo "$line" | cut -d' ' -f2- | sed -E 's/feat\([^)]+\): //' | sed -E 's/verify\([^)]+\): //')
+    printf "   ${GRAY}%s${NC} ${GREEN}%-15s${NC} %s\n" "$hash" "$story_id" "$msg"
   done
+  echo ""
+
+  # Unset helper function
+  unset -f _ralph_show_prd
 }
 

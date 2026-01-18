@@ -57,17 +57,27 @@ The PRD file IS the memory. Checkboxes ARE the state.
 
 ```bash
 # 1. Install
-git clone https://github.com/YOUR_USERNAME/ralph.git ~/.config/ralph
+git clone https://github.com/EtanHey/ralph-tooling.git ~/.config/ralph
 echo '[[ -f ~/.config/ralph/ralph.zsh ]] && source ~/.config/ralph/ralph.zsh' >> ~/.zshrc
 source ~/.zshrc
 
-# 2. Generate a PRD with /prd command (see setup below)
+# 2. Set up skills (required for /prd command)
+mkdir -p ~/.claude/commands
+cp ~/.config/ralph/skills/prd.md ~/.claude/commands/prd.md
+cp ~/.config/ralph/skills/critique-waves.md ~/.claude/commands/critique-waves.md
+
+# 3. In any project, generate a PRD
 claude
 > /prd Add user authentication with JWT
 
-# 3. Run Ralph
+# 4. Run Ralph to execute
 ralph 20  # 20 iterations
 ```
+
+### Prerequisites
+- **zsh** shell (bash may work with modifications)
+- **Claude CLI** installed (`claude` command available)
+- **git** for commits and branch management
 
 ---
 

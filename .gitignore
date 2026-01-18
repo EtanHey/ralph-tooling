@@ -1,0 +1,12 @@
+# Local documentation (per-project learnings, not shared)
+docs.local/
+
+# Editor files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.log
