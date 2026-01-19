@@ -6,11 +6,11 @@ Run Claude (or any LLM) in an autonomous loop to execute PRD stories. Each itera
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  while [ ] stories remain:                                  │
+│  while stories remain in prd-json/:                         │
 │    1. Spawn fresh Claude                                    │
-│    2. Claude reads PRD.md, finds first [ ] story            │
+│    2. Claude reads index.json, finds next story             │
 │    3. Claude implements ONE story                           │
-│    4. Claude marks [x], commits                             │
+│    4. Claude marks criteria checked, commits                │
 │    5. Loop                                                  │
 │  done                                                       │
 └─────────────────────────────────────────────────────────────┘
@@ -27,7 +27,7 @@ Ralph was created by [Geoffrey Huntley](https://ghuntley.com/ralph/) as a simple
 | Feature | This Ralph (Original) | Claude Code Plugin |
 |---------|----------------------|-------------------|
 | Fresh context each iteration | ✅ Yes | ❌ Same session |
-| PRD-driven with checkboxes | ✅ Yes | ❌ Single prompt |
+| PRD-driven with JSON criteria | ✅ Yes | ❌ Single prompt |
 | Learnings persist across iterations | ✅ Yes | ❌ No |
 | Monorepo support | ✅ Yes | ❌ No |
 | Browser verification protocol | ✅ Yes | ❌ No |
@@ -44,12 +44,12 @@ When Claude runs in a long session, it accumulates context that can:
 - Lead to inconsistent behavior as context window fills
 
 Ralph solves this by **spawning a fresh Claude every iteration**. Each Claude:
-1. Reads the PRD.md file (the source of truth)
-2. Sees only checked `[x]` and unchecked `[ ]` boxes
-3. Works on ONE story, marks it done, commits
+1. Reads `prd-json/index.json` (the source of truth)
+2. Finds the next pending story in `prd-json/stories/`
+3. Works on ONE story, marks criteria checked, commits
 4. Exits — next iteration is completely fresh
 
-The PRD file IS the memory. Checkboxes ARE the state.
+The JSON files ARE the memory. Checked criteria ARE the state.
 
 ---
 
@@ -57,7 +57,7 @@ The PRD file IS the memory. Checkboxes ARE the state.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/ralph-tooling.git ~/.config/ralph
+git clone https://github.com/EtanHey/ralph-tooling.git ~/.config/ralph
 
 # 2. Interactive setup (recommended)
 cd ~/.config/ralph
@@ -92,8 +92,8 @@ ralph 20  # 20 iterations
 
 | Command | Description |
 |---------|-------------|
-| `ralph [N] [sleep]` | Run N iterations (default 10) on `./PRD.md` |
-| `ralph <app> N` | Run on `apps/<app>/PRD.md` with auto branch |
+| `ralph [N] [sleep]` | Run N iterations (default 10) on `./prd-json/` |
+| `ralph <app> N` | Run on `apps/<app>/prd-json/` with auto branch |
 | `ralph-init [app]` | Create PRD template |
 | `ralph-archive [app]` | Archive completed stories |
 | `ralph-status` | Show PRD status across all apps |
@@ -117,7 +117,7 @@ Ralph executes PRDs, but first you need to create one. The `/prd` command is a C
 
 1. Asks 3-5 clarifying questions about your feature
 2. Generates a complete PRD with properly-sized stories
-3. Saves `PRD.md` and `progress.txt` to your project root
+3. Saves to `prd-json/` directory (index.json + stories/*.json)
 4. **Stops** — it does NOT implement (that's Ralph's job)
 
 ### Setup
@@ -140,7 +140,7 @@ claude
 ┌─────────────────────────────────────────────────────────────┐
 │  1. You: /prd "Add feature X"                               │
 │  2. Claude asks clarifying questions                        │
-│  3. Claude generates PRD.md + progress.txt                  │
+│  3. Claude generates prd-json/ (index.json + stories/)      │
 │  4. Claude says "PRD ready. Run Ralph to execute."          │
 │  5. You: ralph 20                                           │
 │  6. Ralph executes stories autonomously                     │
@@ -149,31 +149,47 @@ claude
 
 ---
 
-## PRD Format
+## PRD Format (JSON)
 
-```markdown
-**Working Directory:** `src`
+Ralph uses a JSON-based PRD format stored in `prd-json/`:
 
-### US-001: Add User Authentication
+```
+prd-json/
+├── index.json          # Story order and metadata
+└── stories/
+    ├── US-001.json     # Individual story files
+    ├── US-002.json
+    └── ...
+```
 
-**Description:** Implement login/logout functionality
+**index.json:**
+```json
+{
+  "title": "Feature Name",
+  "workingDirectory": "src",
+  "stories": ["US-001", "US-002"]
+}
+```
 
-**Acceptance Criteria:**
-- [ ] Login form with email/password
-- [ ] Session management
-- [ ] Logout button in header
-- [ ] Typecheck passes
-
-**⏹️ STOP - END OF US-001**
-
-### US-002: Add Dashboard
-...
+**stories/US-001.json:**
+```json
+{
+  "id": "US-001",
+  "title": "Add User Authentication",
+  "description": "Implement login/logout functionality",
+  "criteria": [
+    { "id": "c1", "text": "Login form with email/password", "checked": false },
+    { "id": "c2", "text": "Session management", "checked": false },
+    { "id": "c3", "text": "Logout button in header", "checked": false },
+    { "id": "c4", "text": "Typecheck passes", "checked": false }
+  ]
+}
 ```
 
 Key rules:
 - **One story per iteration** — Ralph completes exactly one story, then respawns
-- **Stop markers** — `⏹️ STOP` prevents Claude from continuing to next story
-- **Checkboxes are truth** — Next Claude only sees what's in PRD.md
+- **JSON criteria are truth** — `checked: true` marks completion
+- **Incremental progress** — Criteria are checked one-by-one and committed
 - **Verification stories** — V-XXX stories for visual verification
 
 ---
@@ -270,7 +286,9 @@ cp ~/.config/ralph/skills/critique-waves.md ~/.claude/commands/critique-waves.md
 ```
 your-project/
 ├── .gitignore          # Add: docs.local/
-├── PRD.md              # Active PRD (Ralph reads this)
+├── prd-json/           # Active PRD (Ralph reads this)
+│   ├── index.json
+│   └── stories/
 ├── progress.txt        # Current iteration notes
 └── docs.local/         # Local-only, gitignored
     ├── README.md       # Index of learnings
@@ -278,7 +296,7 @@ your-project/
     │   ├── auth.md
     │   └── rtl.md
     └── prd-archive/    # Completed PRDs
-        └── 2024-01-feature-x.md
+        └── 2024-01-feature-x/
 ```
 
 ### Setup
@@ -390,7 +408,7 @@ When a story is too big for one iteration, Ralph can split it.
 ### Behavior
 
 When Ralph encounters a blocked task:
-1. Marks in PRD: `**Status:** ⏹️ BLOCKED: [reason]`
+1. Marks in story JSON: `"status": "blocked"` with reason
 2. Notes in progress.txt
 3. Moves to next incomplete task
 4. Commits the blocker note
@@ -404,9 +422,9 @@ When ALL tasks are blocked:
 ## App-Specific Mode (Monorepos)
 
 ```bash
-ralph frontend 30    # apps/frontend/PRD.md
-ralph backend 30     # apps/backend/PRD.md
-ralph mobile 30      # apps/mobile/PRD.md
+ralph frontend 30    # apps/frontend/prd-json/
+ralph backend 30     # apps/backend/prd-json/
+ralph mobile 30      # apps/mobile/prd-json/
 ```
 
 Features:
@@ -518,7 +536,7 @@ Don't aim for perfect on first try. Let the loop refine the work.
 Each iteration starts clean. No accumulated confusion.
 
 ### 3. PRD is Truth
-Checkboxes are the only state. If it's not in PRD.md, it didn't happen.
+JSON criteria are the only state. If it's not checked in prd-json/, it didn't happen.
 
 ### 4. Failures Are Data
 When Ralph fails, it leaves notes for the next iteration.
@@ -554,6 +572,13 @@ MIT License - See LICENSE file
 ---
 
 ## Changelog
+
+### v1.3.0
+- JSON-based PRD format (prd-json/) replaces markdown PRD.md
+- Incremental criterion checking with commits per criterion
+- Configuration system with `ralph-config.local` for personal settings
+- Claude Haiku pre-push hook for personal info detection
+- SETUP.md for interactive Claude Code guided setup
 
 ### v1.2.0
 - Comprehensive README with skills documentation

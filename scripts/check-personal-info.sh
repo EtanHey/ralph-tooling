@@ -66,10 +66,14 @@ I will provide file contents. Check for ANY personal/private information:
 - Personal project references that identify the owner
 - API keys, tokens, secrets (even if they look fake)
 
-IGNORE:
+IGNORE (these are OK for public release):
 - Placeholders like 'YOUR_USERNAME', '{project}', '{app}'
 - Generic defaults like 'ralph-notifications'
 - Example patterns meant for documentation
+- GitHub clone URLs (git clone https://github.com/...) - these are public repo URLs
+- Public attributions and credits (original concept authors, contributors)
+- Example API keys in documentation (like 'sk-1234...' shown as examples)
+- File paths in code comments showing example structure
 
 OUTPUT FORMAT - be concise:
 If personal info found:
