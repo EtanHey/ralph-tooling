@@ -455,18 +455,30 @@ Read docs.local/ralph-meta-learnings.md if it exists - contains critical pattern
 3. Read progress.txt - check Learnings section for patterns
 4. Check if story has blockedBy field (see Blocked Task Rules below)
 5. If blocked: move to next in pending array
-6. If actionable: implement that ONE task only
-7. Run typecheck to verify
+6. If actionable: work through acceptance criteria ONE BY ONE
+
+## INCREMENTAL CRITERION CHECKING (CRITICAL)
+As you complete EACH acceptance criterion:
+1. Immediately update the story JSON: set that criterion's checked=true
+2. Do NOT wait until all criteria are done
+3. This allows live progress tracking via 'ralph-live'
+4. After updating the JSON, continue to the next criterion
+
+Example workflow:
+- Complete criterion 1 → Edit JSON, set checked=true for criterion 1
+- Complete criterion 2 → Edit JSON, set checked=true for criterion 2
+- ...continue until all done
+- When ALL checked=true → set passes=true
+
+## Final Steps
+7. Run typecheck to verify all code changes
 8. If 'verify in browser': take a screenshot (see Browser Rules below)
-9. **CRITICAL**: Update the story JSON file:
-   - Set acceptanceCriteria[n].checked = true for each completed criterion
-   - Set passes = true when ALL criteria are checked
-10. **CRITICAL**: Update prd-json/index.json:
-    - Remove story from pending array
-    - Update stats.completed and stats.pending counts
-    - Set nextStory to first remaining pending item
-11. Commit prd-json/ AND progress.txt together
-12. Verify commit succeeded before ending iteration"
+9. Update prd-json/index.json:
+   - Remove story from pending array
+   - Update stats.completed and stats.pending counts
+   - Set nextStory to first remaining pending item
+10. Commit prd-json/ AND progress.txt together
+11. Verify commit succeeded before ending iteration"
       else
         # MARKDOWN MODE PROMPT (legacy)
         ralph_prompt="You are Ralph, an autonomous coding agent. Do exactly ONE task per iteration.
@@ -840,6 +852,7 @@ function ralph-help() {
   echo "  ${BOLD}ralph-init [app]${NC}      Create PRD JSON structure (prd-json/)"
   echo "  ${BOLD}ralph-archive [app]${NC}   Archive completed stories to docs.local/"
   echo "  ${BOLD}ralph-status${NC}          Show PRD progress, blocked stories, next story"
+  echo "  ${BOLD}ralph-live [N]${NC}        Live refreshing status (default: 3s)"
   echo "  ${BOLD}ralph-learnings${NC}       Manage learnings in docs.local/learnings/"
   echo "  ${BOLD}ralph-watch${NC}           Live tail of current Ralph output"
   echo "  ${BOLD}ralph-stop${NC}            Kill all running Ralph processes"
@@ -1447,6 +1460,20 @@ EOF
   rm -f "$prompt_file"
 }
 
+# ralph-live - Live refreshing PRD status (Ctrl+C to exit)
+function ralph-live() {
+  local interval="${1:-3}"  # Default 3 second refresh
+
+  echo "📺 Ralph Live Status (refreshing every ${interval}s, Ctrl+C to exit)"
+  echo ""
+
+  while true; do
+    clear
+    ralph-status
+    sleep "$interval"
+  done
+}
+
 # ralph-status - Show detailed status of all Ralph PRDs
 function ralph-status() {
   local BLUE='\033[0;34m'
@@ -1540,15 +1567,19 @@ _ralph_show_prd_json() {
     echo ""
   fi
 
-  # Show next story
+  # Show next story with acceptance criteria checklist
   if [[ "$next_story" != "none" && "$next_story" != "null" ]]; then
     local story_file="$json_dir/stories/${next_story}.json"
     if [[ -f "$story_file" ]]; then
       local story_title=$(jq -r '.title // "Untitled"' "$story_file" 2>/dev/null)
-      local criteria_count=$(jq '[.acceptanceCriteria[] | select(.checked == false)] | length' "$story_file" 2>/dev/null)
-      echo "   ${GREEN}▶ NEXT STORY:${NC}"
-      echo "      ${BOLD}$next_story: $story_title${NC}"
-      echo "      ${GRAY}($criteria_count acceptance criteria remaining)${NC}"
+      local total_criteria=$(jq '.acceptanceCriteria | length' "$story_file" 2>/dev/null)
+      local done_criteria=$(jq '[.acceptanceCriteria[] | select(.checked == true)] | length' "$story_file" 2>/dev/null)
+      echo "   ${GREEN}▶ CURRENT STORY:${NC} ${BOLD}$next_story${NC}"
+      echo "      ${story_title}"
+      echo "      ${CYAN}Progress: $done_criteria/$total_criteria criteria${NC}"
+      echo ""
+      # Show each acceptance criterion with checkbox
+      jq -r '.acceptanceCriteria[] | if .checked then "      \u001b[32m✓\u001b[0m " + .text else "      \u001b[90m○\u001b[0m " + .text end' "$story_file" 2>/dev/null
       echo ""
     fi
   fi
