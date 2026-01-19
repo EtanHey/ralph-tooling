@@ -10,7 +10,7 @@
 #   ralph 100 -S           # Run with Sonnet model (faster, cheaper)
 #
 # Options:
-#   app  : Optional app name (expo, public, admin) - uses apps/{app}/PRD.md
+#   app  : Optional app name - uses apps/{app}/PRD.md
 #   -QN  : Enable quiet notifications via ntfy app
 #   -S   : Use Sonnet model (default: Opus)
 #   (no flag) : No notifications, Opus model (default)
@@ -29,6 +29,23 @@
 # This is the ORIGINAL Ralph concept - a bash loop spawning FRESH
 # Claude instances. Unlike the plugin, each iteration gets clean context.
 # Output streams in REAL-TIME so you can watch Claude work.
+# ═══════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════
+# CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════
+# Source local config if it exists (for personal overrides)
+RALPH_CONFIG_DIR="${RALPH_CONFIG_DIR:-$HOME/.config/ralph}"
+[[ -f "$RALPH_CONFIG_DIR/ralph-config.local" ]] && source "$RALPH_CONFIG_DIR/ralph-config.local"
+
+# Defaults (can be overridden in ralph-config.local or environment)
+RALPH_NTFY_TOPIC="${RALPH_NTFY_TOPIC:-ralph-notifications}"
+# Note: Use simple default without braces to avoid zsh glob interpretation
+[[ -z "$RALPH_NTFY_TOPIC_PATTERN" ]] && RALPH_NTFY_TOPIC_PATTERN='{project}-{app}'
+RALPH_DEFAULT_MODEL="${RALPH_DEFAULT_MODEL:-opus}"
+RALPH_MAX_ITERATIONS="${RALPH_MAX_ITERATIONS:-10}"
+RALPH_SLEEP_SECONDS="${RALPH_SLEEP_SECONDS:-2}"
+RALPH_VALID_APPS="${RALPH_VALID_APPS:-frontend backend mobile expo public admin}"
 # ═══════════════════════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════════════════════
@@ -164,8 +181,8 @@ _ralph_json_remaining_count() {
 # ═══════════════════════════════════════════════════════════════════
 
 function ralph() {
-  local MAX=10
-  local SLEEP=2
+  local MAX=$RALPH_MAX_ITERATIONS
+  local SLEEP=$RALPH_SLEEP_SECONDS
   local notify_enabled=false
   local use_sonnet=false
   local RALPH_TMP="/tmp/ralph_output_$$.txt"
@@ -174,13 +191,13 @@ function ralph() {
   local PRD_JSON_DIR="$REPO_ROOT/prd-json"
   local use_json_mode=false
   local project_key="ralph"
-  local ntfy_topic="etans-ralph"
+  local ntfy_topic="$RALPH_NTFY_TOPIC"
   local app_mode=""
   local target_branch=""
   local original_branch=""
 
-  # Valid app names for app-specific mode
-  local valid_apps=("expo" "public" "admin")
+  # Valid app names for app-specific mode (parsed from space-separated config)
+  local valid_apps=(${=RALPH_VALID_APPS})
 
   # Parse arguments - check for app name first
   local args_to_parse=()
@@ -194,26 +211,30 @@ function ralph() {
         use_sonnet=true
         shift
         ;;
-      expo|public|admin)
-        # App-specific mode
-        app_mode="$1"
-        PRD_PATH="$REPO_ROOT/apps/$app_mode/PRD.md"
-        target_branch="feat/${app_mode}-work"
-        # Get project name from directory for ntfy topic
-        local project_name=$(basename "$REPO_ROOT")
-        ntfy_topic="etans-${project_name}-${app_mode}"
-        shift
-        ;;
       *)
-        # Positional args: numbers for MAX/SLEEP
-        if [[ "$1" =~ ^[0-9]+$ ]]; then
-          if [[ "$MAX" -eq 10 ]]; then
+        # Check if it's a valid app name
+        if [[ " ${valid_apps[*]} " =~ " $1 " ]]; then
+          # App-specific mode
+          app_mode="$1"
+          PRD_PATH="$REPO_ROOT/apps/$app_mode/PRD.md"
+          target_branch="feat/${app_mode}-work"
+          # Get project name from directory for ntfy topic
+          local project_name=$(basename "$REPO_ROOT")
+          # Build ntfy topic from pattern (replace {project} and {app})
+          ntfy_topic="${RALPH_NTFY_TOPIC_PATTERN//\{project\}/$project_name}"
+          ntfy_topic="${ntfy_topic//\{app\}/$app_mode}"
+          shift
+        elif [[ "$1" =~ ^[0-9]+$ ]]; then
+          # Positional args: numbers for MAX/SLEEP
+          if [[ "$MAX" -eq "$RALPH_MAX_ITERATIONS" ]]; then
             MAX="$1"
           else
             SLEEP="$1"
           fi
+          shift
+        else
+          shift
         fi
-        shift
         ;;
     esac
   done

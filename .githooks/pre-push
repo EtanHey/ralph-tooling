@@ -123,9 +123,40 @@ fi
 echo ""
 
 # ═══════════════════════════════════════════════════════════════
-# 4. DOCUMENTATION CHECK
+# 4. PERSONAL INFO CHECK (uses Claude Code for smart detection)
 # ═══════════════════════════════════════════════════════════════
-echo "${YELLOW}[4/4] Documentation Check${NC}"
+echo "${YELLOW}[4/5] Personal Info Check (Claude Code)${NC}"
+
+# Run the Claude-powered check script
+if [[ -x "scripts/check-personal-info.sh" ]]; then
+  if ! scripts/check-personal-info.sh; then
+    echo "  ${RED}✗${NC} Personal info detected by Claude Code"
+    ERRORS=$((ERRORS + 1))
+  fi
+else
+  # Fallback to simple regex if script not available
+  PERSONAL_PATTERNS="etans-|etanheyman|etan@|heyman@"
+  LEAKED=""
+  for file in *.zsh *.md *.sh *.json scripts/*.sh tests/*.sh skills/*.md configs/*.json; do
+    [[ -f "$file" ]] || continue
+    [[ "$file" == "ralph-config.local"* ]] && continue
+    if grep -qE "$PERSONAL_PATTERNS" "$file" 2>/dev/null; then
+      LEAKED="$LEAKED $file"
+    fi
+  done
+  if [[ -n "$LEAKED" ]]; then
+    echo "  ${RED}✗${NC} Personal info found in:$LEAKED"
+    ERRORS=$((ERRORS + 1))
+  else
+    echo "  ${GREEN}✓${NC} No personal info (regex fallback)"
+  fi
+fi
+echo ""
+
+# ═══════════════════════════════════════════════════════════════
+# 5. DOCUMENTATION CHECK
+# ═══════════════════════════════════════════════════════════════
+echo "${YELLOW}[5/5] Documentation Check${NC}"
 
 # Check README exists and has content
 if [[ -f "README.md" && -s "README.md" ]]; then

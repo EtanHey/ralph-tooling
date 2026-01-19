@@ -1,0 +1,103 @@
+#!/usr/bin/env zsh
+#
+# check-personal-info.sh - Uses Claude Code to detect personal info before pushing
+#
+# Usage: ./scripts/check-personal-info.sh
+# Returns: 0 if clean, 1 if personal info found
+#
+
+set -e
+
+SCRIPT_DIR="${0:A:h}"
+REPO_DIR="${SCRIPT_DIR:h}"
+
+cd "$REPO_DIR"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+echo ""
+echo "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo "${CYAN}  🔍 Personal Info Check (Claude Haiku)${NC}"
+echo "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+# Build content from files to check
+CONTENT=""
+FILE_COUNT=0
+
+for pattern in "*.zsh" "*.md" "*.sh" "scripts/*.sh" "tests/*.sh" "skills/*.md"; do
+  for file in ${~pattern}(N); do
+    [[ -f "$file" ]] || continue
+    [[ "$file" == "ralph-config.local" ]] && continue
+    [[ "$file" == *".example" ]] && continue
+
+    # Skip large files and binary files
+    [[ $(wc -c < "$file") -gt 50000 ]] && continue
+
+    CONTENT="${CONTENT}
+=== FILE: $file ===
+$(cat "$file")
+"
+    FILE_COUNT=$((FILE_COUNT + 1))
+  done
+done
+
+if [[ $FILE_COUNT -eq 0 ]]; then
+  echo "${GREEN}✓ No files to check${NC}"
+  exit 0
+fi
+
+echo "Checking $FILE_COUNT files..."
+echo ""
+
+# Run Claude Haiku with the file contents directly
+RESULT=$(echo "$CONTENT" | claude --print --model haiku -p "You are checking code files for personal information before public release.
+
+I will provide file contents. Check for ANY personal/private information:
+- Personal names, usernames (real names or nicknames that identify a person)
+- Email addresses (any @domain patterns that look real, not placeholders)
+- Personal notification topics (like 'username-projectname' patterns)
+- Hardcoded paths with usernames (/Users/realname/, /home/person/)
+- Personal project references that identify the owner
+- API keys, tokens, secrets (even if they look fake)
+
+IGNORE:
+- Placeholders like 'YOUR_USERNAME', '{project}', '{app}'
+- Generic defaults like 'ralph-notifications'
+- Example patterns meant for documentation
+
+OUTPUT FORMAT - be concise:
+If personal info found:
+FOUND: [filename]: [brief description]
+RESULT: FAIL
+
+If clean:
+RESULT: PASS
+
+Here are the files:" 2>&1)
+
+echo "$RESULT"
+echo ""
+
+# Check result
+if echo "$RESULT" | grep -q "RESULT: PASS"; then
+  echo "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo "${GREEN}  ✓ No personal info detected${NC}"
+  echo "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  exit 0
+elif echo "$RESULT" | grep -q "RESULT: FAIL"; then
+  echo "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo "${RED}  ✗ Personal info found - fix before pushing${NC}"
+  echo "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  exit 1
+else
+  echo "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo "${YELLOW}  ⚠ Could not parse result - assuming clean${NC}"
+  echo "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  exit 0
+fi

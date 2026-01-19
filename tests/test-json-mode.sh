@@ -10,8 +10,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 
-# Test directory (use songscript as default test case)
-TEST_DIR="${1:-$HOME/Desktop/Gits/songscript/prd-json}"
+# Test directory (default: prd-json in current directory)
+TEST_DIR="${1:-./prd-json}"
 PASS=0
 FAIL=0
 

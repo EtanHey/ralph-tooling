@@ -1,6 +1,9 @@
 # Local documentation (per-project learnings, not shared)
 docs.local/
 
+# Personal configuration (not shared)
+ralph-config.local
+
 # Editor files
 .DS_Store
 *.swp

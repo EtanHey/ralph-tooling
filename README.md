@@ -56,15 +56,20 @@ The PRD file IS the memory. Checkboxes ARE the state.
 ## Quick Start
 
 ```bash
-# 1. Install
-git clone https://github.com/EtanHey/ralph-tooling.git ~/.config/ralph
+# 1. Clone the repo
+git clone https://github.com/YOUR_USERNAME/ralph-tooling.git ~/.config/ralph
+
+# 2. Interactive setup (recommended)
+cd ~/.config/ralph
+claude  # Opens Claude Code
+# Then say: "Help me set up Ralph using SETUP.md"
+
+# Or manual setup:
 echo '[[ -f ~/.config/ralph/ralph.zsh ]] && source ~/.config/ralph/ralph.zsh' >> ~/.zshrc
 source ~/.zshrc
-
-# 2. Set up skills (required for /prd command)
 mkdir -p ~/.claude/commands
-cp ~/.config/ralph/skills/prd.md ~/.claude/commands/prd.md
-cp ~/.config/ralph/skills/critique-waves.md ~/.claude/commands/critique-waves.md
+ln -sf ~/.config/ralph/skills/prd.md ~/.claude/commands/prd.md
+ln -sf ~/.config/ralph/skills/critique-waves.md ~/.claude/commands/critique-waves.md
 
 # 3. In any project, generate a PRD
 claude
@@ -73,6 +78,8 @@ claude
 # 4. Run Ralph to execute
 ralph 20  # 20 iterations
 ```
+
+> **Tip:** For personalized configuration (notifications, app names), see `SETUP.md` or copy `ralph-config.local.example` to `ralph-config.local` and customize.
 
 ### Prerequisites
 - **zsh** shell (bash may work with modifications)
@@ -407,9 +414,9 @@ Features:
 - Uses app-specific PRD path
 - Returns to original branch when done
 
-Configure valid app names in `ralph.zsh`:
+Configure valid app names in `ralph-config.local`:
 ```bash
-local valid_apps=("frontend" "backend" "mobile")
+export RALPH_VALID_APPS="frontend backend mobile expo"
 ```
 
 ---
@@ -418,9 +425,10 @@ local valid_apps=("frontend" "backend" "mobile")
 
 Enable with `-QN` flag. Uses [ntfy.sh](https://ntfy.sh) for push notifications.
 
-Configure your topic in `ralph.zsh`:
+Configure in `ralph-config.local`:
 ```bash
-local ntfy_topic="your-topic-name"
+export RALPH_NTFY_TOPIC="your-topic-name"
+export RALPH_NTFY_TOPIC_PATTERN="{project}-{app}"  # For app mode
 ```
 
 Notifications sent:
@@ -451,24 +459,39 @@ Safety hooks prevent common bugs:
 
 ## Configuration
 
+### Personal Config File
+
+Copy `ralph-config.local.example` to `ralph-config.local` and customize:
+
+```bash
+cp ~/.config/ralph/ralph-config.local.example ~/.config/ralph/ralph-config.local
+```
+
 ### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RALPH_MODEL` | Default model | `opus` |
-| `RALPH_MAX_ITERATIONS` | Default limit | `10` |
-| `RALPH_SLEEP` | Seconds between iterations | `2` |
+| `RALPH_NTFY_TOPIC` | Notification topic | `ralph-notifications` |
+| `RALPH_NTFY_TOPIC_PATTERN` | App-mode topic pattern | `{project}-{app}` |
+| `RALPH_DEFAULT_MODEL` | Default model | `opus` |
+| `RALPH_MAX_ITERATIONS` | Default iteration limit | `10` |
+| `RALPH_SLEEP_SECONDS` | Seconds between iterations | `2` |
+| `RALPH_VALID_APPS` | Valid app names (space-separated) | `frontend backend mobile expo public admin` |
 
 ### Files
 
 ```
 ~/.config/ralph/
-├── ralph.zsh           # Main script (source this)
+├── ralph.zsh                   # Main script (source this)
+├── ralph-config.local          # Your personal config (gitignored)
+├── ralph-config.local.example  # Config template
 ├── skills/
-│   ├── prd.md          # /prd command
+│   ├── prd.md                  # /prd command
 │   └── critique-waves.md
-├── docs.local/         # Local docs (gitignored)
-└── .githooks/          # Pre-commit hooks
+├── configs/                    # Rule configs (RTL, modals, etc.)
+├── scripts/                    # Helper scripts
+├── tests/                      # Test scripts
+└── .githooks/                  # Pre-commit hooks
 ```
 
 ---
