@@ -359,7 +359,15 @@ function ralph() {
     local completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
     local blocked=$(jq -r '.stats.blocked // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
     local total=$(jq -r '.stats.total // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
-    echo "📋 PRD: $pending stories remaining ($completed done, $blocked blocked) of $total"
+    # Count total criteria across all pending stories
+    local total_criteria=0
+    for story_file in "$PRD_JSON_DIR/stories"/*.json; do
+      if [[ -f "$story_file" ]]; then
+        local unchecked=$(jq '[.acceptanceCriteria[] | select(.checked == false)] | length' "$story_file" 2>/dev/null || echo 0)
+        total_criteria=$((total_criteria + unchecked))
+      fi
+    done
+    echo "📋 PRD: $pending stories ($total_criteria criteria) remaining | $completed done | $blocked blocked"
   else
     local task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
     echo "📋 PRD: $task_count tasks remaining"
