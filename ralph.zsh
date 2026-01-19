@@ -353,14 +353,17 @@ function ralph() {
     echo "📱 App: $app_mode (branch: $target_branch)"
   fi
   echo "📂 Working in: $(pwd)"
-  # Count tasks based on mode
-  local task_count
+  # Count and display based on mode
   if [[ "$use_json_mode" == "true" ]]; then
-    task_count=$(_ralph_json_remaining_count "$PRD_JSON_DIR")
+    local pending=$(jq -r '.stats.pending // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
+    local completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
+    local blocked=$(jq -r '.stats.blocked // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
+    local total=$(jq -r '.stats.total // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
+    echo "📋 PRD: $pending stories remaining ($completed done, $blocked blocked) of $total"
   else
-    task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
+    local task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
+    echo "📋 PRD: $task_count tasks remaining"
   fi
-  echo "📋 PRD: $task_count tasks remaining"
   if $use_sonnet; then
     echo "🧠 Model: Sonnet (faster)"
   else
