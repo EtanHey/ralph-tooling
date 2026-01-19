@@ -1,0 +1,54 @@
+{
+  "$schema": "https://ralph.dev/schemas/iteration-rules.schema.json",
+  "version": "1.0",
+  "rules": {
+    "oneStoryPerIteration": {
+      "description": "Complete exactly ONE user story, then STOP",
+      "critical": true
+    },
+    "typecheckMandatory": {
+      "description": "Run typecheck BEFORE marking complete",
+      "critical": true
+    },
+    "verifyVisually": {
+      "description": "Check in browser before marking complete",
+      "critical": true
+    },
+    "noBatching": {
+      "description": "Each story is a SEPARATE iteration",
+      "critical": true
+    },
+    "verificationMandatory": {
+      "description": "Must execute ALL V-* verification stories",
+      "critical": true
+    },
+    "updateCheckboxes": {
+      "description": "Update story JSON after completing criteria",
+      "critical": true,
+      "jsonMode": {
+        "action": "Set acceptanceCriteria[n].checked = true",
+        "final": "Set passes = true when ALL criteria checked"
+      }
+    },
+    "commitStateChanges": {
+      "description": "Commit after marking checkboxes",
+      "why": [
+        "Git history is the audit trail",
+        "Next Ralph instance needs updated state",
+        "Without commits, infinite loops occur"
+      ]
+    }
+  },
+  "styling": {
+    "noInlineColors": {
+      "description": "Use Tailwind preset tokens, never arbitrary hex",
+      "bad": "bg-[#E9EFFD]",
+      "good": "bg-primary-50"
+    },
+    "noArbitraryPixels": {
+      "description": "Use Tailwind scale or @theme CSS variables",
+      "bad": "gap-[17px]",
+      "good": "gap-4"
+    }
+  }
+}
