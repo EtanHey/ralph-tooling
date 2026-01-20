@@ -691,7 +691,8 @@ At the end of EVERY iteration, provide an expressive summary:
 - \"I completed [story ID] which was about [what it accomplished/changed]\"
 - \"Next I think I should work on \[next story ID\] which is \[what it will do\]. I'm planning to \[specific actions X, Y, Z\]\"
 - Be descriptive and conversational about what you did and what's next, not just checkboxes
-- Do NOT output 'remaining=N' or task counts - the script handles displaying remaining tasks
+
+**NEVER OUTPUT TASK COUNTS** - No 'remaining=N', no 'X stories left', no task counts at all. The Ralph script displays this automatically. Just describe what you did.
 
 ## End Condition
 
