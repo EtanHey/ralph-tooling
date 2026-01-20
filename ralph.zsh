@@ -13,6 +13,7 @@
 #   app  : Optional app name - uses apps/{app}/prd-json/
 #   -QN  : Enable quiet notifications via ntfy app
 #   -S   : Use Sonnet model (default: Opus)
+#   -H   : Use Haiku model (fastest, cheapest)
 #   (no flag) : No notifications, Opus model (default)
 #
 # App Mode:
@@ -185,6 +186,7 @@ function ralph() {
   local SLEEP=$RALPH_SLEEP_SECONDS
   local notify_enabled=false
   local use_sonnet=false
+  local use_haiku=false
   local RALPH_TMP="/tmp/ralph_output_$$.txt"
   local REPO_ROOT=$(pwd)
   local PRD_PATH="$REPO_ROOT/PRD.md"
@@ -209,6 +211,10 @@ function ralph() {
         ;;
       -S|--sonnet)
         use_sonnet=true
+        shift
+        ;;
+      -H|--haiku)
+        use_haiku=true
         shift
         ;;
       *)
@@ -424,7 +430,9 @@ function ralph() {
     local task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
     echo "📋 PRD: $task_count tasks remaining"
   fi
-  if $use_sonnet; then
+  if $use_haiku; then
+    echo "🧠 Model: Haiku (fastest)"
+  elif $use_sonnet; then
     echo "🧠 Model: Sonnet (faster)"
   else
     echo "🧠 Model: Opus (default)"
@@ -452,7 +460,9 @@ function ralph() {
     while [[ "$retry_count" -lt "$max_retries" ]]; do
       # Build claude command as array (safer than string concatenation)
       local -a claude_cmd_arr=(claude --chrome --dangerously-skip-permissions)
-      if $use_sonnet; then
+      if $use_haiku; then
+        claude_cmd_arr+=(--model haiku)
+      elif $use_sonnet; then
         claude_cmd_arr+=(--model sonnet)
       fi
 
@@ -881,6 +891,7 @@ function ralph-help() {
   echo "${GRAY}Flags:${NC}"
   echo "  ${BOLD}-QN${NC}                   Enable ntfy notifications"
   echo "  ${BOLD}-S${NC}                    Use Sonnet model (faster)"
+  echo "  ${BOLD}-H${NC}                    Use Haiku model (fastest)"
   echo ""
   echo "${GREEN}JSON Mode:${NC}"
   echo "  Ralph auto-detects prd-json/ folder for JSON mode."
