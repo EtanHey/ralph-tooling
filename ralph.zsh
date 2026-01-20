@@ -14,6 +14,7 @@
 #   -QN  : Enable quiet notifications via ntfy app
 #   -S   : Use Sonnet model (default: Opus)
 #   -H   : Use Haiku model (fastest, cheapest)
+#   -K   : Use Kiro CLI instead of Claude (MCPs via ~/.kiro/settings/mcp.json)
 #   (no flag) : No notifications, Opus model (default)
 #
 # App Mode:
@@ -187,6 +188,7 @@ function ralph() {
   local notify_enabled=false
   local use_sonnet=false
   local use_haiku=false
+  local use_kiro=false
   local RALPH_TMP="/tmp/ralph_output_$$.txt"
   local REPO_ROOT=$(pwd)
   local PRD_PATH="$REPO_ROOT/PRD.md"
@@ -215,6 +217,10 @@ function ralph() {
         ;;
       -H|--haiku)
         use_haiku=true
+        shift
+        ;;
+      -K|--kiro)
+        use_kiro=true
         shift
         ;;
       *)
@@ -430,7 +436,9 @@ function ralph() {
     local task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
     echo "📋 PRD: $task_count tasks remaining"
   fi
-  if $use_haiku; then
+  if $use_kiro; then
+    echo "🧠 CLI: Kiro"
+  elif $use_haiku; then
     echo "🧠 Model: Haiku (fastest)"
   elif $use_sonnet; then
     echo "🧠 Model: Sonnet (faster)"
@@ -458,12 +466,21 @@ function ralph() {
     local claude_success=false
 
     while [[ "$retry_count" -lt "$max_retries" ]]; do
-      # Build claude command as array (safer than string concatenation)
-      local -a claude_cmd_arr=(claude --chrome --dangerously-skip-permissions)
-      if $use_haiku; then
-        claude_cmd_arr+=(--model haiku)
-      elif $use_sonnet; then
-        claude_cmd_arr+=(--model sonnet)
+      # Build CLI command as array (safer than string concatenation)
+      local -a cli_cmd_arr
+      local prompt_flag="-p"  # Claude uses -p, Kiro uses positional arg
+      if $use_kiro; then
+        # Kiro CLI - MCPs configured via ~/.kiro/settings/mcp.json
+        cli_cmd_arr=(kiro-cli chat --trust-all-tools --no-interactive)
+        prompt_flag=""  # Kiro takes prompt as positional argument
+      else
+        # Claude CLI with chrome/MCP support
+        cli_cmd_arr=(claude --chrome --dangerously-skip-permissions)
+        if $use_haiku; then
+          cli_cmd_arr+=(--model haiku)
+        elif $use_sonnet; then
+          cli_cmd_arr+=(--model sonnet)
+        fi
       fi
 
       # Build the prompt based on JSON vs Markdown mode
@@ -534,8 +551,51 @@ Read docs.local/ralph-meta-learnings.md if it exists - contains critical pattern
 10. Verify commit succeeded before ending iteration"
       fi
 
-      # Run Claude with output capture (tee for checking promises)
-      "${claude_cmd_arr[@]}" -p "${ralph_prompt}
+      # Build browser/MCP rules (only for Claude, not Kiro)
+      local browser_rules=""
+      if ! $use_kiro; then
+        browser_rules="
+## Browser Rules (IMPORTANT)
+
+**🚨 CHECK TABS FIRST - BEFORE ANY BROWSER WORK 🚨**
+
+At the START of any iteration that needs browser verification:
+1. Call \`mcp__claude-in-chrome__tabs_context_mcp\` IMMEDIATELY
+2. **If tabs exist:** Report \"✓ Browser tabs available (desktop: tabId X, mobile: tabId Y)\" and proceed
+3. **If NO tabs / error / extension not connected:**
+   - Report: \"⚠️ Browser tabs not available. Need user to open Chrome with extension.\"
+   - Mark the browser verification step as BLOCKED
+   - Continue with non-browser parts of the story
+   - Do NOT keep retrying - the user will open tabs and run Ralph again
+
+**Expected Setup (user provides this):**
+- Tab 1: Desktop viewport (1440px+)
+- Tab 2: Mobile viewport (375px)
+- Chrome extension: Claude-in-Chrome running
+
+**When tabs ARE available:**
+1. CHOOSE the correct tab (desktop or mobile based on what you're testing)
+2. Navigate to the test URL if needed
+3. Take screenshot with: mcp__claude-in-chrome__computer action='screenshot' tabId=<chosen_tab_id>
+4. Describe what you see in the screenshot
+
+**Click rules:**
+- ALWAYS use action='left_click' - NEVER 'right_click'
+- Use ref='ref_X' from read_page, or coordinate=\[x,y\] from screenshot
+- ALWAYS include tabId parameter
+
+**Do NOT:**
+- Create new tabs (reuse existing ones)
+- Resize window or change viewport - NEVER
+- Open DevTools
+- Right-click anything
+- Keep retrying if tabs aren't available
+"
+      fi
+
+      # Run CLI with output capture (tee for checking promises)
+      # Note: Claude uses -p flag, Kiro uses positional argument (${prompt_flag:+...} expands only if non-empty)
+      "${cli_cmd_arr[@]}" ${prompt_flag:+$prompt_flag} "${ralph_prompt}
 
 ## Dev Server Rules (CRITICAL)
 
@@ -587,41 +647,7 @@ A task is BLOCKED only when you CANNOT fix it yourself:
 - Output the same \"all tasks blocked\" message without the ALL_BLOCKED promise
 - Wait for external resources that won't appear
 
-## Browser Rules (IMPORTANT)
-
-**🚨 CHECK TABS FIRST - BEFORE ANY BROWSER WORK 🚨**
-
-At the START of any iteration that needs browser verification:
-1. Call \`mcp__claude-in-chrome__tabs_context_mcp\` IMMEDIATELY
-2. **If tabs exist:** Report \"✓ Browser tabs available (desktop: tabId X, mobile: tabId Y)\" and proceed
-3. **If NO tabs / error / extension not connected:**
-   - Report: \"⚠️ Browser tabs not available. Need user to open Chrome with extension.\"
-   - Mark the browser verification step as BLOCKED
-   - Continue with non-browser parts of the story
-   - Do NOT keep retrying - the user will open tabs and run Ralph again
-
-**Expected Setup (user provides this):**
-- Tab 1: Desktop viewport (1440px+)
-- Tab 2: Mobile viewport (375px)
-- Chrome extension: Claude-in-Chrome running
-
-**When tabs ARE available:**
-1. CHOOSE the correct tab (desktop or mobile based on what you're testing)
-2. Navigate to the test URL if needed
-3. Take screenshot with: mcp__claude-in-chrome__computer action='screenshot' tabId=<chosen_tab_id>
-4. Describe what you see in the screenshot
-
-**Click rules:**
-- ALWAYS use action='left_click' - NEVER 'right_click'
-- Use ref='ref_X' from read_page, or coordinate=\[x,y\] from screenshot
-- ALWAYS include tabId parameter
-
-**Do NOT:**
-- Create new tabs (reuse existing ones)
-- Resize window or change viewport - NEVER
-- Open DevTools
-- Right-click anything
-- Keep retrying if tabs aren't available
+${browser_rules}
 
 ## Completion Rules (CRITICAL)
 
@@ -892,6 +918,7 @@ function ralph-help() {
   echo "  ${BOLD}-QN${NC}                   Enable ntfy notifications"
   echo "  ${BOLD}-S${NC}                    Use Sonnet model (faster)"
   echo "  ${BOLD}-H${NC}                    Use Haiku model (fastest)"
+  echo "  ${BOLD}-K${NC}                    Use Kiro CLI (MCPs via ~/.kiro/settings/mcp.json)"
   echo ""
   echo "${GREEN}JSON Mode:${NC}"
   echo "  Ralph auto-detects prd-json/ folder for JSON mode."
