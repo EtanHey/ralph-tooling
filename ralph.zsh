@@ -662,7 +662,7 @@ The next Ralph is a FRESH instance with NO MEMORY of your work. The ONLY way the
 → Infinite loop forever
 
 **If typecheck PASSES (JSON mode):**
-1. **UPDATE story JSON**: Set checked=true for completed criteria, passes=true if all done
+1. **UPDATE story JSON**: Set checked=true for completed criteria, passes=true if all done, AND add completedAt with ISO timestamp (e.g. \"completedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\")
 2. **UPDATE index.json**: Remove from pending, update stats, set nextStory
 3. **UPDATE progress.txt**: Add iteration summary
 4. **COMMIT**: git add prd-json/ progress.txt && git commit -m \"feat: [story-id] [description]\"
