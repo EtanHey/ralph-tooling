@@ -17,6 +17,12 @@
 #   -K   : Use Kiro CLI instead of Claude (MCPs via ~/.kiro/settings/mcp.json)
 #   (no flag) : No notifications, Opus model (default)
 #
+# Model Routing:
+#   V-* stories (verification) ALWAYS use Claude Haiku, even with -K flag
+#   This is because V-* stories need browser MCP tools that Kiro doesn't have
+#   US-* and BUG-* stories use the specified model flag
+#   If ONLY V-* stories remain in blocked, switches to Claude Haiku automatically
+#
 # App Mode:
 #   - PRD: apps/{app}/prd-json/
 #   - Branch: feat/{app}-work (creates if needed)
@@ -454,10 +460,70 @@ function ralph() {
   echo ""
 
   for ((i=1; i<=$MAX; i++)); do
+    # Determine current story and model to use
+    local current_story=""
+    local story_model_override=""
+    local effective_model=""
+
+    if [[ "$use_json_mode" == "true" ]]; then
+      current_story=$(_ralph_json_next_story "$PRD_JSON_DIR")
+    fi
+
+    # V-* stories ALWAYS use Claude Haiku (regardless of -K flag)
+    # This is because V-* stories need browser verification MCPs
+    if [[ "$current_story" == V-* ]]; then
+      story_model_override="haiku"
+      effective_model="Haiku (verification)"
+    elif [[ -z "$current_story" && "$use_json_mode" == "true" ]]; then
+      # No pending stories - check if only V-* stories remain in blocked
+      # If so, we should use Claude Haiku to handle them (Kiro can't do browser verification)
+      local index_file="$PRD_JSON_DIR/index.json"
+      local blocked_stories=$(jq -r '.blocked[]? // empty' "$index_file" 2>/dev/null)
+      local has_non_v_blocked=false
+
+      if [[ -n "$blocked_stories" ]]; then
+        while IFS= read -r blocked_id; do
+          if [[ "$blocked_id" != V-* ]]; then
+            has_non_v_blocked=true
+            break
+          fi
+        done <<< "$blocked_stories"
+
+        if [[ "$has_non_v_blocked" == "false" ]]; then
+          # All blocked stories are V-* - switch to Claude Haiku
+          story_model_override="haiku"
+          effective_model="Haiku (V-* blocked only)"
+        fi
+      fi
+
+      # Set effective model if not overridden
+      if [[ -z "$story_model_override" ]]; then
+        if $use_kiro; then
+          effective_model="Kiro"
+        elif $use_haiku; then
+          effective_model="Haiku"
+        elif $use_sonnet; then
+          effective_model="Sonnet"
+        else
+          effective_model="Opus"
+        fi
+      fi
+    elif $use_kiro; then
+      effective_model="Kiro"
+    elif $use_haiku; then
+      effective_model="Haiku"
+    elif $use_sonnet; then
+      effective_model="Sonnet"
+    else
+      effective_model="Opus"
+    fi
+
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
     echo "  🔄 ITERATION $i of $MAX"
     echo "  ⏱️  $(date '+%H:%M:%S')"
+    [[ -n "$current_story" ]] && echo "  📖 Story: $current_story"
+    echo "  🧠 Model: $effective_model"
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
 
@@ -468,9 +534,14 @@ function ralph() {
 
     while [[ "$retry_count" -lt "$max_retries" ]]; do
       # Build CLI command as array (safer than string concatenation)
+      # V-* stories ALWAYS use Claude Haiku for browser verification
       local -a cli_cmd_arr
       local prompt_flag="-p"  # Claude uses -p, Kiro uses positional arg
-      if $use_kiro; then
+
+      if [[ "$story_model_override" == "haiku" ]]; then
+        # Force Claude Haiku for V-* verification stories
+        cli_cmd_arr=(claude --chrome --dangerously-skip-permissions --model haiku)
+      elif $use_kiro; then
         # Kiro CLI - MCPs configured via ~/.kiro/settings/mcp.json
         cli_cmd_arr=(kiro-cli chat --trust-all-tools --no-interactive)
         prompt_flag=""  # Kiro takes prompt as positional argument
@@ -704,6 +775,10 @@ After completing task, check PRD state:
       # Capture exit code of Claude (PIPESTATUS[0] gets first command in pipe)
       local exit_code=${PIPESTATUS[0]}
 
+      # Debug: show exit code
+      echo ""
+      echo "  [DEBUG] Exit code: $exit_code"
+
       # Check for Ctrl+C (exit code 130 = SIGINT)
       if [[ "$exit_code" -eq 130 ]]; then
         echo ""
@@ -727,6 +802,9 @@ After completing task, check PRD state:
       if [[ "$exit_code" -ne 0 ]] || [[ ! -s "$RALPH_TMP" ]]; then
         has_error=true
       fi
+
+      # Debug: show error detection
+      echo "  [DEBUG] has_error: $has_error, retry_count: $retry_count"
 
       if $has_error; then
         retry_count=$((retry_count + 1))
@@ -920,7 +998,11 @@ function ralph-help() {
   echo "  ${BOLD}-QN${NC}                   Enable ntfy notifications"
   echo "  ${BOLD}-S${NC}                    Use Sonnet model (faster)"
   echo "  ${BOLD}-H${NC}                    Use Haiku model (fastest)"
-  echo "  ${BOLD}-K${NC}                    Use Kiro CLI (MCPs via ~/.kiro/settings/mcp.json)"
+  echo "  ${BOLD}-K${NC}                    Use Kiro CLI for US-*/BUG-* stories"
+  echo ""
+  echo "${GREEN}Model Routing:${NC}"
+  echo "  V-* stories → Always Claude Haiku (needs browser MCPs)"
+  echo "  US-*/BUG-* → Uses specified model flag (-K, -S, -H, or Opus)"
   echo ""
   echo "${GREEN}JSON Mode:${NC}"
   echo "  Ralph auto-detects prd-json/ folder for JSON mode."

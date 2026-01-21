@@ -60,6 +60,31 @@ Read `~/.config/ralph/configs/modal-rules.json` - each state = separate story.
 
 ---
 
+## ⚠️ ADDING TO EXISTING PRD (CRITICAL)
+
+**NEVER edit `index.json` directly when adding stories to an existing PRD!**
+
+Use `prd-json/update.json` instead. Ralph auto-merges it on next run.
+
+### To add new stories:
+1. Create story files in `prd-json/stories/` (e.g., `US-034.json`)
+2. Create `prd-json/update.json`:
+```json
+{
+  "storyOrder": ["...existing IDs...", "US-034", "US-035"],
+  "pending": ["...existing pending...", "US-034", "US-035"],
+  "stats": { "total": 29, "pending": 8 }
+}
+```
+3. Ralph merges update.json → index.json automatically, then deletes update.json
+
+### Why update.json?
+- Prevents merge conflicts
+- Clear audit trail
+- Multiple agents can queue changes safely
+
+---
+
 ## JSON Templates
 
 ### index.json
@@ -98,7 +123,34 @@ Read `~/.config/ralph/configs/modal-rules.json` - each state = separate story.
 Create at repository root:
 - `prd-json/index.json`
 - `prd-json/stories/*.json`
+- `prd-json/AGENTS.md` - Instructions for AI agents (see template below)
 - `progress.txt`
+
+### AGENTS.md Template
+```markdown
+# AI Agent Instructions for PRD
+
+## ⚠️ NEVER EDIT index.json DIRECTLY
+
+To add/modify stories, use `update.json`:
+
+1. Create story files in `stories/`
+2. Write changes to `update.json` (not index.json!)
+3. Ralph merges automatically on next run
+
+## Example update.json
+\`\`\`json
+{
+  "storyOrder": ["existing...", "NEW-001"],
+  "pending": ["existing...", "NEW-001"],
+  "stats": { "total": X, "pending": Y }
+}
+\`\`\`
+
+## Story ID Rules
+- Check `archive/` for used IDs before creating new ones
+- Use next available number (e.g., if US-033 exists, use US-034)
+```
 
 **Then say:**
 > ✅ PRD saved to `prd-json/` with X stories + X verification stories.
@@ -110,6 +162,7 @@ Create at repository root:
 
 - [ ] prd-json/ created at repo root
 - [ ] index.json has valid stats, storyOrder, pending
+- [ ] AGENTS.md created with update.json instructions
 - [ ] Each story has its own JSON file
 - [ ] Stories ordered by dependency
 - [ ] All criteria are verifiable
