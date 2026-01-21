@@ -50,19 +50,27 @@ ralph 20                      # Execute 20 iterations
 | Flag | Description |
 |------|-------------|
 | `-QN` | Enable [ntfy](https://ntfy.sh) notifications |
-| `-S` | Use Sonnet (faster, cheaper) |
-| `-H` | Use Haiku (fastest, cheapest) |
-| `-K` | Use [Kiro CLI](https://kiro.dev/) for US-*/BUG-* stories |
 
-### Model Routing
+### Model Flags
 
-| Story Type | Model Used |
-|------------|------------|
-| `V-*` (verification) | Always Claude Haiku (needs browser MCPs) |
-| `US-*` (user stories) | Flag-specified model |
-| `BUG-*` (bug fixes) | Flag-specified model |
+Specify up to two model flags: **first = main stories**, **second = verification stories**.
 
-**Example:** `ralph -K 50` runs Kiro for US-*/BUG-* stories, auto-switches to Claude Haiku for V-* stories.
+| Flag | Model | Browser MCPs |
+|------|-------|--------------|
+| `-O` | Claude Opus (default) | ✅ |
+| `-S` | Claude Sonnet | ✅ |
+| `-H` | Claude Haiku | ✅ |
+| `-K` | [Kiro CLI](https://kiro.dev/) | ❌ |
+| `-G` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | ✅ |
+
+### Examples
+
+```bash
+ralph 50              # Opus main, Haiku verify (default)
+ralph 50 -G -H        # Gemini main, Haiku verify
+ralph 50 -K -G        # Kiro main, Gemini verify
+ralph 50 -G -G        # Gemini for all stories
+```
 
 ---
 
@@ -100,10 +108,43 @@ ralph -K 20    # Run with Kiro instead of Claude
 
 ---
 
+## Alternative: Gemini CLI
+
+[Gemini CLI](https://github.com/google-gemini/gemini-cli) is Google's AI terminal agent. Unlike Kiro, it **has browser MCPs** via chrome-devtools-mcp, so it can handle V-* verification stories.
+
+### Setup
+
+```bash
+npm install -g @google/gemini-cli
+```
+
+Configure MCP servers in `~/.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["chrome-devtools-mcp@latest", "--browserUrl", "http://127.0.0.1:9222"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}
+```
+
+**Note:** Start Brave/Chrome with remote debugging: `brave --remote-debugging-port=9222`
+
+**Pricing:** Free (60 req/min, 1,000 req/day) with personal Google account.
+
+---
+
 ## Requirements
 
 - **zsh** (bash may work)
-- **Claude CLI** or **Kiro CLI**
+- **Claude CLI**, **Kiro CLI**, or **Gemini CLI**
 - **git**
 - Optional: Chrome + Claude-in-Chrome, ntfy, [Superpowers plugin](https://github.com/obra/superpowers)
 

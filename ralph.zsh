@@ -12,16 +12,19 @@
 # Options:
 #   app  : Optional app name - uses apps/{app}/prd-json/
 #   -QN  : Enable quiet notifications via ntfy app
-#   -S   : Use Sonnet model (default: Opus)
-#   -H   : Use Haiku model (fastest, cheapest)
-#   -K   : Use Kiro CLI instead of Claude (MCPs via ~/.kiro/settings/mcp.json)
 #   (no flag) : No notifications, Opus model (default)
 #
+# Model Flags (can specify two: first=primary, second=verification):
+#   -O   : Opus (Claude, default)
+#   -S   : Sonnet (Claude, faster)
+#   -H   : Haiku (Claude, fastest)
+#   -K   : Kiro CLI (no browser MCPs)
+#   -G   : Gemini CLI (has browser MCPs)
+#
 # Model Routing:
-#   V-* stories (verification) ALWAYS use Claude Haiku, even with -K flag
-#   This is because V-* stories need browser MCP tools that Kiro doesn't have
-#   US-* and BUG-* stories use the specified model flag
-#   If ONLY V-* stories remain in blocked, switches to Claude Haiku automatically
+#   - First flag = model for US-*/BUG-* stories
+#   - Second flag = model for V-* verification stories (default: Haiku)
+#   - Examples: -G -H (Gemini main, Haiku verify), -K -G (Kiro main, Gemini verify)
 #
 # App Mode:
 #   - PRD: apps/{app}/prd-json/
@@ -193,9 +196,8 @@ function ralph() {
   local MAX=$RALPH_MAX_ITERATIONS
   local SLEEP=$RALPH_SLEEP_SECONDS
   local notify_enabled=false
-  local use_sonnet=false
-  local use_haiku=false
-  local use_kiro=false
+  local primary_model=""     # First model flag: for US-*/BUG-* stories
+  local verify_model=""      # Second model flag: for V-* stories (defaults to haiku)
   local RALPH_TMP="/tmp/ralph_output_$$.txt"
   local REPO_ROOT=$(pwd)
   local PRD_PATH="$REPO_ROOT/PRD.md"
@@ -218,16 +220,44 @@ function ralph() {
         notify_enabled=true
         shift
         ;;
+      -O|--opus)
+        if [[ -z "$primary_model" ]]; then
+          primary_model="opus"
+        else
+          verify_model="opus"
+        fi
+        shift
+        ;;
       -S|--sonnet)
-        use_sonnet=true
+        if [[ -z "$primary_model" ]]; then
+          primary_model="sonnet"
+        else
+          verify_model="sonnet"
+        fi
         shift
         ;;
       -H|--haiku)
-        use_haiku=true
+        if [[ -z "$primary_model" ]]; then
+          primary_model="haiku"
+        else
+          verify_model="haiku"
+        fi
         shift
         ;;
       -K|--kiro)
-        use_kiro=true
+        if [[ -z "$primary_model" ]]; then
+          primary_model="kiro"
+        else
+          verify_model="kiro"
+        fi
+        shift
+        ;;
+      -G|--gemini)
+        if [[ -z "$primary_model" ]]; then
+          primary_model="gemini"
+        else
+          verify_model="gemini"
+        fi
         shift
         ;;
       *)
@@ -443,15 +473,9 @@ function ralph() {
     local task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
     echo "📋 PRD: $task_count tasks remaining"
   fi
-  if $use_kiro; then
-    echo "🧠 CLI: Kiro"
-  elif $use_haiku; then
-    echo "🧠 Model: Haiku (fastest)"
-  elif $use_sonnet; then
-    echo "🧠 Model: Sonnet (faster)"
-  else
-    echo "🧠 Model: Opus (default)"
-  fi
+  local pm="${primary_model:-opus}"
+  local vm="${verify_model:-haiku}"
+  echo "🧠 Models: $pm (main) / $vm (verify)"
   if $notify_enabled; then
     echo "🔔 Notifications: ON (topic: $ntfy_topic)"
   else
@@ -462,60 +486,17 @@ function ralph() {
   for ((i=1; i<=$MAX; i++)); do
     # Determine current story and model to use
     local current_story=""
-    local story_model_override=""
     local effective_model=""
 
     if [[ "$use_json_mode" == "true" ]]; then
       current_story=$(_ralph_json_next_story "$PRD_JSON_DIR")
     fi
 
-    # V-* stories ALWAYS use Claude Haiku (regardless of -K flag)
-    # This is because V-* stories need browser verification MCPs
+    # Determine effective model based on story type
     if [[ "$current_story" == V-* ]]; then
-      story_model_override="haiku"
-      effective_model="Haiku (verification)"
-    elif [[ -z "$current_story" && "$use_json_mode" == "true" ]]; then
-      # No pending stories - check if only V-* stories remain in blocked
-      # If so, we should use Claude Haiku to handle them (Kiro can't do browser verification)
-      local index_file="$PRD_JSON_DIR/index.json"
-      local blocked_stories=$(jq -r '.blocked[]? // empty' "$index_file" 2>/dev/null)
-      local has_non_v_blocked=false
-
-      if [[ -n "$blocked_stories" ]]; then
-        while IFS= read -r blocked_id; do
-          if [[ "$blocked_id" != V-* ]]; then
-            has_non_v_blocked=true
-            break
-          fi
-        done <<< "$blocked_stories"
-
-        if [[ "$has_non_v_blocked" == "false" ]]; then
-          # All blocked stories are V-* - switch to Claude Haiku
-          story_model_override="haiku"
-          effective_model="Haiku (V-* blocked only)"
-        fi
-      fi
-
-      # Set effective model if not overridden
-      if [[ -z "$story_model_override" ]]; then
-        if $use_kiro; then
-          effective_model="Kiro"
-        elif $use_haiku; then
-          effective_model="Haiku"
-        elif $use_sonnet; then
-          effective_model="Sonnet"
-        else
-          effective_model="Opus"
-        fi
-      fi
-    elif $use_kiro; then
-      effective_model="Kiro"
-    elif $use_haiku; then
-      effective_model="Haiku"
-    elif $use_sonnet; then
-      effective_model="Sonnet"
+      effective_model="${verify_model:-haiku} (verification)"
     else
-      effective_model="Opus"
+      effective_model="${primary_model:-opus}"
     fi
 
     echo ""
@@ -538,22 +519,34 @@ function ralph() {
       local -a cli_cmd_arr
       local prompt_flag="-p"  # Claude uses -p, Kiro uses positional arg
 
-      if [[ "$story_model_override" == "haiku" ]]; then
-        # Force Claude Haiku for V-* verification stories
-        cli_cmd_arr=(claude --chrome --dangerously-skip-permissions --model haiku)
-      elif $use_kiro; then
-        # Kiro CLI - MCPs configured via ~/.kiro/settings/mcp.json
-        cli_cmd_arr=(kiro-cli chat --trust-all-tools --no-interactive)
-        prompt_flag=""  # Kiro takes prompt as positional argument
+      # Determine which model to use based on story type
+      local active_model=""
+      if [[ "$current_story" == V-* ]]; then
+        # V-* verification story: use verify_model (default haiku)
+        active_model="${verify_model:-haiku}"
       else
-        # Claude CLI with chrome/MCP support
-        cli_cmd_arr=(claude --chrome --dangerously-skip-permissions)
-        if $use_haiku; then
-          cli_cmd_arr+=(--model haiku)
-        elif $use_sonnet; then
-          cli_cmd_arr+=(--model sonnet)
-        fi
+        # US-*/BUG-* story: use primary_model (default opus)
+        active_model="${primary_model:-opus}"
       fi
+
+      # Build CLI command based on active model
+      case "$active_model" in
+        kiro)
+          cli_cmd_arr=(kiro-cli chat --trust-all-tools --no-interactive)
+          prompt_flag=""  # Kiro takes prompt as positional argument
+          ;;
+        gemini)
+          cli_cmd_arr=(gemini -y)
+          prompt_flag=""  # Gemini takes prompt as positional argument
+          ;;
+        haiku|sonnet)
+          cli_cmd_arr=(claude --chrome --dangerously-skip-permissions --model "$active_model")
+          ;;
+        *)
+          # Default: Claude Opus
+          cli_cmd_arr=(claude --chrome --dangerously-skip-permissions)
+          ;;
+      esac
 
       # Build the prompt based on JSON vs Markdown mode
       local ralph_prompt=""
@@ -623,9 +616,9 @@ Read docs.local/ralph-meta-learnings.md if it exists - contains critical pattern
 10. Verify commit succeeded before ending iteration"
       fi
 
-      # Build browser/MCP rules (only for Claude, not Kiro)
+      # Build browser/MCP rules (only for models with browser MCPs - Claude/Gemini, not Kiro)
       local browser_rules=""
-      if ! $use_kiro; then
+      if [[ "$active_model" != "kiro" ]]; then
         browser_rules="
 ## Browser Rules (IMPORTANT)
 
@@ -996,13 +989,18 @@ function ralph-help() {
   echo ""
   echo "${GRAY}Flags:${NC}"
   echo "  ${BOLD}-QN${NC}                   Enable ntfy notifications"
-  echo "  ${BOLD}-S${NC}                    Use Sonnet model (faster)"
-  echo "  ${BOLD}-H${NC}                    Use Haiku model (fastest)"
-  echo "  ${BOLD}-K${NC}                    Use Kiro CLI for US-*/BUG-* stories"
   echo ""
-  echo "${GREEN}Model Routing:${NC}"
-  echo "  V-* stories → Always Claude Haiku (needs browser MCPs)"
-  echo "  US-*/BUG-* → Uses specified model flag (-K, -S, -H, or Opus)"
+  echo "${GREEN}Model Flags (first=main, second=verify):${NC}"
+  echo "  ${BOLD}-O${NC}                    Opus (Claude, default)"
+  echo "  ${BOLD}-S${NC}                    Sonnet (Claude, faster)"
+  echo "  ${BOLD}-H${NC}                    Haiku (Claude, fastest)"
+  echo "  ${BOLD}-K${NC}                    Kiro CLI (no browser MCPs)"
+  echo "  ${BOLD}-G${NC}                    Gemini CLI (has browser MCPs)"
+  echo ""
+  echo "${GREEN}Examples:${NC}"
+  echo "  ralph 50 -G -H        Gemini for main, Haiku for V-*"
+  echo "  ralph 50 -K -G        Kiro for main, Gemini for V-*"
+  echo "  ralph 50 -G -G        Gemini for all stories"
   echo ""
   echo "${GREEN}JSON Mode:${NC}"
   echo "  Ralph auto-detects prd-json/ folder for JSON mode."
