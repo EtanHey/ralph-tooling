@@ -46,7 +46,7 @@
 # CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════
 # Source local config if it exists (for personal overrides)
-RALPH_CONFIG_DIR="${RALPH_CONFIG_DIR:-$HOME/.config/ralph}"
+RALPH_CONFIG_DIR="${RALPH_CONFIG_DIR:-$HOME/.config/ralphtools}"
 [[ -f "$RALPH_CONFIG_DIR/ralph-config.local" ]] && source "$RALPH_CONFIG_DIR/ralph-config.local"
 
 # Defaults (can be overridden in ralph-config.local or environment)
