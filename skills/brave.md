@@ -1,18 +1,20 @@
-# Skill: Brave Browser Management
+# Skill: Brave Browser Management (Ultra-Minimal v2.0)
 
 You have access to a custom browser management tool.
-**Tool Path:** `node $HOME/.config/ralph/scripts/brave-manager.js` (Absolute Path)
+**Global Command:** `brave-manager <command> [args]`
 
-### Available Commands
+### Core Commands
 - **tabs**: List URLs of all open tabs.
 - **switch <index>**: Focus a specific tab.
-- **audit <url>**: Full page load with console logs and network requests.
-- **screenshot <url>**: Save full-page visual to `screenshot.png`.
-- **click <selector>**: Click element on current page.
-- **type <selector> <text>**: Input text.
-- **html**: Output the full DOM structure.
-- **hover <selector>**: Trigger hover state.
-- **scroll <up|down>**: Move viewport.
+- **navigate <url>**: Go directly to a page.
+- **inspect**: (LOW TOKEN) Get a numbered list of all interactive elements.
+- **click <id>**: Click element by its ID from `inspect` (e.g., `click 5`).
+- **type <id> <text>**: Type into element by its ID (e.g., `type 2 "email@test.com"`).
+- **errors**: (LOW TOKEN) Show only the last 5 network/console errors.
+- **eval "<code>"**: (POWERFUL) Run JS to check `localStorage` or state.
+- **screenshot**: Save visual state to `screenshot.png`.
 
-### Usage Rule
-Use these commands via `run_shell_command` when you need to verify UI, logs, or network in Brave. The tool is globally accessible via the absolute path above.
+### Efficient Workflow
+1. **inspect**: Always run `inspect` first to see the available "Menu" of elements.
+2. **Act by ID**: Use the numeric ID for `click` or `type`. This is much safer than CSS selectors.
+3. **Verify**: Use `errors` to check if things broke, or `eval` to check `localStorage`.
