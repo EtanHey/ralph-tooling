@@ -42,6 +42,50 @@
 # Output streams in REAL-TIME so you can watch Claude work.
 # ═══════════════════════════════════════════════════════════════════
 
+RALPH_VERSION="1.3.0"
+
+# ═══════════════════════════════════════════════════════════════════
+# WHAT'S NEW (shown once per version upgrade)
+# ═══════════════════════════════════════════════════════════════════
+_ralph_show_whatsnew() {
+  local last_version_file="$RALPH_CONFIG_DIR/.ralph_last_version"
+  local last_version=""
+
+  [[ -f "$last_version_file" ]] && last_version=$(cat "$last_version_file" 2>/dev/null)
+
+  # Skip if same version
+  [[ "$last_version" == "$RALPH_VERSION" ]] && return 0
+
+  # Show what's new
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  🆕 Ralph v${RALPH_VERSION}                                          │"
+  echo "├─────────────────────────────────────────────────────────────┤"
+
+  case "$RALPH_VERSION" in
+    "1.3.0")
+      echo "│  • Per-iteration cost tracking (actual tokens from JSONL)   │"
+      echo "│  • Enhanced ntfy notifications with titles & priorities     │"
+      echo "│  • Session IDs passed to Claude for precise tracking        │"
+      echo "│  • ralph-costs shows ✓ actual vs ~ estimated data           │"
+      ;;
+    "1.2.0")
+      echo "│  • Smart model routing (US→Sonnet, V→Haiku, etc.)           │"
+      echo "│  • Config-based model assignment via config.json            │"
+      echo "│  • Cost tracking infrastructure                             │"
+      ;;
+    *)
+      echo "│  • Updated to v${RALPH_VERSION}                                      │"
+      ;;
+  esac
+
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+
+  # Save current version
+  echo "$RALPH_VERSION" > "$last_version_file"
+}
+
 # ═══════════════════════════════════════════════════════════════════
 # CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════
@@ -57,7 +101,382 @@ RALPH_DEFAULT_MODEL="${RALPH_DEFAULT_MODEL:-opus}"
 RALPH_MAX_ITERATIONS="${RALPH_MAX_ITERATIONS:-10}"
 RALPH_SLEEP_SECONDS="${RALPH_SLEEP_SECONDS:-2}"
 RALPH_VALID_APPS="${RALPH_VALID_APPS:-frontend backend mobile expo public admin}"
+RALPH_CONFIG_FILE="${RALPH_CONFIG_DIR}/config.json"
 # ═══════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════
+# SMART MODEL ROUTING
+# ═══════════════════════════════════════════════════════════════════
+
+# Load config from config.json
+_ralph_load_config() {
+  if [[ -f "$RALPH_CONFIG_FILE" ]]; then
+    # Export config values as environment variables for easy access
+    RALPH_MODEL_STRATEGY=$(jq -r '.modelStrategy // "single"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_DEFAULT_MODEL_CFG=$(jq -r '.defaultModel // "opus"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_UNKNOWN_TASK_MODEL=$(jq -r '.unknownTaskType // "sonnet"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+
+    # Load model mappings for smart routing
+    RALPH_MODEL_US=$(jq -r '.models.US // "sonnet"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_MODEL_V=$(jq -r '.models.V // "haiku"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_MODEL_TEST=$(jq -r '.models.TEST // "haiku"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_MODEL_BUG=$(jq -r '.models.BUG // "sonnet"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_MODEL_AUDIT=$(jq -r '.models.AUDIT // "opus"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+
+    # Load notification settings
+    local notify_enabled=$(jq -r '.notifications.enabled // false' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    if [[ "$notify_enabled" == "true" ]]; then
+      RALPH_NTFY_TOPIC=$(jq -r '.notifications.ntfyTopic // "ralph-notifications"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    fi
+
+    # Load defaults
+    local max_iter=$(jq -r '.defaults.maxIterations // empty' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    local sleep_sec=$(jq -r '.defaults.sleepSeconds // empty' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    [[ -n "$max_iter" && "$max_iter" != "null" ]] && RALPH_MAX_ITERATIONS="$max_iter"
+    [[ -n "$sleep_sec" && "$sleep_sec" != "null" ]] && RALPH_SLEEP_SECONDS="$sleep_sec"
+
+    return 0
+  fi
+  return 1
+}
+
+# Get model for a story based on smart routing
+# Usage: _ralph_get_model_for_story "US-001"
+# Returns: model name (haiku, sonnet, opus, gemini, kiro)
+_ralph_get_model_for_story() {
+  local story_id="$1"
+  local cli_primary="$2"   # CLI override for primary model
+  local cli_verify="$3"    # CLI override for verify model
+
+  # Extract prefix (everything before the dash and number)
+  local prefix="${story_id%%-*}"
+
+  # CLI flags always win if specified
+  if [[ -n "$cli_primary" || -n "$cli_verify" ]]; then
+    case "$prefix" in
+      V)
+        echo "${cli_verify:-${cli_primary:-haiku}}"
+        ;;
+      *)
+        echo "${cli_primary:-opus}"
+        ;;
+    esac
+    return
+  fi
+
+  # No CLI override - use config-based routing
+  if [[ "$RALPH_MODEL_STRATEGY" == "smart" ]]; then
+    case "$prefix" in
+      US)
+        echo "${RALPH_MODEL_US:-sonnet}"
+        ;;
+      V)
+        echo "${RALPH_MODEL_V:-haiku}"
+        ;;
+      TEST)
+        echo "${RALPH_MODEL_TEST:-haiku}"
+        ;;
+      BUG)
+        echo "${RALPH_MODEL_BUG:-sonnet}"
+        ;;
+      AUDIT)
+        echo "${RALPH_MODEL_AUDIT:-opus}"
+        ;;
+      *)
+        # Unknown prefix - use fallback
+        echo "${RALPH_UNKNOWN_TASK_MODEL:-sonnet}"
+        ;;
+    esac
+  else
+    # Single model strategy - use default for everything
+    echo "${RALPH_DEFAULT_MODEL_CFG:-opus}"
+  fi
+}
+
+# Show current routing config
+_ralph_show_routing() {
+  local strategy="${RALPH_MODEL_STRATEGY:-single}"
+
+  if [[ "$strategy" == "smart" ]]; then
+    echo "🧠 Smart Model Routing:"
+    echo "   US  → ${RALPH_MODEL_US:-sonnet}"
+    echo "   V   → ${RALPH_MODEL_V:-haiku}"
+    echo "   TEST→ ${RALPH_MODEL_TEST:-haiku}"
+    echo "   BUG → ${RALPH_MODEL_BUG:-sonnet}"
+    echo "   AUDIT→${RALPH_MODEL_AUDIT:-opus}"
+    echo "   ???→ ${RALPH_UNKNOWN_TASK_MODEL:-sonnet}"
+  else
+    echo "🧠 Single Model: ${RALPH_DEFAULT_MODEL_CFG:-opus}"
+  fi
+}
+
+# Load config on source
+_ralph_load_config
+
+# ═══════════════════════════════════════════════════════════════════
+# COST TRACKING
+# ═══════════════════════════════════════════════════════════════════
+
+RALPH_COSTS_FILE="${RALPH_CONFIG_DIR}/costs.json"
+
+# Initialize costs.json if it doesn't exist
+_ralph_init_costs() {
+  if [[ ! -f "$RALPH_COSTS_FILE" ]]; then
+    cat > "$RALPH_COSTS_FILE" << 'EOF'
+{
+  "runs": [],
+  "totals": {
+    "stories": 0,
+    "estimatedCost": 0,
+    "byModel": {}
+  },
+  "avgTokensObserved": {
+    "US": { "input": 0, "output": 0, "samples": 0 },
+    "V": { "input": 0, "output": 0, "samples": 0 },
+    "TEST": { "input": 0, "output": 0, "samples": 0 },
+    "BUG": { "input": 0, "output": 0, "samples": 0 },
+    "AUDIT": { "input": 0, "output": 0, "samples": 0 }
+  }
+}
+EOF
+  fi
+}
+
+# Get token usage from Claude's JSONL for a specific session
+# Usage: _ralph_get_session_tokens "session-uuid"
+# Returns: "input_tokens output_tokens cache_create cache_read" (space-separated)
+_ralph_get_session_tokens() {
+  local session_id="$1"
+  local project_path="${2:-$(pwd)}"
+
+  # Convert project path to Claude's project directory format
+  # e.g., /Users/foo/project -> -Users-foo-project
+  local claude_project=$(echo "$project_path" | tr '/' '-')
+  local jsonl_dir="$HOME/.claude/projects/$claude_project"
+
+  if [[ ! -d "$jsonl_dir" ]]; then
+    echo "0 0 0 0"
+    return
+  fi
+
+  # Stream through JSONL files, filter by session, sum tokens
+  cat "$jsonl_dir"/*.jsonl 2>/dev/null | \
+    grep "$session_id" | grep '"usage"' | \
+    jq -r '.message.usage | "\(.input_tokens // 0) \(.output_tokens // 0) \(.cache_creation_input_tokens // 0) \(.cache_read_input_tokens // 0)"' 2>/dev/null | \
+    awk '{input+=$1; output+=$2; cache_create+=$3; cache_read+=$4} END {print input, output, cache_create, cache_read}'
+}
+
+# Log a story completion with cost data
+# Usage: _ralph_log_cost "US-001" "sonnet" "180" "success" [session_id]
+_ralph_log_cost() {
+  local story_id="$1"
+  local model="$2"
+  local duration_seconds="$3"
+  local status="$4"  # success, blocked, error
+  local session_id="$5"  # Optional: Claude session UUID for real token tracking
+
+  _ralph_init_costs
+
+  local prefix="${story_id%%-*}"
+  local timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+  # Get pricing from config (or use defaults) - per million tokens
+  local input_price=3   # Default sonnet input price per M tokens
+  local output_price=15 # Default sonnet output price per M tokens
+  local cache_create_price=3.75  # Cache creation price (Sonnet)
+  local cache_read_price=0.30    # Cache read price (Sonnet)
+
+  case "$model" in
+    haiku)   input_price=1;   output_price=5; cache_create_price=1.25; cache_read_price=0.10 ;;
+    sonnet)  input_price=3;   output_price=15; cache_create_price=3.75; cache_read_price=0.30 ;;
+    opus)    input_price=15;  output_price=75; cache_create_price=18.75; cache_read_price=1.50 ;;
+    gemini*) input_price=0.075; output_price=0.30; cache_create_price=0; cache_read_price=0 ;;
+    kiro)    input_price=0;   output_price=0; cache_create_price=0; cache_read_price=0 ;;  # Credit-based
+  esac
+
+  local input_tokens=0 output_tokens=0 cache_create=0 cache_read=0
+  local token_source="estimated"
+
+  # Try to get real tokens from session if session_id provided
+  if [[ -n "$session_id" ]]; then
+    local token_data=$(_ralph_get_session_tokens "$session_id")
+    input_tokens=$(echo "$token_data" | awk '{print $1}')
+    output_tokens=$(echo "$token_data" | awk '{print $2}')
+    cache_create=$(echo "$token_data" | awk '{print $3}')
+    cache_read=$(echo "$token_data" | awk '{print $4}')
+
+    if [[ "$input_tokens" -gt 0 ]] || [[ "$output_tokens" -gt 0 ]]; then
+      token_source="actual"
+    fi
+  fi
+
+  # Fall back to duration-based estimates if no real data
+  if [[ "$token_source" == "estimated" ]]; then
+    input_tokens=$((duration_seconds * 1000))   # ~1K input tokens/sec
+    output_tokens=$((duration_seconds * 500))   # ~500 output tokens/sec
+  fi
+
+  # Calculate cost (tokens / 1M * price)
+  local cost=$(echo "scale=4; \
+    ($input_tokens * $input_price / 1000000) + \
+    ($output_tokens * $output_price / 1000000) + \
+    ($cache_create * $cache_create_price / 1000000) + \
+    ($cache_read * $cache_read_price / 1000000)" | bc 2>/dev/null || echo "0")
+
+  # Update costs.json
+  local tmp_file=$(mktemp)
+  jq --arg id "$story_id" \
+     --arg model "$model" \
+     --arg prefix "$prefix" \
+     --arg ts "$timestamp" \
+     --arg status "$status" \
+     --arg src "$token_source" \
+     --arg sid "${session_id:-}" \
+     --argjson duration "$duration_seconds" \
+     --argjson input "$input_tokens" \
+     --argjson output "$output_tokens" \
+     --argjson cache_c "$cache_create" \
+     --argjson cache_r "$cache_read" \
+     --argjson cost "${cost:-0}" \
+     '.runs += [{
+       "storyId": $id,
+       "model": $model,
+       "prefix": $prefix,
+       "timestamp": $ts,
+       "status": $status,
+       "durationSeconds": $duration,
+       "tokens": { "input": $input, "output": $output, "cacheCreate": $cache_c, "cacheRead": $cache_r },
+       "tokenSource": $src,
+       "sessionId": (if $sid == "" then null else $sid end),
+       "cost": ($cost | tonumber)
+     }] |
+     .totals.stories += 1 |
+     .totals.cost += ($cost | tonumber) |
+     .totals.byModel[$model] = ((.totals.byModel[$model] // 0) + 1)' \
+     "$RALPH_COSTS_FILE" > "$tmp_file" 2>/dev/null && mv "$tmp_file" "$RALPH_COSTS_FILE"
+
+  # Print iteration cost summary
+  if [[ "$token_source" == "actual" ]]; then
+    echo "  💰 Cost: \$$(printf '%.4f' $cost) (${input_tokens}↓ ${output_tokens}↑ ${cache_read}📖)"
+  fi
+}
+
+# Show cost summary
+ralph-costs() {
+  local CYAN='\033[0;36m'
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[1;33m'
+  local BOLD='\033[1m'
+  local GRAY='\033[0;90m'
+  local NC='\033[0m'
+
+  _ralph_init_costs
+
+  echo ""
+  echo "${CYAN}${BOLD}💰 Ralph Cost Tracking${NC}"
+  echo ""
+
+  if [[ ! -f "$RALPH_COSTS_FILE" ]]; then
+    echo "${YELLOW}No cost data yet. Run some stories first.${NC}"
+    return
+  fi
+
+  local total_stories=$(jq -r '.totals.stories // 0' "$RALPH_COSTS_FILE")
+  local total_cost=$(jq -r '.totals.cost // .totals.estimatedCost // 0' "$RALPH_COSTS_FILE")
+  local actual_count=$(jq -r '[.runs[] | select(.tokenSource == "actual")] | length' "$RALPH_COSTS_FILE" 2>/dev/null || echo "0")
+
+  echo "${BOLD}Total Stories:${NC} $total_stories"
+  echo "${BOLD}Total Cost:${NC} \$$(printf '%.2f' $total_cost)"
+  echo "${GRAY}($actual_count with actual token data, rest estimated)${NC}"
+  echo ""
+
+  echo "${CYAN}By Model:${NC}"
+  jq -r '.totals.byModel | to_entries[] | "   \(.key): \(.value) stories"' "$RALPH_COSTS_FILE" 2>/dev/null
+
+  echo ""
+  echo "${CYAN}Recent Runs (last 10):${NC}"
+  jq -r '.runs | .[-10:] | reverse | .[] |
+    "   \(.timestamp | split("T")[0]) \(.storyId) [\(.model)] $\(.cost // .estimatedCost | . * 100 | floor / 100) \(if .tokenSource == "actual" then "✓" else "~" end)"' \
+    "$RALPH_COSTS_FILE" 2>/dev/null
+
+  echo ""
+  echo "${GRAY}✓ = actual tokens, ~ = estimated${NC}"
+  echo "${GRAY}Data: $RALPH_COSTS_FILE${NC}"
+  echo "${GRAY}Reset: rm $RALPH_COSTS_FILE${NC}"
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# NTFY NOTIFICATIONS
+# ═══════════════════════════════════════════════════════════════════
+
+# Send enhanced ntfy notification with rich context
+# Usage: _ralph_ntfy "topic" "event_type" "message" ["story_id" "model" "iteration" "remaining" "cost"]
+_ralph_ntfy() {
+  local topic="$1"
+  local event="$2"  # complete, blocked, error, iteration, max_iterations
+  local message="$3"
+  local story_id="${4:-}"
+  local model="${5:-}"
+  local iteration="${6:-}"
+  local remaining="${7:-}"
+  local cost="${8:-}"
+
+  [[ -z "$topic" ]] && return 0
+
+  local project_name=$(basename "$(pwd)")
+  local title=""
+  local priority="default"
+  local tags=""
+
+  case "$event" in
+    complete)
+      title="✅ Ralph Complete"
+      tags="white_check_mark,robot"
+      priority="high"
+      ;;
+    blocked)
+      title="⏹️ Ralph Blocked"
+      tags="stop_button,warning"
+      priority="urgent"
+      ;;
+    error)
+      title="❌ Ralph Error"
+      tags="x,fire"
+      priority="urgent"
+      ;;
+    iteration)
+      title="🔄 Ralph Progress"
+      tags="arrows_counterclockwise"
+      priority="low"
+      ;;
+    max_iterations)
+      title="⚠️ Ralph Limit Hit"
+      tags="warning,hourglass"
+      priority="high"
+      ;;
+    *)
+      title="🤖 Ralph"
+      tags="robot"
+      ;;
+  esac
+
+  # Build body with available info
+  local body="📁 $project_name"
+  [[ -n "$iteration" ]] && body+="\n🔢 Iteration $iteration"
+  [[ -n "$story_id" ]] && body+="\n📝 $story_id"
+  [[ -n "$model" ]] && body+="\n🤖 $model"
+  [[ -n "$remaining" ]] && body+="\n📋 $remaining remaining"
+  [[ -n "$cost" ]] && body+="\n💰 \$$cost"
+  [[ -n "$message" ]] && body+="\n\n$message"
+
+  # Send with ntfy headers for rich notification
+  curl -s \
+    -H "Title: $title" \
+    -H "Priority: $priority" \
+    -H "Tags: $tags" \
+    -d "$(echo -e "$body")" \
+    "ntfy.sh/${topic}" > /dev/null 2>&1
+}
 
 # ═══════════════════════════════════════════════════════════════════
 # JSON MODE HELPERS
@@ -506,6 +925,12 @@ function ralph() {
     echo "📱 App: $app_mode (branch: $target_branch)"
   fi
   echo "📂 Working in: $(pwd)"
+
+  # Show routing config (smart vs single)
+  if [[ -z "$primary_model" && -z "$verify_model" ]]; then
+    # No CLI override - show config-based routing
+    _ralph_show_routing
+  fi
   # Count and display based on mode
   if [[ "$use_json_mode" == "true" ]]; then
     local pending=$(jq -r '.stats.pending // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
@@ -544,12 +969,12 @@ function ralph() {
       current_story=$(_ralph_json_next_story "$PRD_JSON_DIR")
     fi
 
-    # Determine effective model based on story type
-    if [[ "$current_story" == V-* ]]; then
-      effective_model="${verify_model:-haiku} (verification)"
-    else
-      effective_model="${primary_model:-opus}"
-    fi
+    # Determine effective model using smart routing
+    local routed_model=$(_ralph_get_model_for_story "$current_story" "$primary_model" "$verify_model")
+    effective_model="$routed_model"
+
+    # Track iteration start time for cost logging
+    local iteration_start_time=$(date +%s)
 
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
@@ -582,10 +1007,14 @@ function ralph() {
       fi
 
       # Build CLI command based on active model
+      # Generate session UUID for Claude cost tracking
+      local iteration_session_id=$(uuidgen | tr '[:upper:]' '[:lower:]')
+
       case "$active_model" in
         kiro)
           cli_cmd_arr=(kiro-cli chat --trust-all-tools --no-interactive)
           prompt_flag=""  # Kiro takes prompt as positional argument
+          iteration_session_id=""  # Kiro doesn't use session IDs
           ;;
         gemini*)
           cli_cmd_arr=(gemini -y)
@@ -595,13 +1024,14 @@ function ralph() {
             cli_cmd_arr+=(--model "$RALPH_GEMINI_MODEL")
           fi
           prompt_flag=""  # Gemini takes prompt as positional argument
+          iteration_session_id=""  # Gemini doesn't use session IDs
           ;;
         haiku|sonnet)
-          cli_cmd_arr=(claude --chrome --dangerously-skip-permissions --model "$active_model")
+          cli_cmd_arr=(claude --chrome --dangerously-skip-permissions --model "$active_model" --session-id "$iteration_session_id")
           ;;
         *)
           # Default: Claude Opus
-          cli_cmd_arr=(claude --chrome --dangerously-skip-permissions)
+          cli_cmd_arr=(claude --chrome --dangerously-skip-permissions --session-id "$iteration_session_id")
           ;;
       esac
 
@@ -931,7 +1361,7 @@ After completing task, check PRD state:
           echo "  ❌ Error persisted after $max_retries retries. Skipping iteration."
           echo "  📝 Full error log: $error_log"
           if $notify_enabled; then
-            curl -s -d "Ralph ❌ Error after $max_retries retries on iteration $i - see $error_log" "ntfy.sh/${ntfy_topic}" > /dev/null
+            _ralph_ntfy "$ntfy_topic" "error" "Failed after $max_retries retries" "$current_story" "$routed_model" "$i"
           fi
           break  # Only break after exhausting retries
         fi
@@ -943,6 +1373,15 @@ After completing task, check PRD state:
 
     echo ""
 
+    # Log cost data for this iteration (with session ID for real token tracking)
+    local iteration_end_time=$(date +%s)
+    local iteration_duration=$((iteration_end_time - iteration_start_time))
+    if [[ -n "$current_story" && "$claude_success" == "true" ]]; then
+      # Small delay to ensure JSONL is flushed before reading
+      sleep 1
+      _ralph_log_cost "$current_story" "$routed_model" "$iteration_duration" "success" "$iteration_session_id"
+    fi
+
     # Check if all tasks complete (search anywhere in output, not just on own line)
     if grep -q "<promise>COMPLETE</promise>" "$RALPH_TMP" 2>/dev/null; then
       echo ""
@@ -952,7 +1391,8 @@ After completing task, check PRD state:
       echo "═══════════════════════════════════════════════════════════════"
       # Send notification if enabled
       if $notify_enabled; then
-        curl -s -d "Ralph ✅ All tasks complete after $i iterations" "ntfy.sh/${ntfy_topic}" > /dev/null
+        local total_cost=$(jq -r '.totals.cost // 0' "$RALPH_COSTS_FILE" 2>/dev/null | xargs printf "%.2f")
+        _ralph_ntfy "$ntfy_topic" "complete" "All tasks done!" "" "" "$i" "0" "$total_cost"
       fi
       rm -f "$RALPH_TMP"
       return 0
@@ -971,7 +1411,7 @@ After completing task, check PRD state:
       echo "═══════════════════════════════════════════════════════════════"
       # Send notification if enabled
       if $notify_enabled; then
-        curl -s -d "Ralph ⏹️ All tasks BLOCKED after $i iterations - needs user action" "ntfy.sh/${ntfy_topic}" > /dev/null
+        _ralph_ntfy "$ntfy_topic" "blocked" "User action needed" "$current_story" "" "$i"
       fi
       rm -f "$RALPH_TMP"
       return 2  # Different exit code for blocked vs complete
@@ -997,7 +1437,7 @@ After completing task, check PRD state:
 
     # Per-iteration notification if enabled
     if $notify_enabled; then
-      curl -s -d "Ralph 🔄 Iteration $i done. $remaining tasks left" "ntfy.sh/${ntfy_topic}" > /dev/null
+      _ralph_ntfy "$ntfy_topic" "iteration" "" "$current_story" "$routed_model" "$i" "$remaining"
     fi
 
     sleep $SLEEP
@@ -1020,9 +1460,9 @@ After completing task, check PRD state:
   echo "  📋 Remaining: $final_remaining"
   echo "═══════════════════════════════════════════════════════════════"
   # Send notification if enabled
-  local remaining="$final_remaining"
   if $notify_enabled; then
-    curl -s -d "Ralph ⚠️ Max iterations ($MAX). $remaining tasks remaining" "ntfy.sh/${ntfy_topic}" > /dev/null
+    local total_cost=$(jq -r '.totals.cost // 0' "$RALPH_COSTS_FILE" 2>/dev/null | xargs printf "%.2f")
+    _ralph_ntfy "$ntfy_topic" "max_iterations" "Limit reached" "" "" "$MAX" "$final_remaining" "$total_cost"
   fi
   rm -f "$RALPH_TMP"
   return 1
@@ -1099,6 +1539,29 @@ function ralph-help() {
   echo "${GREEN}JSON Mode:${NC}"
   echo "  Ralph auto-detects prd-json/ folder for JSON mode."
   echo "  Falls back to PRD.md if prd-json/ not found."
+  echo ""
+  echo "${GREEN}Info:${NC}"
+  echo "  ${BOLD}ralph-costs${NC}            Show cost tracking summary"
+  echo "  ${BOLD}ralph-whatsnew${NC}         Show what's new in current version"
+  echo "  ${BOLD}ralph --version${NC}        Show Ralph version"
+  echo ""
+}
+
+# ralph-whatsnew - Show current version changelog
+function ralph-whatsnew() {
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  🆕 Ralph v${RALPH_VERSION}                                          │"
+  echo "├─────────────────────────────────────────────────────────────┤"
+  echo "│  • Per-iteration cost tracking (actual tokens from JSONL)   │"
+  echo "│  • Enhanced ntfy notifications with titles & priorities     │"
+  echo "│  • Session IDs passed to Claude for precise tracking        │"
+  echo "│  • ralph-costs shows ✓ actual vs ~ estimated data           │"
+  echo "├─────────────────────────────────────────────────────────────┤"
+  echo "│  v1.2.0: Smart model routing, config.json support           │"
+  echo "│  v1.1.0: JSON mode, auto-unblock, brave-manager             │"
+  echo "│  v1.0.0: Initial release                                    │"
+  echo "└─────────────────────────────────────────────────────────────┘"
   echo ""
 }
 
@@ -1940,3 +2403,8 @@ function convex-deploy() {
 function brave-manager() {
   node "$RALPH_CONFIG_DIR/scripts/brave-manager.js" "$@"
 }
+
+# ═══════════════════════════════════════════════════════════════════
+# INITIALIZATION (runs when sourced)
+# ═══════════════════════════════════════════════════════════════════
+_ralph_show_whatsnew
