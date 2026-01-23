@@ -1383,3 +1383,54 @@ Executed the first step of the rename: renaming the GitHub repository from `ralp
 - GitHub automatically creates permanent redirects from old URL to new URL
 - Local git remote must be manually updated with `git remote set-url`
 - The local directory name (ralphtools) doesn't need to change for git to work
+
+## Iteration 38 - US-064: Update Local References (Symlinks and Paths)
+**Status**: COMPLETED
+
+Created migration script and prepared all references for the directory rename from ralphtools to claude-golem.
+
+### What Was Done
+
+**Created scripts/rename-to-claude-golem.sh:**
+- Comprehensive migration script that updates all symlinks after directory rename
+- Step 1: Updates ~/.claude/commands/ symlinks (10 total)
+- Step 2: Updates ~/.config/ralphtools/ symlinks (5 total)  
+- Step 3: Updates ~/.claude/CLAUDE.md references
+- Step 4: Reminds about ~/.zshrc manual updates
+- Step 5: Verifies all symlinks are valid
+
+**Updated ~/.claude/CLAUDE.md:**
+- Changed "ralphtools" → "claude-golem" in the global CLAUDE.md reference
+
+**Verified ralph.zsh:**
+- No hardcoded repo paths (only config dir paths which correctly stay as ~/.config/ralphtools)
+- Config directory naming is a separate concern (US-065)
+
+### User Manual Steps Required
+
+After this Ralph session ends:
+```bash
+# 1. Rename the directory
+mv ~/Desktop/Gits/ralphtools ~/Desktop/Gits/claude-golem
+
+# 2. Run the migration script
+cd ~/Desktop/Gits/claude-golem
+bash scripts/rename-to-claude-golem.sh
+
+# 3. Update ~/.zshrc manually (the script shows which lines)
+
+# 4. Reload Ralph
+source ~/.config/ralphtools/ralph.zsh
+```
+
+### Files Created/Modified
+- `/Users/etanheyman/Desktop/Gits/ralphtools/scripts/rename-to-claude-golem.sh` - NEW
+- `/Users/etanheyman/.claude/CLAUDE.md` - Updated reference
+- `prd-json/stories/US-064.json` - All criteria checked, passes=true
+- `prd-json/index.json` - Updated stats (42 completed, 4 pending)
+
+### Learnings
+- Cannot rename directory while Ralph is running in that directory
+- Migration scripts allow deferring destructive operations until safe
+- ralph.zsh uses RALPH_CONFIG_DIR for config paths, not hardcoded repo paths
+- ~/.config/ralphtools is the CONFIG directory (user data), not the repo
