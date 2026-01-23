@@ -1,11 +1,13 @@
 {
   "id": "V-TEST",
-  "title": "Test verification story for parallel testing",
-  "description": "A simple test verification story to verify parallel agent spawning and aggregation. Agents should verify simple acceptance criteria and pass.",
+  "title": "Verify Ralph story execution flow",
+  "description": "Simple verification that Ralph can read stories, check criteria, and mark them complete. This tests the basic loop mechanics.",
   "acceptanceCriteria": [
-    { "text": "Desktop agent can read this story", "checked": false },
-    { "text": "Mobile agent can read this story", "checked": false },
-    { "text": "Both agents pass their verification", "checked": false }
+    { "text": "Read prd-json/index.json and confirm nextStory points here", "checked": false },
+    { "text": "Read this story file and parse acceptanceCriteria", "checked": false },
+    { "text": "Check each criterion and mark as checked: true", "checked": false },
+    { "text": "Set passes: true when all criteria checked", "checked": false },
+    { "text": "Commit the updated story file", "checked": false }
   ],
   "passes": false,
   "blockedBy": null
