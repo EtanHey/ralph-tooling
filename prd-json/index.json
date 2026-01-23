@@ -3,20 +3,153 @@
   "generatedAt": "2026-01-23T15:00:00Z",
   "stats": {
     "total": 13,
-    "completed": 3,
-    "pending": 8,
+    "completed": 4,
+    "pending": 7,
     "blocked": 2
   },
-  "nextStory": "US-036",
+  "nextStory": "US-037",
   "storyOrder": [
-    "US-032", "US-033", "US-034", "US-035", "US-036",
-    "US-037", "US-038", "US-039", "US-040", "US-041", "US-042",
-    "BUG-003", "V-008"
+    "US-032",
+    "US-033",
+    "US-034",
+    "US-035",
+    "US-036",
+    "US-037",
+    "US-038",
+    "US-039",
+    "US-040",
+    "US-041",
+    "US-042",
+    "BUG-003",
+    "V-008"
   ],
   "pending": [
-    "US-036",
-    "US-037", "US-038", "US-039", "US-040", "US-041", "US-042",
+    "US-037",
+    "US-038",
+    "US-039",
+    "US-040",
+    "US-041",
+    "US-042",
     "BUG-003"
   ],
-  "blocked": ["US-035", "V-008"]
+  "blocked": [
+    "US-035",
+    "V-008"
+  ],
+  "newStories": [
+    {
+      "id": "US-043",
+      "title": "Guided ntfy setup via Gum + Claude notify config",
+      "description": "Ralph should guide users through ntfy setup via Gum interactive prompts, then create /tmp/.claude_notify_config_<project>.json on startup so Claude's notify_stop.sh hook works. Full end-to-end: install ntfy app → subscribe to topic → test notification → enable for Ralph + Claude.",
+      "acceptanceCriteria": [
+        {
+          "text": "ralph-setup shows 'Notifications' section with gum choose",
+          "checked": false
+        },
+        {
+          "text": "If ntfy not configured: guide user through setup steps",
+          "checked": false
+        },
+        {
+          "text": "Step 1: gum confirm 'Install ntfy app?' with link to app store",
+          "checked": false
+        },
+        {
+          "text": "Step 2: gum input for topic name (default: etans-<project>)",
+          "checked": false
+        },
+        {
+          "text": "Step 3: Show 'Subscribe to topic X in ntfy app' instruction",
+          "checked": false
+        },
+        {
+          "text": "Step 4: gum confirm 'Send test notification?' then curl to ntfy",
+          "checked": false
+        },
+        {
+          "text": "Step 5: gum confirm 'Did you receive the test?' - if no, troubleshoot",
+          "checked": false
+        },
+        {
+          "text": "Store topic in config.json under notifications.ntfyTopic",
+          "checked": false
+        },
+        {
+          "text": "On ralph() start, create /tmp/.claude_notify_config_<project>.json",
+          "checked": false
+        },
+        {
+          "text": "Config includes: name, topic, quiet, verbose, cwd",
+          "checked": false
+        },
+        {
+          "text": "On ralph() exit (trap), clean up the config file",
+          "checked": false
+        },
+        {
+          "text": "Add ralph-notify-test command to re-send test notification",
+          "checked": false
+        },
+        {
+          "text": "Document full ntfy flow in docs/notifications.md",
+          "checked": false
+        },
+        {
+          "text": "Typecheck passes (zsh -n ralph.zsh)",
+          "checked": false
+        }
+      ],
+      "passes": false,
+      "blockedBy": null
+    },
+    {
+      "id": "US-044",
+      "title": "Cache 1Password secrets for 24 hours",
+      "description": "Currently 'op run --env-file' is called every iteration, consuming 1Password API quota (1000 calls/day). Instead, cache resolved secrets locally for 24 hours. First Ralph run of the day fetches secrets, subsequent runs use cache. Cache stored securely in ~/.config/ralph/secrets-cache/ with 600 permissions.",
+      "acceptanceCriteria": [
+        {
+          "text": "Create ~/.config/ralph/secrets-cache/<project>.env with 600 permissions",
+          "checked": false
+        },
+        {
+          "text": "Cache file includes timestamp for TTL checking",
+          "checked": false
+        },
+        {
+          "text": "If cache exists and < 24h old, use cached secrets (no API call)",
+          "checked": false
+        },
+        {
+          "text": "If cache missing or expired, fetch via 'op run' and update cache",
+          "checked": false
+        },
+        {
+          "text": "Add --refresh-secrets flag to force re-fetch",
+          "checked": false
+        },
+        {
+          "text": "Cache is per-project (different secrets per repo)",
+          "checked": false
+        },
+        {
+          "text": "On 'op' auth failure, invalidate cache and re-prompt",
+          "checked": false
+        },
+        {
+          "text": "Document cache location and TTL in docs/configuration.md",
+          "checked": false
+        },
+        {
+          "text": "Add ralph-clear-secrets command to manually invalidate cache",
+          "checked": false
+        },
+        {
+          "text": "Typecheck passes (zsh -n ralph.zsh)",
+          "checked": false
+        }
+      ],
+      "passes": false,
+      "blockedBy": null
+    }
+  ]
 }

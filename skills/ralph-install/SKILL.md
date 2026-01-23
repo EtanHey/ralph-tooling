@@ -1,0 +1,71 @@
+---
+name: ralph-install
+description: Install wizard for ralphtools. Checks dependencies, installs missing tools, configures API tokens, and validates installation.
+---
+
+# Ralph Install Wizard
+
+> Guides new users through ralphtools setup. Checks for required CLIs, configures tokens in 1Password, sets up symlinks, and validates everything works.
+
+## Quick Start
+
+For a full installation, run through these workflows in order:
+
+| Step | Workflow | Purpose |
+|------|----------|---------|
+| 1 | [check-deps](workflows/check-deps.md) | Verify required CLIs are installed |
+| 2 | [install-deps](workflows/install-deps.md) | Install missing dependencies via brew |
+| 3 | [setup-tokens](workflows/setup-tokens.md) | Configure API tokens in 1Password |
+| 4 | [setup-symlinks](workflows/setup-symlinks.md) | Create skill symlinks in ~/.claude/commands |
+| 5 | [validate](workflows/validate.md) | Verify installation works end-to-end |
+
+---
+
+## Required Dependencies
+
+| CLI | Purpose | Check Command |
+|-----|---------|---------------|
+| `gh` | GitHub CLI for PRs, issues | `gh --version` |
+| `op` | 1Password CLI for secrets | `op --version` |
+| `gum` | Interactive prompts | `gum --version` |
+| `fswatch` | File watching for live mode | `fswatch --version` |
+| `jq` | JSON processing | `jq --version` |
+| `git` | Version control | `git --version` |
+
+---
+
+## Configuration Paths
+
+| Path | Purpose |
+|------|---------|
+| `~/.config/ralphtools/` | Main config directory |
+| `~/.config/ralphtools/config.json` | User settings |
+| `~/.claude/commands/` | Skill symlinks |
+| `~/.claude/CLAUDE.md` | Global Claude instructions |
+
+---
+
+## Troubleshooting
+
+### Homebrew not installed
+
+Install Homebrew first:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+### 1Password CLI not connecting to app
+
+Ensure:
+1. 1Password 8 desktop app is installed
+2. Settings > Developer > CLI integration is enabled
+3. Biometric unlock is enabled for CLI
+
+### Skills not appearing in Claude
+
+Check symlinks exist:
+```bash
+ls -la ~/.claude/commands/
+```
+
+If missing, run [setup-symlinks](workflows/setup-symlinks.md) workflow.

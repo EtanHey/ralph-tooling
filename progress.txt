@@ -70,3 +70,28 @@ Files created:
 - Function path format: `filename:functionName` (no .ts extension)
 - Always backup before import - import can overwrite data
 - Schema changes can be destructive - export first
+
+## Iteration 4 - US-036: Install Wizard skill
+**Status**: COMPLETED
+
+Created `/ralph-install` skill that guides new users through ralphtools setup:
+- Progressive disclosure architecture: SKILL.md router + 5 workflow files
+- Checks for all required CLIs (gh, op, gum, fswatch, jq, git)
+- Guides brew installation of missing dependencies
+- Helps configure API tokens in 1Password
+- Creates skill symlinks in ~/.claude/commands/
+- Validates entire installation end-to-end
+
+Files created:
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/ralph-install/SKILL.md - Router with workflow table and troubleshooting
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/ralph-install/workflows/check-deps.md - Dependency verification scripts
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/ralph-install/workflows/install-deps.md - Homebrew installation guide
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/ralph-install/workflows/setup-tokens.md - 1Password token configuration
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/ralph-install/workflows/setup-symlinks.md - Skill symlink creation
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/ralph-install/workflows/validate.md - Post-install validation
+- Symlinked to ~/.claude/commands/ralph-install
+
+### Learnings
+- Install wizards benefit from step-by-step workflow separation
+- Include troubleshooting in main SKILL.md for quick reference
+- Validation scripts with pass/fail counts give clear status
