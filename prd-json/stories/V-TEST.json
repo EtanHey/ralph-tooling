@@ -3,12 +3,12 @@
   "title": "Verify Ralph story execution flow",
   "description": "Simple verification that Ralph can read stories, check criteria, and mark them complete. This tests the basic loop mechanics.",
   "acceptanceCriteria": [
-    { "text": "Read prd-json/index.json and confirm nextStory points here", "checked": false },
-    { "text": "Read this story file and parse acceptanceCriteria", "checked": false },
-    { "text": "Check each criterion and mark as checked: true", "checked": false },
-    { "text": "Set passes: true when all criteria checked", "checked": false },
-    { "text": "Commit the updated story file", "checked": false }
+    { "text": "Read prd-json/index.json and confirm nextStory points here", "checked": true },
+    { "text": "Read this story file and parse acceptanceCriteria", "checked": true },
+    { "text": "Check each criterion and mark as checked: true", "checked": true },
+    { "text": "Set passes: true when all criteria checked", "checked": true },
+    { "text": "Commit the updated story file", "checked": true }
   ],
-  "passes": false,
+  "passes": true,
   "blockedBy": null
 }
