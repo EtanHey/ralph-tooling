@@ -159,40 +159,71 @@ Detailed docs for AI agents in [`docs/`](docs/):
 
 ## Changelog
 
-### v2.0.0 (planned - critique-waves approved)
-- Skills-first architecture (replaces MCPs with CLI wrappers)
-- `/skills` discovery command
-- Linear, Convex, Worktrees, Install Wizard skills
-- Session isolation via git worktree
-- Enhanced archive with cleanup
-- Per-project notification channels
-
 ### v1.4.0
 - **Smart Model Routing**: AUDIT→opus, US→sonnet, V→haiku, story-level `"model"` override
 - **Live criteria sync**: fswatch file watching, ANSI cursor updates (no flash)
-- **1Password Environments**: `op run --env-file` integration
+- **1Password Environments**: `op run --env-file` integration, `ralph-secrets` command
 - **Progressive disclosure skills**: GitHub + 1Password skills (SKILL.md → workflows/)
 - **Box drawing alignment**: emoji width calculation, variation selector handling
 - **ANSI color fixes**: full escape sequences, semantic color schemes
 - **ralph-setup wizard**: gum-based first-run experience
 - **Multi-agent audit**: AUDIT-001 pattern with parallel verification
-- Internal Brave Browser Manager fallback (`scripts/brave-manager.js`)
-- Kiro browser verification support via fallback
-- Dynamic Gemini model selection (`-G-gemini-3-flash-preview`)
-- Model-aware completions (`completedBy` field in JSON)
+- **Test framework**: zsh test suite with unit tests for config, cost tracking, notifications
+- **GitHub Actions CI**: automated testing workflow (TEST-005)
+- **Brave Browser Manager**: internal fallback for Kiro/Gemini browser automation
+- Per-iteration cost tracking with model-aware pricing
+- Per-project MCP configuration (`ralph-projects`)
+- Project launcher auto-generation (US-009)
+- Parallel verification infrastructure (US-006, US-007)
+- `ralph --version` flag
+- Compact ntfy notifications with emoji labels (3-line format)
+- Error handling for 'No messages returned' Claude CLI error (BUG-002)
+- .env to 1Password migration (US-012)
+- Progress bars and compact output mode (US-015, US-016)
+- AGENTS.md auto-sync to all AI tools (US-017)
+- Enhanced iteration status with gum interactivity (US-021)
 
 ### v1.3.0
-- JSON-based PRD format (`prd-json/`)
-- Kiro support (`-K` flag)
-- Configuration system (`ralph-config.local`)
-- Claude Haiku pre-push hook
+- **JSON-based PRD format** (`prd-json/` replaces markdown PRD)
+- **Kiro CLI support** (`-K` flag for AWS's agentic coding assistant)
+- **Gemini CLI support** (`-G` flag)
+- **Claude Haiku support** (`-H` flag for faster verification)
+- **Configuration system** (`ralph-config.local` for project settings)
+- **Model routing** for V-* stories (auto-select Haiku for verification)
+- **Per-iteration cost tracking**: costs.json with token estimates
+- **Archive skill** (`/archive` command pointing to `ralph-archive`)
+- `completedAt` timestamp tracking
+- `ralph-live` enhanced status mode
+- `ralph-auto` auto-restart wrapper
+- Incremental criteria checking with robust retry logic
+- Dev server self-start + end iteration on infrastructure blockers
+- Update queue for criteria count display
+- Fail-safe when Claude output is unclear
+- Smarter error detection to avoid false positives
 
 ### v1.2.0
-- Comprehensive docs, skills documentation
-- docs.local convention
+- **Comprehensive documentation** rewrite for open source release
+- **Skills documentation** with /prd, /archive commands
+- **docs.local convention** for project-specific learnings
+- Enhanced helper commands with better UX
+- Real-time output capture with `script` command
+- Proper Ctrl+C handling
+- Line-buffered output with `tee`
 
 ### v1.1.0
-- Browser tab checking, learnings directory
+- **Browser tab checking** for MCP verification stories
+- **Learnings directory** support (`docs.local/learnings/`)
+- **Pre-commit/pre-push hooks** with Claude Haiku validation
+- Improved retry logic and command execution
+- Sonnet model flag (`-S`)
+- Use pipestatus to capture claude exit code
+- Quote all variables in conditionals for safer evaluation
 
 ### v1.0.0
-- Initial release
+- Initial Ralph tooling release
+- Core loop: spawn fresh Claude, read PRD, implement story, commit
+- `ralph [N]` command for N iterations
+- `ralph-init`, `ralph-status`, `ralph-stop` commands
+- ntfy notification support (`-QN` flag)
+- Real-time output with `ralph-watch`
+- CLAUDE.md with commit/push instructions
