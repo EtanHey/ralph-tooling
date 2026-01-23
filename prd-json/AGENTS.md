@@ -31,9 +31,34 @@ To add/modify stories, use `update.json`:
 2. Write changes to `update.json` (not index.json!)
 3. Ralph merges automatically on next run
 
-## Testing
+## Testing (CRITICAL)
 
-After implementing a feature, verify:
-1. `zsh -n ralph.zsh` passes
-2. `source ralph.zsh` works without errors
-3. New commands/functions are callable
+**Test file:** `tests/test-ralph.zsh`
+
+### Rules
+- **New code = new tests.** Every new function needs test coverage.
+- **Updated code = updated tests.** If you change a function, update its tests.
+- **Run tests before completing any story:** `zsh tests/test-ralph.zsh`
+
+### Verification Checklist
+1. `zsh -n ralph.zsh` passes (syntax check)
+2. `zsh -n tests/test-ralph.zsh` passes (test syntax)
+3. `zsh tests/test-ralph.zsh` passes (all tests green)
+4. `source ralph.zsh` works without errors
+5. New commands/functions are callable
+
+### Adding Tests
+```zsh
+test_my_new_function() {
+  test_start "my_new_function works"
+
+  # Arrange
+  local input="test"
+
+  # Act
+  local result=$(_ralph_my_function "$input")
+
+  # Assert
+  assert_equals "$result" "expected" "should return expected"
+}
+```
