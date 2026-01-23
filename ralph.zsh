@@ -1573,8 +1573,17 @@ function ralph() {
       local prompt_flag="-p"  # Claude uses -p, Kiro uses positional arg
 
       # Determine which model to use based on story type
+      # Priority: 1) story JSON "model" field, 2) prefix-based routing
       local active_model=""
-      if [[ "$current_story" == V-* ]]; then
+      local story_model=""
+      if [[ "$use_json_mode" == "true" ]]; then
+        story_model=$(jq -r '.model // empty' "$PRD_JSON_DIR/stories/${current_story}.json" 2>/dev/null)
+      fi
+
+      if [[ -n "$story_model" ]]; then
+        # Story-level override (for sensitive work: 1Password, MCP, env, keys)
+        active_model="$story_model"
+      elif [[ "$current_story" == V-* ]]; then
         # V-* verification story: use verify_model (default haiku)
         active_model="${verify_model:-haiku}"
       else
@@ -3125,6 +3134,117 @@ function ralph-projects() {
 # ralph-secrets migrate <.env>   - Migrate .env file secrets to 1Password
 # ═══════════════════════════════════════════════════════════════════
 
+# SERVICE_PREFIXES: Map env var prefixes to service names
+# Used by _ralph_detect_service() to auto-categorize secrets
+typeset -gA RALPH_SERVICE_PREFIXES
+RALPH_SERVICE_PREFIXES[ANTHROPIC]=anthropic
+RALPH_SERVICE_PREFIXES[OPENAI]=openai
+RALPH_SERVICE_PREFIXES[SUPABASE]=supabase
+RALPH_SERVICE_PREFIXES[VERCEL]=vercel
+RALPH_SERVICE_PREFIXES[AWS]=aws
+RALPH_SERVICE_PREFIXES[STRIPE]=stripe
+RALPH_SERVICE_PREFIXES[DATABASE]=db
+RALPH_SERVICE_PREFIXES[DB]=db
+RALPH_SERVICE_PREFIXES[REDIS]=redis
+RALPH_SERVICE_PREFIXES[GITHUB]=github
+RALPH_SERVICE_PREFIXES[LINEAR]=linear
+RALPH_SERVICE_PREFIXES[FIGMA]=figma
+RALPH_SERVICE_PREFIXES[TWILIO]=twilio
+RALPH_SERVICE_PREFIXES[SENDGRID]=sendgrid
+RALPH_SERVICE_PREFIXES[SLACK]=slack
+RALPH_SERVICE_PREFIXES[FIREBASE]=firebase
+RALPH_SERVICE_PREFIXES[GOOGLE]=google
+RALPH_SERVICE_PREFIXES[AZURE]=azure
+RALPH_SERVICE_PREFIXES[CLOUDFLARE]=cloudflare
+RALPH_SERVICE_PREFIXES[POSTGRES]=db
+RALPH_SERVICE_PREFIXES[MYSQL]=db
+RALPH_SERVICE_PREFIXES[MONGO]=db
+RALPH_SERVICE_PREFIXES[MONGODB]=db
+
+# GLOBAL_VARS: Variables that are truly global (not project-specific)
+# These go to _global/{service}/{key} instead of {project}/{service}/{key}
+typeset -ga RALPH_GLOBAL_VARS
+RALPH_GLOBAL_VARS=(
+  "EDITOR"
+  "VISUAL"
+  "GIT_AUTHOR_NAME"
+  "GIT_AUTHOR_EMAIL"
+  "GIT_COMMITTER_NAME"
+  "GIT_COMMITTER_EMAIL"
+  "PATH"
+  "HOME"
+  "USER"
+  "SHELL"
+  "TERM"
+  "LANG"
+  "LC_ALL"
+)
+
+# _ralph_detect_service: Detect service name from env var key
+# Arguments: $1 = key name (e.g., ANTHROPIC_API_KEY)
+# Returns: service name (e.g., anthropic) or 'misc' if no match
+function _ralph_detect_service() {
+  local key="$1"
+  local prefix=""
+
+  # Try each known prefix (longest match first by iterating)
+  for p in "${(@k)RALPH_SERVICE_PREFIXES}"; do
+    if [[ "$key" == ${p}_* || "$key" == ${p} ]]; then
+      # Check if this is a longer match than current
+      if [[ ${#p} -gt ${#prefix} ]]; then
+        prefix="$p"
+      fi
+    fi
+  done
+
+  if [[ -n "$prefix" ]]; then
+    echo "${RALPH_SERVICE_PREFIXES[$prefix]}"
+  else
+    echo "misc"
+  fi
+}
+
+# _ralph_normalize_key: Strip service prefix from key
+# Arguments: $1 = key name (e.g., ANTHROPIC_API_KEY)
+# Returns: normalized key (e.g., API_KEY) or original if no prefix
+function _ralph_normalize_key() {
+  local key="$1"
+  local prefix=""
+
+  # Find matching prefix
+  for p in "${(@k)RALPH_SERVICE_PREFIXES}"; do
+    if [[ "$key" == ${p}_* ]]; then
+      if [[ ${#p} -gt ${#prefix} ]]; then
+        prefix="$p"
+      fi
+    fi
+  done
+
+  if [[ -n "$prefix" ]]; then
+    # Strip prefix and underscore
+    echo "${key#${prefix}_}"
+  else
+    echo "$key"
+  fi
+}
+
+# _ralph_is_global_var: Check if var is in GLOBAL_VARS list
+# Arguments: $1 = key name
+# Returns: 0 if global, 1 if not
+function _ralph_is_global_var() {
+  local key="$1"
+  for gv in "${RALPH_GLOBAL_VARS[@]}"; do
+    if [[ "$key" == "$gv" ]]; then
+      return 0
+    fi
+    # Also check for prefix match (GIT_* matches GIT_AUTHOR_NAME, etc.)
+    if [[ "$gv" == *"_" && "$key" == ${gv}* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 function ralph-secrets() {
   local RED='\033[0;31m'
   local GREEN='\033[0;32m'
@@ -3311,6 +3431,7 @@ function ralph-secrets() {
     migrate)
       local env_path=""
       local dry_run=false
+      local service_override=""
       shift # remove 'migrate' from args
 
       # Parse arguments
@@ -3320,9 +3441,18 @@ function ralph-secrets() {
             dry_run=true
             shift
             ;;
+          --service)
+            if [[ -n "$2" && "$2" != -* ]]; then
+              service_override="$2"
+              shift 2
+            else
+              echo "${RED}Error: --service requires a service name${NC}"
+              return 1
+            fi
+            ;;
           -*)
             echo "${RED}Error: Unknown option: $1${NC}"
-            echo "Usage: ralph-secrets migrate <.env path> [--dry-run]"
+            echo "Usage: ralph-secrets migrate <.env path> [--dry-run] [--service <name>]"
             return 1
             ;;
           *)
@@ -3349,11 +3479,12 @@ function ralph-secrets() {
       if [[ -z "$env_path" ]]; then
         echo "${RED}Error: .env file path required${NC}"
         echo ""
-        echo "Usage: ralph-secrets migrate <.env path> [--dry-run]"
+        echo "Usage: ralph-secrets migrate <.env path> [--dry-run] [--service <name>]"
         echo ""
         echo "Examples:"
         echo "  ralph-secrets migrate .env"
         echo "  ralph-secrets migrate ~/myproject/.env --dry-run"
+        echo "  ralph-secrets migrate .env --service backend"
         return 1
       fi
 
@@ -3432,10 +3563,42 @@ function ralph-secrets() {
 
           ((secrets_count++))
 
-          # Item name in 1Password: projectname-KEY
-          local item_name="${project_name}-${key}"
+          # Detect service: use override if provided, else auto-detect
+          local service=""
+          if [[ -n "$service_override" ]]; then
+            service="$service_override"
+          else
+            service=$(_ralph_detect_service "$key")
+          fi
+
+          # Normalize key (strip service prefix)
+          local normalized_key=$(_ralph_normalize_key "$key")
+
+          # Determine if this is a global var
+          local is_global=false
+          local item_prefix=""
+          if _ralph_is_global_var "$key"; then
+            is_global=true
+            item_prefix="_global"
+          else
+            item_prefix="$project_name"
+          fi
+
+          # Build item name: {project|_global}/{service}/{normalized_key}
+          local item_name="${item_prefix}/${service}/${normalized_key}"
+          # Build op:// reference path
+          local op_path="op://${vault}/${item_prefix}/${service}/${normalized_key}/password"
 
           echo "├─ ${YELLOW}${key}${NC}"
+          if $dry_run; then
+            echo "│  ├─ Service: ${service}"
+            echo "│  ├─ Normalized: ${normalized_key}"
+            if $is_global; then
+              echo "│  ├─ Scope: global"
+            else
+              echo "│  ├─ Scope: project (${project_name})"
+            fi
+          fi
 
           # Check if item already exists in 1Password
           local item_exists=false
@@ -3447,7 +3610,7 @@ function ralph-secrets() {
             # Prompt before overwriting (unless dry-run)
             if $dry_run; then
               echo "│  └─ Would prompt to overwrite (item exists)"
-              env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+              env_template+="${key}=${op_path}"$'\n'
               ((skipped_count++))
             else
               local overwrite_choice="no"
@@ -3466,7 +3629,7 @@ function ralph-secrets() {
                   echo "│  └─ ${GREEN}✓ Updated${NC}"
                   ((overwritten_count++))
                   ((migrated_count++))
-                  env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+                  env_template+="${key}=${op_path}"$'\n'
                 else
                   echo "│  └─ ${RED}✗ Failed to update${NC}"
                   ((skipped_count++))
@@ -3475,20 +3638,20 @@ function ralph-secrets() {
               else
                 echo "│  └─ ${YELLOW}Skipped (not overwritten)${NC}"
                 ((skipped_count++))
-                env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+                env_template+="${key}=${op_path}"$'\n'
               fi
             fi
           else
             # Create new item
             if $dry_run; then
               echo "│  └─ Would create: ${item_name}"
-              env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+              env_template+="${key}=${op_path}"$'\n'
               ((migrated_count++))
             else
               if op item create --vault "$vault" --category "Password" --title "$item_name" "password=$value" &>/dev/null; then
                 echo "│  └─ ${GREEN}✓ Created${NC}"
                 ((migrated_count++))
-                env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+                env_template+="${key}=${op_path}"$'\n'
               else
                 echo "│  └─ ${RED}✗ Failed to create${NC}"
                 ((skipped_count++))
@@ -3554,6 +3717,15 @@ function ralph-secrets() {
       echo ""
       echo "Options for migrate:"
       echo "  --dry-run          - Preview migration without making changes"
+      echo "  --service <name>   - Override auto-detected service for all vars"
+      echo ""
+      echo "Item naming format:"
+      echo "  Project vars: {project}/{service}/{normalized_key}"
+      echo "  Global vars:  _global/{service}/{key}"
+      echo ""
+      echo "Examples:"
+      echo "  ralph-secrets migrate .env --dry-run"
+      echo "  ralph-secrets migrate .env --service backend"
       return 1
       ;;
   esac
