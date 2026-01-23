@@ -2055,12 +2055,12 @@ After completing task, check PRD state:
       _ralph_auto_unblock "$PRD_JSON_DIR"
     fi
 
-    # Show remaining tasks
+    # Show remaining tasks (suppress any debug output)
     local remaining
     local remaining_stats
     if [[ "$use_json_mode" == "true" ]]; then
-      remaining=$(_ralph_json_remaining_count "$PRD_JSON_DIR")
-      remaining_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR")
+      remaining=$(_ralph_json_remaining_count "$PRD_JSON_DIR" 2>/dev/null)
+      remaining_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR" 2>/dev/null)
     else
       remaining=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo "?")
       remaining_stats="? ?"
@@ -2090,8 +2090,8 @@ After completing task, check PRD state:
   local final_remaining
   local final_remaining_stats
   if [[ "$use_json_mode" == "true" ]]; then
-    final_remaining=$(_ralph_json_remaining_count "$PRD_JSON_DIR")
-    final_remaining_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR")
+    final_remaining=$(_ralph_json_remaining_count "$PRD_JSON_DIR" 2>/dev/null)
+    final_remaining_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR" 2>/dev/null)
   else
     final_remaining=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
     final_remaining_stats="? ?"
@@ -3101,9 +3101,9 @@ function ralph-projects() {
 # ═══════════════════════════════════════════════════════════════════
 # SECRETS MANAGEMENT - 1Password integration for project secrets
 # ═══════════════════════════════════════════════════════════════════
-# ralph-secrets setup   - Configure 1Password vault
-# ralph-secrets status  - Show 1Password configuration and sign-in status
-# ralph-secrets migrate - Migrate environment variables to 1Password (future)
+# ralph-secrets setup            - Configure 1Password vault
+# ralph-secrets status           - Show 1Password configuration and sign-in status
+# ralph-secrets migrate <.env>   - Migrate .env file secrets to 1Password
 # ═══════════════════════════════════════════════════════════════════
 
 function ralph-secrets() {
@@ -3290,24 +3290,251 @@ function ralph-secrets() {
       ;;
 
     migrate)
+      local env_path=""
+      local dry_run=false
+      shift # remove 'migrate' from args
+
+      # Parse arguments
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --dry-run)
+            dry_run=true
+            shift
+            ;;
+          -*)
+            echo "${RED}Error: Unknown option: $1${NC}"
+            echo "Usage: ralph-secrets migrate <.env path> [--dry-run]"
+            return 1
+            ;;
+          *)
+            if [[ -z "$env_path" ]]; then
+              env_path="$1"
+            fi
+            shift
+            ;;
+        esac
+      done
+
       echo ""
       echo "┌─────────────────────────────────────────────────────────────┐"
       echo "│  🔐 Ralph Secrets Migration                                 │"
       echo "└─────────────────────────────────────────────────────────────┘"
       echo ""
-      echo "${YELLOW}Migration feature coming soon...${NC}"
+
+      if $dry_run; then
+        echo "${YELLOW}[DRY RUN MODE - No changes will be made]${NC}"
+        echo ""
+      fi
+
+      # Validate .env path provided
+      if [[ -z "$env_path" ]]; then
+        echo "${RED}Error: .env file path required${NC}"
+        echo ""
+        echo "Usage: ralph-secrets migrate <.env path> [--dry-run]"
+        echo ""
+        echo "Examples:"
+        echo "  ralph-secrets migrate .env"
+        echo "  ralph-secrets migrate ~/myproject/.env --dry-run"
+        return 1
+      fi
+
+      # Validate file exists
+      if [[ ! -f "$env_path" ]]; then
+        echo "${RED}Error: File not found: $env_path${NC}"
+        return 1
+      fi
+
+      # Check op CLI
+      if ! _ralph_check_op_cli; then
+        return 1
+      fi
+
+      # Check signed in
+      if ! _ralph_check_op_signin; then
+        return 1
+      fi
+
+      # Get configured vault from config
+      local vault=""
+      if [[ -f "$config_file" ]]; then
+        vault=$(/usr/bin/jq -r '.secrets.vault // ""' "$config_file" 2>/dev/null)
+      fi
+
+      if [[ -z "$vault" || "$vault" == "null" ]]; then
+        echo "${RED}Error: No vault configured${NC}"
+        echo "Run: ralph-secrets setup"
+        return 1
+      fi
+
+      echo "📁 Source: $env_path"
+      echo "🔐 Target vault: $vault"
       echo ""
-      echo "This will help you migrate existing environment variables"
-      echo "to 1Password for more secure secret management."
+
+      # Parse .env file and count secrets
+      local secrets_count=0
+      local migrated_count=0
+      local skipped_count=0
+      local overwritten_count=0
+      local env_template=""
+
+      # Get the project name from the .env path (parent directory name)
+      local project_dir
+      project_dir=$(/usr/bin/dirname "$env_path")
+      local project_name
+      project_name=$(/usr/bin/basename "$project_dir")
+      if [[ "$project_name" == "." ]]; then
+        project_name=$(/usr/bin/basename "$PWD")
+      fi
+
+      echo "📋 Scanning .env file..."
+      echo ""
+
+      # Read and process each line
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        # Skip empty lines and comments
+        [[ -z "$line" ]] && continue
+        [[ "$line" =~ ^[[:space:]]*# ]] && {
+          # Preserve comments in template
+          env_template+="$line"$'\n'
+          continue
+        }
+
+        # Extract KEY=VALUE
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+          local key="${match[1]}"
+          local value="${match[2]}"
+
+          # Remove surrounding quotes from value if present
+          if [[ "$value" =~ ^\"(.*)\"$ ]]; then
+            value="${match[1]}"
+          elif [[ "$value" =~ ^\'(.*)\'$ ]]; then
+            value="${match[1]}"
+          fi
+
+          ((secrets_count++))
+
+          # Item name in 1Password: projectname-KEY
+          local item_name="${project_name}-${key}"
+
+          echo "├─ ${YELLOW}${key}${NC}"
+
+          # Check if item already exists in 1Password
+          local item_exists=false
+          if op item get "$item_name" --vault "$vault" &>/dev/null 2>&1; then
+            item_exists=true
+          fi
+
+          if $item_exists; then
+            # Prompt before overwriting (unless dry-run)
+            if $dry_run; then
+              echo "│  └─ Would prompt to overwrite (item exists)"
+              env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+              ((skipped_count++))
+            else
+              local overwrite_choice="no"
+              if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+                if gum confirm "Item '$item_name' already exists. Overwrite?"; then
+                  overwrite_choice="yes"
+                fi
+              else
+                echo -n "│  └─ Item exists. Overwrite? (y/n): "
+                read overwrite_choice
+              fi
+
+              if [[ "$overwrite_choice" == "yes" || "$overwrite_choice" == "y" ]]; then
+                # Edit existing item
+                if op item edit "$item_name" --vault "$vault" "password=$value" &>/dev/null; then
+                  echo "│  └─ ${GREEN}✓ Updated${NC}"
+                  ((overwritten_count++))
+                  ((migrated_count++))
+                  env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+                else
+                  echo "│  └─ ${RED}✗ Failed to update${NC}"
+                  ((skipped_count++))
+                  env_template+="${key}=${value}"$'\n'
+                fi
+              else
+                echo "│  └─ ${YELLOW}Skipped (not overwritten)${NC}"
+                ((skipped_count++))
+                env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+              fi
+            fi
+          else
+            # Create new item
+            if $dry_run; then
+              echo "│  └─ Would create: ${item_name}"
+              env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+              ((migrated_count++))
+            else
+              if op item create --vault "$vault" --category "Password" --title "$item_name" "password=$value" &>/dev/null; then
+                echo "│  └─ ${GREEN}✓ Created${NC}"
+                ((migrated_count++))
+                env_template+="${key}=op://${vault}/${item_name}/password"$'\n'
+              else
+                echo "│  └─ ${RED}✗ Failed to create${NC}"
+                ((skipped_count++))
+                env_template+="${key}=${value}"$'\n'
+              fi
+            fi
+          fi
+        fi
+      done < "$env_path"
+
+      echo ""
+      echo "─────────────────────────────────────────────────────────────"
+
+      # Generate .env.template
+      local template_path="${env_path}.template"
+      if $dry_run; then
+        echo ""
+        echo "📄 Would generate: $template_path"
+        echo ""
+        echo "Template preview:"
+        echo "─────────────────────────────────────────────────────────────"
+        echo "$env_template"
+        echo "─────────────────────────────────────────────────────────────"
+      else
+        echo "$env_template" > "$template_path"
+        echo ""
+        echo "${GREEN}📄 Generated: $template_path${NC}"
+      fi
+
+      echo ""
+      echo "┌─────────────────────────────────────────────────────────────┐"
+      echo "│  Summary                                                    │"
+      echo "└─────────────────────────────────────────────────────────────┘"
+      if $dry_run; then
+        echo ""
+        echo "   ${YELLOW}[DRY RUN - No changes made]${NC}"
+      fi
+      echo ""
+      echo "   📊 Total secrets found: $secrets_count"
+      echo "   ${GREEN}✓ Migrated to 1Password: $migrated_count${NC}"
+      if [[ $overwritten_count -gt 0 ]]; then
+        echo "   ${YELLOW}↻ Overwritten: $overwritten_count${NC}"
+      fi
+      if [[ $skipped_count -gt 0 ]]; then
+        echo "   ${YELLOW}⊘ Skipped: $skipped_count${NC}"
+      fi
+      echo ""
+      if ! $dry_run && [[ $migrated_count -gt 0 ]]; then
+        echo "   To use in your project:"
+        echo "   1. Copy ${template_path} to .env"
+        echo "   2. Load secrets with: source <(op inject -i .env)"
+        echo "   3. Or use: op run --env-file .env -- your-command"
+      fi
       ;;
 
     *)
-      echo "Usage: ralph-secrets [setup|status|migrate]"
+      echo "Usage: ralph-secrets [setup|status|migrate <path>]"
       echo ""
       echo "Subcommands:"
-      echo "  setup   - Configure 1Password vault for Ralph secrets"
-      echo "  status  - Show 1Password configuration and sign-in status"
-      echo "  migrate - Migrate environment variables to 1Password (coming soon)"
+      echo "  setup              - Configure 1Password vault for Ralph secrets"
+      echo "  status             - Show 1Password configuration and sign-in status"
+      echo "  migrate <.env>     - Migrate .env file secrets to 1Password"
+      echo ""
+      echo "Options for migrate:"
+      echo "  --dry-run          - Preview migration without making changes"
       return 1
       ;;
   esac

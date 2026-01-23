@@ -365,3 +365,34 @@
 - All 7 acceptance criteria completed
 - Updated stats: completed=22, pending=9, blocked=1
 ---
+
+## Iteration 24 - US-012 Add .env to 1Password migration
+- Model: opus
+- Implemented full `ralph-secrets migrate` command with all required features:
+  1. ✓ ralph-secrets migrate <.env path> reads .env file
+     - Validates path is provided and file exists
+     - Checks op CLI is installed and user is signed in
+     - Uses configured vault from config.json
+  2. ✓ For each KEY=VALUE, create 1Password item in configured vault
+     - Parses .env file line by line, skipping comments and empty lines
+     - Creates items with naming format: projectname-KEY
+     - Uses zsh regex matching (${match[1]} for capture groups)
+  3. ✓ Generate .env.template with op:// references
+     - Template format: KEY=op://vault/projectname-KEY/password
+     - Preserves comments from original .env
+     - Writes to <path>.template
+  4. ✓ Show summary: X secrets migrated to 1Password
+     - Displays total found, migrated, overwritten, and skipped counts
+     - Shows usage instructions for op inject/run
+  5. ✓ Prompt before overwriting existing 1Password items
+     - Checks if item exists with `op item get`
+     - Uses gum confirm (or fallback read prompt) to ask user
+     - Updates existing items with `op item edit` if confirmed
+  6. ✓ Support --dry-run to preview without making changes
+     - Shows "Would create" / "Would prompt to overwrite" messages
+     - Displays template preview without writing file
+  7. ✓ Typecheck passes (zsh -n ralph.zsh)
+- All 29 unit tests still pass
+- Updated help text and header comments
+- Updated stats: completed=23, pending=8, blocked=1
+---
