@@ -1,0 +1,19 @@
+{
+  "id": "V-013",
+  "title": "Verify: Pre-commit tests block bad commits",
+  "description": "Verify the pre-commit hook properly runs tests and blocks commits when tests fail.",
+  "type": "verification",
+  "priority": "high",
+  "storyPoints": 1,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Intentionally break a skill file (bad JSON)", "checked": false},
+    {"text": "Attempt git commit - should fail with error message", "checked": false},
+    {"text": "Fix the skill file", "checked": false},
+    {"text": "Attempt git commit - should succeed", "checked": false},
+    {"text": "Verify tests ran (check output shows test results)", "checked": false},
+    {"text": "Verify --no-verify bypasses hook (for documentation)", "checked": false}
+  ],
+  "dependencies": ["US-071"],
+  "passes": false
+}

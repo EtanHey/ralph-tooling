@@ -1,0 +1,19 @@
+{
+  "id": "BUG-012",
+  "title": "Live criteria bar doesn't update during iteration",
+  "description": "The criteria progress bar and stories progress bar don't update in real-time during Claude execution. The _ralph_get_cursor_row function has no timeout and can fail silently, causing RALPH_CRITERIA_ROW and RALPH_STORIES_ROW to remain at 0. The polling loop then skips because row positions aren't set.",
+  "type": "bug",
+  "priority": "medium",
+  "storyPoints": 2,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "_ralph_get_cursor_row has timeout (-t 1) to prevent hangs", "checked": false},
+    {"text": "Function returns non-zero exit code on failure", "checked": false},
+    {"text": "Debug output added: echo row positions after capture", "checked": false},
+    {"text": "Fallback: if cursor position fails, use line counting from box top", "checked": false},
+    {"text": "Polling loop logs to /tmp/ralph-live-debug.log when RALPH_DEBUG_LIVE=true", "checked": false},
+    {"text": "Test: run with RALPH_DEBUG_LIVE=true and verify log shows row positions", "checked": false}
+  ],
+  "dependencies": [],
+  "technicalNotes": "Key functions: _ralph_get_cursor_row (line 527), _ralph_start_polling_loop (line 670), row position capture (line 3015-3022). The issue is IFS=';' read -sdR -p $'\\E[6n' has no timeout and can fail if terminal doesn't support Device Status Report."
+}

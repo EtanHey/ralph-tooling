@@ -5,7 +5,7 @@
   "type": "feature",
   "priority": "high",
   "storyPoints": 3,
-  "status": "completed",
+  "status": "pending",
   "acceptanceCriteria": [
     {
       "text": "Scan ~/.claude/commands/ for all skill directories",
@@ -41,5 +41,5 @@
     }
   ],
   "dependencies": [],
-  "passes": true
+  "passes": false
 }

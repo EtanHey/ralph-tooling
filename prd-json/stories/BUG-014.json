@@ -1,0 +1,20 @@
+{
+  "id": "BUG-014",
+  "title": "Ralph exits early when Claude falsely signals COMPLETE",
+  "description": "Claude sometimes outputs <promise>COMPLETE</promise> after completing just one story, causing Ralph to exit even with many stories pending. Need robust verification that ignores false COMPLETE signals.",
+  "type": "bug",
+  "priority": "high",
+  "storyPoints": 2,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Find COMPLETE signal detection code in ralph.zsh", "checked": false},
+    {"text": "Add verification: check actual pending count from index.json before trusting COMPLETE", "checked": false},
+    {"text": "If pending > 0 and COMPLETE signaled, log warning and continue", "checked": false},
+    {"text": "Only exit on COMPLETE when pending == 0 in index.json", "checked": false},
+    {"text": "Add test: manually inject false COMPLETE, verify Ralph continues", "checked": false},
+    {"text": "Document the COMPLETE verification logic in code comments", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false,
+  "technicalNotes": "The COMPLETE detection is around line 3521-3555 in ralph.zsh. A fix was attempted but may not be robust. Check grep -n 'promise.*COMPLETE' ralph.zsh"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "US-070",
+  "title": "Convex skill: Complete user deletion pattern",
+  "description": "Add a workflow to the Convex skill that provides the pattern for complete user deletion - deleting user AND all related data across tables (progress, preferences, logs, etc). This pattern will be used by SongScript and other Convex projects.",
+  "type": "feature",
+  "priority": "high",
+  "storyPoints": 3,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Create workflows/user-deletion.md in ~/.claude/commands/convex/", "checked": false},
+    {"text": "Document pattern: find user by email, get userId", "checked": false},
+    {"text": "Document pattern: delete from auth tables (user, session, account)", "checked": false},
+    {"text": "Document pattern: delete from all app tables with userId foreign key", "checked": false},
+    {"text": "Include table discovery query to find all tables with userId field", "checked": false},
+    {"text": "Include example mutation code for deleteUserAndAllData", "checked": false},
+    {"text": "Document index usage (by_user, by_email) for efficient deletion", "checked": false},
+    {"text": "Add CLI command pattern: npx convex run admin:deleteUserAndAllData", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}
