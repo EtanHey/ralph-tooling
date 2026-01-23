@@ -22,3 +22,26 @@ Files created:
 - Skills use YAML frontmatter with `name` and `description` fields
 - Multi-file skills have SKILL.md at root with workflows/ subdirectory
 - Source detection via symlink resolution (readlink -f)
+
+## Iteration 2 - US-033: Linear skill (API wrapper)
+**Status**: COMPLETED
+
+Created `/linear` skill that replaces the need for Linear MCP:
+- Uses curl with Linear's GraphQL API (https://api.linear.app/graphql)
+- API key stored in 1Password, retrieved via `op read`
+- Progressive disclosure architecture: SKILL.md router + 4 workflow files
+
+Files created:
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/linear/SKILL.md - Router with quick actions table
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/linear/workflows/create-issue.md - Create issues with priority, labels, assignee
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/linear/workflows/list-issues.md - Query/filter/search issues
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/linear/workflows/update-issue.md - Update state, assignee, priority, add comments
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/linear/workflows/create-worktree.md - Create git worktree from Linear issue
+- Symlinked to ~/.claude/commands/linear
+
+### Learnings
+- Linear API uses GraphQL at https://api.linear.app/graphql
+- Auth: `Authorization: <API_KEY>` (no Bearer prefix for API keys)
+- Linear auto-generates branch names for issues via `branchName` field
+- Rate limit: 1,500 requests/hour with API key auth
+- GraphQL returns 200 even on errors - always check `errors` array
