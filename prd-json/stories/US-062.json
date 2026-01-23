@@ -7,14 +7,16 @@
   "storyPoints": 3,
   "status": "pending",
   "acceptanceCriteria": [
-    {"text": "Inventory all symlinks in ~/.claude/commands/ pointing to ralphtools", "checked": false},
-    {"text": "List all files with 'ralphtools' in their content (grep -r)", "checked": false},
-    {"text": "Document current git remote URLs", "checked": false},
-    {"text": "List all scripts that source or reference ralphtools path", "checked": false},
-    {"text": "Check ~/.config/ralph/ for any hardcoded paths", "checked": false},
-    {"text": "Document the CLAUDE.md files that reference ralphtools", "checked": false},
-    {"text": "Create docs.local/rename-plan.md with full migration checklist", "checked": false},
-    {"text": "DO NOT make any changes - this is audit only", "checked": false}
+    {"text": "Inventory all symlinks in ~/.claude/commands/ pointing to ralphtools", "checked": true},
+    {"text": "List all files with 'ralphtools' in their content (grep -r)", "checked": true},
+    {"text": "Document current git remote URLs", "checked": true},
+    {"text": "List all scripts that source or reference ralphtools path", "checked": true},
+    {"text": "Check ~/.config/ralph/ for any hardcoded paths", "checked": true},
+    {"text": "Document the CLAUDE.md files that reference ralphtools", "checked": true},
+    {"text": "Create docs.local/rename-plan.md with full migration checklist", "checked": true},
+    {"text": "DO NOT make any changes - this is audit only", "checked": true}
   ],
-  "dependencies": []
+  "dependencies": [],
+  "status": "completed",
+  "passes": true
 }
