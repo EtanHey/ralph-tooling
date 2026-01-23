@@ -105,6 +105,28 @@ RALPH_CONFIG_FILE="${RALPH_CONFIG_DIR}/config.json"
 # ═══════════════════════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════════════════════
+# GUM DEPENDENCY CHECK
+# ═══════════════════════════════════════════════════════════════════
+
+# Check if gum is installed for interactive CLI prompts
+# Returns: 0 if gum available, 1 if not
+_ralph_check_gum() {
+  if command -v gum >/dev/null 2>&1; then
+    return 0
+  else
+    echo "For interactive setup, install gum: brew install gum"
+    return 1
+  fi
+}
+
+# Set RALPH_HAS_GUM on source (0 = has gum, 1 = no gum)
+if command -v gum >/dev/null 2>&1; then
+  RALPH_HAS_GUM=0
+else
+  RALPH_HAS_GUM=1
+fi
+
+# ═══════════════════════════════════════════════════════════════════
 # SMART MODEL ROUTING
 # ═══════════════════════════════════════════════════════════════════
 

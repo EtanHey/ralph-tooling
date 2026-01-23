@@ -79,3 +79,13 @@
 - Verified all 29 tests pass locally
 - CI will now automatically run tests on every PR and push to master
 ---
+
+## Iteration 6 - US-001 Add Gum Dependency Check
+- Model: opus
+- Added _ralph_check_gum() function to check if gum CLI is installed
+- Function outputs "For interactive setup, install gum: brew install gum" when gum is missing
+- Returns 0 if gum available, 1 if not (standard shell convention)
+- Added RALPH_HAS_GUM variable that gets set on script source (0=available, 1=missing)
+- Placed in new GUM DEPENDENCY CHECK section after CONFIGURATION
+- Typecheck passes (zsh -n ralph.zsh)
+---

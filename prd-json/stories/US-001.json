@@ -3,12 +3,14 @@
   "title": "Add gum dependency check",
   "description": "Check if gum is installed, prompt user to install if missing. Gum provides pretty CLI prompts for interactive setup.",
   "acceptanceCriteria": [
-    { "text": "Add _ralph_check_gum() function that checks if gum is installed", "checked": false },
-    { "text": "If gum missing, show: 'For interactive setup, install gum: brew install gum'", "checked": false },
-    { "text": "Function returns 0 if gum available, 1 if not", "checked": false },
-    { "text": "Add RALPH_HAS_GUM variable set on source", "checked": false },
-    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+    { "text": "Add _ralph_check_gum() function that checks if gum is installed", "checked": true },
+    { "text": "If gum missing, show: 'For interactive setup, install gum: brew install gum'", "checked": true },
+    { "text": "Function returns 0 if gum available, 1 if not", "checked": true },
+    { "text": "Add RALPH_HAS_GUM variable set on source", "checked": true },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": true }
   ],
-  "passes": false,
+  "passes": true,
+  "completedAt": "2026-01-23T02:20:00Z",
+  "completedBy": "opus",
   "blockedBy": null
 }
