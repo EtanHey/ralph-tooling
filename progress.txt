@@ -1081,3 +1081,55 @@ Enhanced ralph-setup wizard to configure MCPs per project, select from mcpDefini
 - gum input with --placeholder provides good UX for interactive prompts
 - Validate JSON with `echo "$json" | jq -e '.'` before writing to registry
 
+## Iteration 32 - US-059: Expand brave.md to Progressive Disclosure Structure
+**Status**: COMPLETED
+
+Converted the single-file brave.md skill into a directory-based skill with SKILL.md router and workflows, following the github skill pattern.
+
+### Files Created
+
+**skills/brave/SKILL.md:**
+- YAML frontmatter with name and description
+- Quick Actions table linking to all 4 workflows
+- Core Concept section explaining ID-based interaction
+- Decision tree for routing to appropriate workflow
+- Command Quick Reference table
+- Safety rules section
+
+**skills/brave/workflows/navigation.md:**
+- List tabs, switch tabs, navigate URLs
+- Browser history (back/forward)
+- Common patterns for tab workflows
+
+**skills/brave/workflows/inspection.md:**
+- inspect command (CRITICAL first step)
+- screenshot command
+- errors command
+- Common patterns for debugging
+
+**skills/brave/workflows/interaction.md:**
+- click, type, hover, scroll, press, drag
+- Form filling patterns
+- Keyboard navigation patterns
+
+**skills/brave/workflows/debugging.md:**
+- eval command for JavaScript execution
+- localStorage/sessionStorage checking
+- Cookie verification
+- DOM state inspection
+- Advanced verification patterns
+
+### Changes Made
+- Removed old `skills/brave.md` single file
+- Created symlink: `~/.claude/commands/brave` → `skills/brave/`
+- No scripts/ directory needed since brave-manager is already external CLI
+
+### Tests
+All 14 skill tests pass including brave skill validation.
+
+### Learnings
+- Progressive disclosure structure: SKILL.md router + workflows/ directory
+- No scripts/ needed when wrapping external CLI tools
+- Decision tree in SKILL.md helps route to appropriate workflow
+- Quick reference tables provide at-a-glance command summary
+
