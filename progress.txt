@@ -2,3 +2,23 @@
 
 Started: Fri Jan 23 14:56:32 IST 2026
 
+## Iteration 1 - US-032: Skills Discovery command (/skills)
+**Status**: COMPLETED
+
+Created `/skills` command that:
+- Scans ~/.claude/commands/ for all installed skills
+- Detects both single-file (.md) and multi-file (SKILL.md) formats
+- Extracts descriptions from YAML frontmatter or first blockquote
+- Groups skills by category (Infrastructure, Domain, Custom)
+- Shows skill source (ralphtools, superpowers, ralph-config, custom)
+- Counts workflows for progressive disclosure skills
+- Supports --search keyword filtering
+
+Files created:
+- /Users/etanheyman/Desktop/Gits/ralphtools/skills/skills.md
+- Symlinked to ~/.claude/commands/skills.md
+
+### Learnings
+- Skills use YAML frontmatter with `name` and `description` fields
+- Multi-file skills have SKILL.md at root with workflows/ subdirectory
+- Source detection via symlink resolution (readlink -f)
