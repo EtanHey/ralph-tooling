@@ -130,3 +130,17 @@
 - All criteria checked, story marked passes=true
 - Completed and committed
 ---
+
+## Iteration 10 - US-018 Compact ntfy with emoji labels
+- Model: haiku
+- Refactored _ralph_ntfy() function to use compact 3-line format with emoji labels:
+  - Line 1: repo name (e.g., "ralphtools")
+  - Line 2: 🔄 iteration + story + model (e.g., "🔄5 US-001 sonnet")
+  - Line 3: 📚 stories left + ☐ criteria left + 💵 cost (e.g., "📚10 ☐129 💵$1.50")
+- Updated body building logic to parse "stories criteria" format from _ralph_json_remaining_stats
+- Updated test helper function _ralph_ntfy_testable with same compact format
+- Updated test_ntfy_builds_body_with_project_name to verify all 3 lines with emoji labels
+- Used ☐ (empty checkbox) for remaining criteria count, not ✅
+- All 29 unit tests pass (including updated ntfy tests)
+- Typecheck passes (zsh -n ralph.zsh)
+---

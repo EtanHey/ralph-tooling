@@ -1764,7 +1764,14 @@ After completing task, check PRD state:
           echo "  ❌ Error persisted after $max_retries retries. Skipping iteration."
           echo "  📝 Full error log: $error_log"
           if $notify_enabled; then
-            _ralph_ntfy "$ntfy_topic" "error" "Failed after $max_retries retries" "$current_story" "$routed_model" "$i"
+            local error_stats
+            if [[ "$use_json_mode" == "true" ]]; then
+              error_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR")
+            else
+              error_stats="? ?"
+            fi
+            local error_cost=$(jq -r '.totals.cost // 0' "$RALPH_COSTS_FILE" 2>/dev/null | xargs printf "%.2f")
+            _ralph_ntfy "$ntfy_topic" "error" "Failed after $max_retries retries" "$current_story" "$routed_model" "$i" "$error_stats" "$error_cost"
           fi
           break  # Only break after exhausting retries
         fi
