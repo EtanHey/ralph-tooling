@@ -242,3 +242,26 @@ Upgraded the archive skill from a single-file knowledge skill to a full progress
 - When rebuilding index.json, preserve blocked array but rebuild pending from remaining files
 - Archive first, then cleanup - ensures full history preservation
 - Use `(N)` glob qualifier to handle empty directories gracefully
+
+## Iteration 10 - US-042: Pre-commit hook runs tests
+**Status**: COMPLETED
+
+Added test suite execution to the pre-commit hook. Tests now run automatically on every commit, ensuring code quality is maintained.
+
+### Changes Made
+- `.githooks/pre-commit` - Added step 7 (Test Suite) that runs `tests/test-ralph.zsh`
+- Restructured hook to run tests for ALL commits (not just when .zsh files staged)
+- Steps 1-5 (syntax checks) only run when .zsh files are staged
+- Steps 6-8 (JSON validation, tests, AGENTS.md sync) always run
+- Updated all step numbers from 7 to 8 total
+
+### Files Modified
+- `/Users/etanheyman/Desktop/Gits/ralphtools/.githooks/pre-commit` - Added test suite section
+- `/Users/etanheyman/Desktop/Gits/ralphtools/scripts/setup-hooks.sh` - Updated summary to mention test suite
+- `/Users/etanheyman/Desktop/Gits/ralphtools/CLAUDE.md` - Added pre-commit test hook documentation
+
+### Learnings
+- Pre-commit hooks should run tests for ALL commits, not just code changes
+- Tests ensure any config/schema changes don't break functionality
+- Execution time: ~1 second total (35 tests + all checks)
+- `--no-verify` is built-in git feature for bypassing hooks

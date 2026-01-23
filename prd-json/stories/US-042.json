@@ -3,15 +3,15 @@
   "title": "Pre-commit hook runs tests",
   "description": "Add pre-commit hook that runs test-ralph.zsh before allowing commit. If any test fails, commit is blocked. This ensures tests stay in sync with code - any breaking change will fail a test.",
   "acceptanceCriteria": [
-    { "text": "Create pre-commit hook that runs test-ralph.zsh", "checked": false },
-    { "text": "If any test fails, commit is blocked with error message", "checked": false },
-    { "text": "Show which test(s) failed in output", "checked": false },
-    { "text": "Hook can be bypassed with --no-verify for emergencies", "checked": false },
-    { "text": "Fast execution (< 5 seconds for all tests)", "checked": false },
-    { "text": "Add to install-hooks.sh for easy setup", "checked": false },
-    { "text": "Document in CLAUDE.md", "checked": false },
-    { "text": "Typecheck passes (zsh -n on hook script)", "checked": false }
+    { "text": "Create pre-commit hook that runs test-ralph.zsh", "checked": true },
+    { "text": "If any test fails, commit is blocked with error message", "checked": true },
+    { "text": "Show which test(s) failed in output", "checked": true },
+    { "text": "Hook can be bypassed with --no-verify for emergencies", "checked": true },
+    { "text": "Fast execution (< 5 seconds for all tests)", "checked": true },
+    { "text": "Add to install-hooks.sh for easy setup", "checked": true },
+    { "text": "Document in CLAUDE.md", "checked": true },
+    { "text": "Typecheck passes (zsh -n on hook script)", "checked": true }
   ],
-  "passes": false,
+  "passes": true,
   "blockedBy": null
 }

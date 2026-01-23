@@ -99,10 +99,27 @@ After editing `ralph.zsh`:
 source ~/.config/ralph/ralph.zsh
 ```
 
-Run tests before commit:
+Run tests manually:
 ```bash
 ./tests/test-ralph.zsh
 ```
+
+### Pre-commit Test Hook
+
+Tests run automatically on every commit via the pre-commit hook. If any test fails, the commit is blocked.
+
+**What the hook checks:**
+1. ZSH syntax (`zsh -n`)
+2. Code patterns (break/continue, eval, long sleeps)
+3. Retry logic integrity
+4. Brace/bracket balance
+5. JSON syntax validation
+6. **Test suite** (all 35+ tests)
+7. AGENTS.md sync
+
+**Bypass for emergencies:** `git commit --no-verify`
+
+To enable hooks: `./scripts/setup-hooks.sh`
 
 ---
 
