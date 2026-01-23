@@ -484,3 +484,25 @@ Implemented hot-reload of update.json at the START of each Ralph iteration, allo
 - `jq -c '.array[] | .'` iterates array items as compact JSON, one per line
 - Stats recalculation must read all story files to count `passes: true`
 - `nextStory` should be set to first item in `pending` array or `null` if empty
+
+## Iteration 16 - BUG-004: Display stats don't refresh after update.json merge
+**Status**: COMPLETED (already fixed by US-049)
+
+This bug was automatically fixed as part of the US-049 implementation. The `_ralph_apply_update_queue()` function now:
+1. Recalculates all stats (total, completed, pending, blocked) from story files
+2. Writes fresh stats to index.json immediately after applying updates
+3. All display functions read from index.json directly, so they get fresh values
+
+### Verification
+Tested with a scenario:
+- Initial: 5 total, 3 completed, 2 pending (displayed as 3/5 = 60%)
+- Added 2 new stories via update.json
+- After update: 7 total, 3 completed, 4 pending (displayed as 3/7 = 42%)
+
+Stats refresh correctly because:
+- `_ralph_apply_update_queue()` recalculates stats from story files
+- Stats are written to index.json immediately
+- `_ralph_show_iteration_status()` reads from index.json (not cached)
+- Progress bar shows fresh values on next display
+
+No additional code changes needed - US-049 fix covered this bug.

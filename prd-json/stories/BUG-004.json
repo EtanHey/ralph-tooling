@@ -5,25 +5,25 @@
   "acceptanceCriteria": [
     {
       "text": "After _ralph_apply_updates(), re-read index.json stats",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update local variables: total_stories, completed_stories, pending_count",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Progress bar denominator uses fresh total, not cached",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Add 2 stories mid-run, verify display shows X/(X+2) immediately",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Typecheck passes (zsh -n ralph.zsh)",
-      "checked": false
+      "checked": true
     }
   ],
-  "passes": false,
+  "passes": true,
   "blockedBy": null
 }
