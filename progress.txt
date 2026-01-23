@@ -691,3 +691,32 @@ Audited all skills in `~/.claude/commands/` against the reference pattern (githu
 - Single .md is appropriate for: linear instruction docs, single-purpose utilities
 - Directory structure needed for: multi-operation skills, complex CLIs, multi-phase processes
 - Skills missing scripts/ are only an issue if they reference bash commands that should be deterministic
+
+## Iteration 22 - US-053: Generate Fix Stories for Non-Compliant Skills
+**Status**: COMPLETED
+
+Based on the skill audit report from US-052, created stories in update.json to fix the two non-compliant skills.
+
+### Stories Created
+
+**US-059: Expand brave.md to Progressive Disclosure Structure**
+- Priority: medium
+- Story Points: 3
+- Converts single-file brave.md into directory structure
+- Creates SKILL.md router + 4 workflows (navigation, inspection, interaction, debugging)
+- No scripts/ needed since brave-manager is already an external CLI tool
+
+**US-060: Expand critique-waves.md to Progressive Disclosure Structure**
+- Priority: medium
+- Story Points: 3
+- Converts single-file critique-waves.md into directory structure
+- Creates SKILL.md router + 3 workflows (setup, run-wave, iteration)
+- Creates scripts/init-tracker.sh for initialization
+
+### Files Modified
+- `prd-json/update.json` - Added US-059 and US-060 to newStories array
+
+### Learnings
+- Stories should specify exact files to create, not just general goals
+- Reference pattern (github skill) should be explicitly mentioned in acceptance criteria
+- Independence constraint prevents circular dependencies between fix stories

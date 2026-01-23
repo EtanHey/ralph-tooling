@@ -1,116 +1,81 @@
 {
   "newStories": [
     {
-      "id": "BUG-005",
-      "title": "Ralph keeps looping after PRD complete",
-      "description": "When all stories are complete (pending=0, nextStory=null), Ralph should exit gracefully instead of continuing to loop and saying 'PRD complete' every iteration.",
-      "type": "bug",
-      "priority": "critical",
-      "storyPoints": 2,
-      "status": "pending",
-      "acceptanceCriteria": [
-        "When nextStory is null AND pending array is empty, Ralph exits the loop",
-        "Print completion message: '✅ PRD Complete! All N stories finished.'",
-        "Show final stats summary (time, cost, stories completed)",
-        "Exit with code 0 (success)",
-        "Do NOT keep looping and burning tokens"
-      ],
-      "dependencies": []
-    },
-    {
-      "id": "BUG-006",
-      "title": "Debug output 'remaining_stats' leaking to display",
-      "description": "The line 'remaining_stats='0 0'' is being printed to the terminal. This debug output should be suppressed.",
-      "type": "bug",
-      "priority": "high",
-      "storyPoints": 1,
-      "status": "pending",
-      "acceptanceCriteria": [
-        "Find the echo/print statement outputting remaining_stats",
-        "Remove or redirect to /dev/null",
-        "No debug output visible in normal Ralph runs",
-        "Test by running Ralph and confirming no 'remaining_stats' output"
-      ],
-      "dependencies": []
-    },
-    {
-      "id": "BUG-007",
-      "title": "Per-project ntfy topics not working - config overrides",
-      "description": "The per-project notification topic feature (etans-ralph-{project}) is bypassed because the config file stores a fixed ntfyTopic that overrides the per-project logic. Parallel Ralphs on different projects all send to the same topic.",
+      "id": "BUG-009",
+      "title": "update.json should auto-convert string criteria to object format",
+      "description": "When processing update.json, if acceptanceCriteria contains strings instead of {text, checked} objects, auto-convert them. This prevents format mismatch that breaks ralph-status and live updates.",
       "type": "bug",
       "priority": "high",
       "storyPoints": 2,
       "status": "pending",
       "acceptanceCriteria": [
-        "Config ntfyTopic value of '' or 'auto' enables per-project topics",
-        "Per-project topic format: {RALPH_NTFY_PREFIX}-{project_name}",
-        "Ralph on ralphtools sends to etans-ralph-ralphtools",
-        "Ralph on songscript sends to etans-ralph-songscript",
-        "Display shows actual topic being used",
-        "Config can still override with explicit topic if desired",
-        "Update docs/notifications.md with how to enable per-project vs fixed topic"
+        {"text": "In _ralph_apply_update_queue(), detect if criteria are strings", "checked": false},
+        {"text": "Auto-convert string criteria to {text: string, checked: false} format", "checked": false},
+        {"text": "Preserve existing object criteria as-is", "checked": false},
+        {"text": "ralph-status shows correct criteria count after conversion", "checked": false},
+        {"text": "Live progress bar updates work with converted criteria", "checked": false},
+        {"text": "Add test case in tests/test-ralph.zsh for criteria conversion", "checked": false}
       ],
       "dependencies": []
     },
     {
-      "id": "US-052",
-      "title": "Audit Skills for Structure Compliance",
-      "description": "Scan all skills in ~/.claude/commands/ and identify those that don't follow the proper skill structure pattern (SKILL.md + workflows/ + scripts/).",
-      "type": "feature",
+      "id": "BUG-010",
+      "title": "Live criteria updates still not working - verify full chain",
+      "description": "Even after BUG-008, the live criteria progress bar doesn't update during iteration. Need to verify: fswatch running, FIFO working, polling loop running, display update working.",
+      "type": "bug",
       "priority": "high",
       "storyPoints": 3,
       "status": "pending",
       "acceptanceCriteria": [
-        "Scan ~/.claude/commands/ for all skill directories",
-        "Check each skill against the reference pattern: github skill (SKILL.md, workflows/, scripts/)",
-        "Identify skills that are single .md files but should be expanded",
-        "Identify skills missing workflows/ directory",
-        "Identify skills missing scripts/ when they reference bash commands",
-        "Create a report file: docs.local/skill-audit-report.md",
-        "Report lists: compliant skills, non-compliant skills with specific issues",
-        "Do NOT fix anything - audit only"
+        {"text": "Add debug logging to _ralph_start_watcher() to confirm fswatch starts", "checked": false},
+        {"text": "Add debug logging to _ralph_start_polling_loop() to confirm loop starts", "checked": false},
+        {"text": "Verify RALPH_CRITERIA_ROW and RALPH_STORIES_ROW are set correctly", "checked": false},
+        {"text": "Test: Run Ralph, watch criteria bar update from 0/N to 1/N as Claude works", "checked": false},
+        {"text": "Remove debug logging after confirming fix works", "checked": false},
+        {"text": "Document in docs/live-updates.md how the system works", "checked": false}
       ],
       "dependencies": []
     },
     {
-      "id": "US-053",
-      "title": "Generate Fix Stories for Non-Compliant Skills",
-      "description": "Based on the skill audit report, create individual stories in update.json to fix each non-compliant skill.",
-      "type": "feature",
-      "priority": "high",
-      "storyPoints": 2,
-      "status": "pending",
-      "acceptanceCriteria": [
-        "Read docs.local/skill-audit-report.md from previous story",
-        "For each non-compliant skill, create a story in update.json",
-        "Story should specify exactly what needs to be added/changed",
-        "Story should reference the github skill as the pattern to follow",
-        "Each fix story should be independent (no dependencies between them)",
-        "Set all fix stories to priority: medium",
-        "Do NOT implement fixes - only create the stories"
-      ],
-      "dependencies": ["US-052"]
-    },
-    {
-      "id": "US-054",
-      "title": "Add Tests for All Skills",
-      "description": "Create a test suite that validates all skills follow the correct structure and their scripts/workflows are functional.",
+      "id": "US-059",
+      "title": "Expand brave.md to Progressive Disclosure Structure",
+      "description": "Convert the single-file brave.md skill into a directory-based skill with SKILL.md router and workflows, following the github skill pattern.",
       "type": "feature",
       "priority": "medium",
-      "storyPoints": 5,
+      "storyPoints": 3,
       "status": "pending",
       "acceptanceCriteria": [
-        "Create tests/test-skills.zsh test file",
-        "Test: Each skill directory has SKILL.md",
-        "Test: SKILL.md contains required sections (When to Use, Quick Start)",
-        "Test: If skill has workflows/, each .md file has proper structure",
-        "Test: If skill references scripts, scripts/ directory exists",
-        "Test: All referenced scripts are executable",
-        "Test: Scripts have shebang and basic syntax validation",
-        "Add test to main test runner",
-        "All tests pass on current compliant skills (github, convex)"
+        {"text": "Create skills/brave/ directory structure mirroring github skill pattern", "checked": false},
+        {"text": "Create SKILL.md with: YAML frontmatter, quick actions table, decision tree, and links to workflows", "checked": false},
+        {"text": "Create workflows/navigation.md covering: tabs, switch, navigate, back, forward commands", "checked": false},
+        {"text": "Create workflows/inspection.md covering: inspect, screenshot, errors commands", "checked": false},
+        {"text": "Create workflows/interaction.md covering: click, type, hover, scroll, press, drag commands", "checked": false},
+        {"text": "Create workflows/debugging.md covering: eval command and advanced verification patterns", "checked": false},
+        {"text": "Remove old brave.md single file after directory structure is complete", "checked": false},
+        {"text": "Update symlink at ~/.claude/commands/brave to point to new directory", "checked": false},
+        {"text": "No scripts/ directory needed - brave-manager is already an external CLI tool", "checked": false}
       ],
-      "dependencies": ["US-053"]
+      "dependencies": []
+    },
+    {
+      "id": "US-060",
+      "title": "Expand critique-waves.md to Progressive Disclosure Structure",
+      "description": "Convert the single-file critique-waves.md skill into a directory-based skill with SKILL.md router, workflows, and scripts, following the github skill pattern.",
+      "type": "feature",
+      "priority": "medium",
+      "storyPoints": 3,
+      "status": "pending",
+      "acceptanceCriteria": [
+        {"text": "Create skills/critique-waves/ directory structure mirroring github skill pattern", "checked": false},
+        {"text": "Create SKILL.md with: YAML frontmatter, overview, quick actions table, and links to workflows", "checked": false},
+        {"text": "Create workflows/setup.md covering: verification folder creation, instructions.md template, tracker.md initialization", "checked": false},
+        {"text": "Create workflows/run-wave.md covering: launching agents in parallel, collecting results, updating tracker", "checked": false},
+        {"text": "Create workflows/iteration.md covering: handling failures, resetting counters, continuing until consensus goal", "checked": false},
+        {"text": "Create scripts/init-tracker.sh that initializes the verification folder structure with proper templates", "checked": false},
+        {"text": "Remove old critique-waves.md single file after directory structure is complete", "checked": false},
+        {"text": "Update symlink at ~/.claude/commands/critique-waves to point to new directory", "checked": false}
+      ],
+      "dependencies": []
     }
   ]
 }
