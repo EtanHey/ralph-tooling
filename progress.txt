@@ -417,3 +417,22 @@
 - Updated stats: completed=24, pending=7, blocked=1
 ---
 
+## Iteration 26 - US-019 Smart 1Password organization with project/service nesting
+- Model: opus
+- Story was already fully implemented from a previous iteration
+- Verified all 11 acceptance criteria:
+  1. ✓ SERVICE_PREFIXES map defined (lines 3139-3162): ANTHROPIC, OPENAI, SUPABASE, VERCEL, AWS, STRIPE, DATABASE/DB, REDIS, GITHUB, LINEAR, FIGMA + more (TWILIO, SENDGRID, SLACK, FIREBASE, GOOGLE, AZURE, CLOUDFLARE, POSTGRES, MYSQL, MONGO, MONGODB)
+  2. ✓ GLOBAL_VARS list defined (lines 3166-3181): EDITOR, VISUAL, GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL, GIT_COMMITTER_NAME, GIT_COMMITTER_EMAIL, PATH, HOME, USER, SHELL, TERM, LANG, LC_ALL
+  3. ✓ _ralph_detect_service() function (lines 3186-3205): parses key, returns service name or 'misc'
+  4. ✓ _ralph_normalize_key() function (lines 3210-3229): strips prefix from key (ANTHROPIC_API_KEY → API_KEY)
+  5. ✓ Item title format: {project}/{service}/{normalized_key} (line 3588)
+  6. ✓ Global vars use: _global/{service}/{key} format (lines 3577-3588)
+  7. ✓ op:// reference: op://{vault}/{project}/{service}/{key}/password (line 3590)
+  8. ✓ Dry-run shows detected categorization (lines 3593-3601): Service, Normalized, Scope
+  9. ✓ --service flag to override auto-detection (lines 3444-3451, 3566-3572)
+  10. ✓ .env files are never modified/deleted - only reads from .env, writes to .env.template
+  11. ✓ Typecheck passes (zsh -n ralph.zsh)
+- All 11 acceptance criteria completed
+- Updated stats: completed=24, pending=8, blocked=5
+---
+
