@@ -74,6 +74,49 @@ ralph 50 -G -G        # Gemini for all stories
 
 ---
 
+## Skills System
+
+Ralph includes a library of skills that provide workflows for common tasks. Skills are stored in `~/.config/ralph/skills/` and made available to Claude via symlinks in `~/.claude/commands/`.
+
+### Sourcing Skills in Other Projects
+
+Projects can access Ralph's skills automatically - they're globally available through `~/.claude/commands/`. No per-project configuration needed.
+
+**How it works:**
+1. Ralph's skills are in `~/.config/ralph/skills/` (the cloned repo)
+2. Symlinks in `~/.claude/commands/` point to these skills
+3. Claude Code finds skills via `~/.claude/commands/` automatically
+4. All projects get the same skills without duplication
+
+### Available Skills
+
+| Skill | Description |
+|-------|-------------|
+| `/convex` | Convex workflows: dev server, deployment, user deletion |
+| `/1password` | Secret management, .env migration |
+| `/github` | Commits, PRs, issues |
+| `/linear` | Linear issue management |
+| `/worktrees` | Git worktree isolation |
+| `/prd` | PRD generation for Ralph |
+
+### Updating Skills
+
+Skills auto-update when you pull ralphtools:
+
+```bash
+cd ~/.config/ralph && git pull
+# Skills update immediately - symlinks point to latest files
+```
+
+### Adding Skills to a New Machine
+
+```bash
+# After cloning ralphtools
+./scripts/setup-symlinks.sh   # Creates all symlinks
+```
+
+---
+
 ## Why Fresh Context?
 
 Long sessions accumulate confusion. Ralph solves this by **spawning fresh Claude every iteration**:

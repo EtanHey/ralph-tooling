@@ -131,3 +131,22 @@ Changes:
 - The pre-commit hook was 95% complete - only missing shellcheck for .sh files
 - shellcheck doesn't support .zsh files (SC1071 error) - use zsh -n instead
 - Hook uses .githooks/ directory with git config core.hooksPath (not .git/hooks/)
+
+## Iteration 9
+Story: US-072 - SongScript sources ralphtools skills via symlink
+Status: COMPLETED (opus)
+Changes:
+- Added "Skills System" section to ralphtools README.md with skill sourcing pattern
+- Documented symlink mechanism: ~/.claude/commands/ → ~/.config/ralph/skills/
+- Listed all available skills with descriptions (convex, 1password, github, linear, worktrees, prd)
+- Documented how skills auto-update when pulling ralphtools
+- Added skill sourcing documentation to SongScript CLAUDE.md
+- Documented /convex workflows table in SongScript (dev, deploy, user-deletion, etc)
+- Verified symlink: ~/.claude/commands/convex → ralphtools/skills/convex
+- Confirmed skill frontmatter meets Claude Code discovery requirements
+
+### Learnings
+- Skills in ~/.claude/commands/ are global - accessible from any project
+- SKILL.md frontmatter (name, description) is required for Claude Code skill discovery
+- Symlinks allow skills to auto-update when the source repo is pulled
+- SongScript benefits from Convex user-deletion workflow (US-070) immediately

@@ -7,12 +7,12 @@
   "storyPoints": 2,
   "status": "pending",
   "acceptanceCriteria": [
-    {"text": "Document skill sourcing pattern in ralphtools README", "checked": false},
-    {"text": "Add instruction to SongScript CLAUDE.md: source skills from ~/.claude/commands/", "checked": false},
-    {"text": "Verify Convex skill workflows are accessible from SongScript context", "checked": false},
-    {"text": "Test: Claude in SongScript can use /convex workflows", "checked": false},
-    {"text": "Document how to update skills (pull ralphtools, skills auto-update)", "checked": false}
+    {"text": "Document skill sourcing pattern in ralphtools README", "checked": true},
+    {"text": "Add instruction to SongScript CLAUDE.md: source skills from ~/.claude/commands/", "checked": true},
+    {"text": "Verify Convex skill workflows are accessible from SongScript context", "checked": true},
+    {"text": "Test: Claude in SongScript can use /convex workflows", "checked": true},
+    {"text": "Document how to update skills (pull ralphtools, skills auto-update)", "checked": true}
   ],
   "dependencies": ["US-070"],
-  "passes": false
+  "passes": true
 }
