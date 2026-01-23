@@ -127,6 +127,174 @@ else
 fi
 
 # ═══════════════════════════════════════════════════════════════════
+# INTERACTIVE CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════
+
+# Interactive config setup using gum (or fallback prompts)
+# Usage: ralph-config
+ralph-config() {
+  local config_file="$RALPH_CONFIG_DIR/config.json"
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  🛠️  Ralph Configuration Setup                              │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+
+  # Ensure config directory exists
+  mkdir -p "$RALPH_CONFIG_DIR"
+
+  local model_strategy=""
+  local default_model=""
+  local notifications_enabled=""
+  local ntfy_topic=""
+
+  # Check if gum is available
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    # ═══════════════════════════════════════════════════════════
+    # GUM-BASED INTERACTIVE PROMPTS
+    # ═══════════════════════════════════════════════════════════
+
+    echo "📊 Model Strategy"
+    echo "   smart  = Different models for different task types"
+    echo "   single = One model for everything"
+    echo ""
+    model_strategy=$(gum choose "smart" "single")
+    echo "   Selected: $model_strategy"
+    echo ""
+
+    echo "🤖 Default Model"
+    echo "   opus   = Most capable, slowest, most expensive"
+    echo "   sonnet = Balanced capability and cost"
+    echo "   haiku  = Fastest, cheapest, good for simple tasks"
+    echo ""
+    default_model=$(gum choose "opus" "sonnet" "haiku")
+    echo "   Selected: $default_model"
+    echo ""
+
+    echo "🔔 Notifications"
+    if gum confirm "Enable ntfy notifications?"; then
+      notifications_enabled="true"
+      echo ""
+      echo "📬 Enter your ntfy topic name:"
+      ntfy_topic=$(gum input --placeholder "ralph-notifications")
+      [[ -z "$ntfy_topic" ]] && ntfy_topic="ralph-notifications"
+      echo "   Topic: $ntfy_topic"
+    else
+      notifications_enabled="false"
+      ntfy_topic=""
+    fi
+
+  else
+    # ═══════════════════════════════════════════════════════════
+    # FALLBACK: Simple read prompts
+    # ═══════════════════════════════════════════════════════════
+    echo "ℹ️  (Install gum for a better experience: brew install gum)"
+    echo ""
+
+    echo "📊 Model Strategy"
+    echo "   1) smart  = Different models for different task types"
+    echo "   2) single = One model for everything"
+    echo -n "   Choose [1/2]: "
+    read strategy_choice
+    case "$strategy_choice" in
+      1|smart)  model_strategy="smart" ;;
+      *)        model_strategy="single" ;;
+    esac
+    echo "   Selected: $model_strategy"
+    echo ""
+
+    echo "🤖 Default Model"
+    echo "   1) opus   = Most capable, slowest, most expensive"
+    echo "   2) sonnet = Balanced capability and cost"
+    echo "   3) haiku  = Fastest, cheapest, good for simple tasks"
+    echo -n "   Choose [1/2/3]: "
+    read model_choice
+    case "$model_choice" in
+      1|opus)   default_model="opus" ;;
+      3|haiku)  default_model="haiku" ;;
+      *)        default_model="sonnet" ;;
+    esac
+    echo "   Selected: $default_model"
+    echo ""
+
+    echo "🔔 Notifications"
+    echo -n "   Enable ntfy notifications? [y/N]: "
+    read notify_choice
+    case "$notify_choice" in
+      [Yy]*)
+        notifications_enabled="true"
+        echo -n "   Enter ntfy topic [ralph-notifications]: "
+        read ntfy_topic
+        [[ -z "$ntfy_topic" ]] && ntfy_topic="ralph-notifications"
+        echo "   Topic: $ntfy_topic"
+        ;;
+      *)
+        notifications_enabled="false"
+        ntfy_topic=""
+        ;;
+    esac
+  fi
+
+  echo ""
+
+  # ═══════════════════════════════════════════════════════════
+  # Save config to JSON
+  # ═══════════════════════════════════════════════════════════
+
+  # Build smart model mappings based on default model
+  local us_model="$default_model"
+  local v_model="haiku"
+  local test_model="haiku"
+  local bug_model="$default_model"
+  local audit_model="opus"
+
+  # If smart mode, use sensible defaults
+  if [[ "$model_strategy" == "smart" ]]; then
+    us_model="sonnet"
+    bug_model="sonnet"
+  fi
+
+  cat > "$config_file" << EOF
+{
+  "modelStrategy": "$model_strategy",
+  "defaultModel": "$default_model",
+  "unknownTaskType": "$default_model",
+  "models": {
+    "US": "$us_model",
+    "V": "$v_model",
+    "TEST": "$test_model",
+    "BUG": "$bug_model",
+    "AUDIT": "$audit_model"
+  },
+  "notifications": {
+    "enabled": $notifications_enabled,
+    "ntfyTopic": "$ntfy_topic"
+  },
+  "defaults": {
+    "maxIterations": $RALPH_MAX_ITERATIONS,
+    "sleepSeconds": $RALPH_SLEEP_SECONDS
+  }
+}
+EOF
+
+  echo "✅ Configuration saved to $config_file"
+  echo ""
+
+  # Reload config
+  _ralph_load_config
+
+  echo "📋 Current settings:"
+  _ralph_show_routing
+  if [[ "$notifications_enabled" == "true" ]]; then
+    echo "🔔 Notifications: enabled → $ntfy_topic"
+  else
+    echo "🔔 Notifications: disabled"
+  fi
+  echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # SMART MODEL ROUTING
 # ═══════════════════════════════════════════════════════════════════
 

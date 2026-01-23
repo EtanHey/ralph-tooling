@@ -89,3 +89,17 @@
 - Placed in new GUM DEPENDENCY CHECK section after CONFIGURATION
 - Typecheck passes (zsh -n ralph.zsh)
 ---
+
+## Iteration 7 - US-002 Create ralph config interactive flow
+- Model: opus
+- Implemented ralph-config() function for interactive configuration setup
+- GUM MODE: Uses gum choose for model strategy (smart/single) and default model (opus/sonnet/haiku)
+- GUM MODE: Uses gum confirm for notifications toggle, gum input for ntfy topic
+- FALLBACK MODE: Simple numbered prompts with read when gum not installed
+- Saves configuration to ~/.config/ralphtools/config.json with proper JSON structure
+- Config includes: modelStrategy, defaultModel, models per-prefix routing, notifications settings, defaults
+- Reloads config after save with _ralph_load_config
+- Shows confirmation with current settings using _ralph_show_routing
+- New INTERACTIVE CONFIGURATION section added between GUM DEPENDENCY CHECK and SMART MODEL ROUTING
+- Typecheck passes (zsh -n ralph.zsh)
+---

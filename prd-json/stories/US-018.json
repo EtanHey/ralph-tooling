@@ -1,12 +1,12 @@
 {
   "id": "US-018",
-  "title": "Compact ntfy notifications (3 lines)",
-  "description": "Reduce ntfy from 4+ lines to 3 lines.",
+  "title": "Compact ntfy with emoji labels",
+  "description": "Use emojis as compact labels instead of text. Pack more info in 3 lines.",
   "acceptanceCriteria": [
-    { "text": "Line 1: story + model (e.g. 'TEST-004 haiku')", "checked": false },
-    { "text": "Line 2: project + iteration (e.g. 'ralphtools 3/50')", "checked": false },
-    { "text": "Line 3: cost (e.g. '$0.28')", "checked": false },
-    { "text": "Remove extra newlines and verbose labels", "checked": false },
+    { "text": "Line 1: repo name (e.g. 'ralphtools')", "checked": false },
+    { "text": "Line 2: 🔄 iteration + story + model (e.g. '🔄5 TEST-004 haiku')", "checked": false },
+    { "text": "Line 3: 📚 stories left + ✅ criteria left + 💵 cost (e.g. '📚26 ✅129 💵$0.28')", "checked": false },
+    { "text": "All info in 3 compact lines using emoji labels", "checked": false },
     { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
   ],
   "passes": false,

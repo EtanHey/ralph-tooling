@@ -3,15 +3,17 @@
   "title": "Create ralph config interactive flow",
   "description": "Implement `ralph config` command with gum-based interactive prompts for model strategy, notifications, and defaults.",
   "acceptanceCriteria": [
-    { "text": "Add ralph-config() function", "checked": false },
-    { "text": "Use gum choose for model strategy: smart vs single", "checked": false },
-    { "text": "Use gum choose for default model: opus/sonnet/haiku", "checked": false },
-    { "text": "Use gum confirm for notifications enabled", "checked": false },
-    { "text": "Use gum input for ntfy topic if notifications enabled", "checked": false },
-    { "text": "Save results to ~/.config/ralphtools/config.json", "checked": false },
-    { "text": "Fall back to simple read prompts if gum not installed", "checked": false },
-    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+    { "text": "Add ralph-config() function", "checked": true },
+    { "text": "Use gum choose for model strategy: smart vs single", "checked": true },
+    { "text": "Use gum choose for default model: opus/sonnet/haiku", "checked": true },
+    { "text": "Use gum confirm for notifications enabled", "checked": true },
+    { "text": "Use gum input for ntfy topic if notifications enabled", "checked": true },
+    { "text": "Save results to ~/.config/ralphtools/config.json", "checked": true },
+    { "text": "Fall back to simple read prompts if gum not installed", "checked": true },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": true }
   ],
-  "passes": false,
+  "passes": true,
+  "completedAt": "2026-01-23T08:15:00Z",
+  "completedBy": "opus",
   "blockedBy": null
 }
