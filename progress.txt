@@ -230,3 +230,24 @@ Changes:
 - Base rules (CLAUDE_COUNTER, git safety) appear in virtually every project
 - Project-specific content is typically only ~50-100 lines after extraction
 - Monorepo sub-apps may need different contexts than root CLAUDE.md
+
+## Iteration 14
+Story: AUDIT-001 - Audit README.md for accuracy and relevance
+Status: COMPLETED (opus)
+Changes:
+- Read and cross-referenced entire README.md with ralph.zsh code
+- Verified -G -H -K examples were already removed (per US-073)
+- Verified all CLI flags (-QN, -O, -S, --compact, --debug) exist in code
+- Updated Commands table: added ralph-live, ralph-watch, ralph-archive, ralph-learnings, ralph-costs, ralph-start, ralph-cleanup
+- Fixed `ralph-init` syntax (added [app] parameter)
+- Updated Skills table: added /update, /archive, /brave, /coderabbit, /critique-waves, /skills
+- Fixed "Adding Skills to a New Machine" section: replaced nonexistent ./scripts/setup-symlinks.sh with /ralph-install skill and manual script
+- Verified smart routing documentation is accurate
+- Verified all 5 external links work (GitHub, ntfy.sh, coderabbit.ai, superpowers, ghuntley.com)
+- Verified MCP integration docs are accurate
+- ZSH syntax check passed, all 46 tests pass
+
+### Learnings
+- Referenced scripts in docs should be verified to exist
+- Command tables should include ALL commands from ralph-help, not just core ones
+- Skills evolve over time - README skill list needs periodic updates

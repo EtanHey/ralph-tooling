@@ -8,19 +8,19 @@
   "status": "pending",
   "model": "opus",
   "acceptanceCriteria": [
-    {"text": "Read entire README.md and cross-reference with ralph.zsh", "checked": false},
-    {"text": "Remove -G -H -K examples (deprecated per US-073)", "checked": false},
-    {"text": "Verify all CLI flags in README actually exist in code", "checked": false},
-    {"text": "Verify all example commands work as documented", "checked": false},
-    {"text": "Update feature list to match current capabilities", "checked": false},
-    {"text": "Verify installation instructions are accurate", "checked": false},
-    {"text": "Verify smart routing documentation is current", "checked": false},
-    {"text": "Remove any references to renamed paths (ralphtools → claude-golem)", "checked": false},
-    {"text": "Ensure MCP integration docs are accurate", "checked": false},
-    {"text": "Verify skills documentation matches actual skills", "checked": false},
-    {"text": "Check all external links still work", "checked": false},
-    {"text": "Typecheck passes", "checked": false}
+    {"text": "Read entire README.md and cross-reference with ralph.zsh", "checked": true},
+    {"text": "Remove -G -H -K examples (deprecated per US-073)", "checked": true},
+    {"text": "Verify all CLI flags in README actually exist in code", "checked": true},
+    {"text": "Verify all example commands work as documented", "checked": true},
+    {"text": "Update feature list to match current capabilities", "checked": true},
+    {"text": "Verify installation instructions are accurate", "checked": true},
+    {"text": "Verify smart routing documentation is current", "checked": true},
+    {"text": "Remove any references to renamed paths (ralphtools → claude-golem)", "checked": true},
+    {"text": "Ensure MCP integration docs are accurate", "checked": true},
+    {"text": "Verify skills documentation matches actual skills", "checked": true},
+    {"text": "Check all external links still work", "checked": true},
+    {"text": "Typecheck passes", "checked": true}
   ],
   "dependencies": ["US-073"],
-  "passes": false
+  "passes": true
 }

@@ -41,9 +41,16 @@ ralph 20                      # Execute 20 iterations
 |---------|-------------|
 | `ralph [N]` | Run N iterations (default 10) |
 | `ralph <app> N` | Run on `apps/<app>/prd-json/` (monorepo) |
-| `ralph-init` | Create PRD template |
+| `ralph-init [app]` | Create PRD template |
 | `ralph-status` | Show PRD status |
+| `ralph-live [N]` | Live refreshing status (default: 3s) |
+| `ralph-watch` | Live tail of current Ralph output |
 | `ralph-stop` | Kill running loops |
+| `ralph-archive [app]` | Archive completed stories to docs.local/ |
+| `ralph-learnings` | Manage learnings in docs.local/learnings/ |
+| `ralph-costs` | Show cost tracking summary |
+| `ralph-start` | Create worktree for isolated Ralph session |
+| `ralph-cleanup` | Merge changes and remove worktree |
 
 ### Flags
 
@@ -93,12 +100,18 @@ Projects can access Ralph's skills automatically - they're globally available th
 
 | Skill | Description |
 |-------|-------------|
+| `/prd` | PRD generation for Ralph |
+| `/update` | Add or modify PRD stories safely |
+| `/archive` | Archive completed PRD stories |
 | `/convex` | Convex workflows: dev server, deployment, user deletion |
 | `/1password` | Secret management, .env migration |
 | `/github` | Commits, PRs, issues |
 | `/linear` | Linear issue management |
 | `/worktrees` | Git worktree isolation |
-| `/prd` | PRD generation for Ralph |
+| `/brave` | Brave browser automation (fallback) |
+| `/coderabbit` | Code review workflows |
+| `/critique-waves` | Iterative verification with parallel agents |
+| `/skills` | List available skills |
 
 ### Updating Skills
 
@@ -112,8 +125,18 @@ cd ~/.config/ralph && git pull
 ### Adding Skills to a New Machine
 
 ```bash
-# After cloning ralphtools
-./scripts/setup-symlinks.sh   # Creates all symlinks
+# After cloning ralphtools, use the /ralph-install skill
+claude
+> /ralph-install   # Follow setup workflow
+
+# Or manually symlink all skills:
+cd ~/.config/ralph
+for skill in skills/*.md; do
+  ln -sf "$(pwd)/$skill" ~/.claude/commands/
+done
+for skill in skills/*/; do
+  ln -sf "$(pwd)/${skill%/}" ~/.claude/commands/
+done
 ```
 
 ---
