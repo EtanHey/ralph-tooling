@@ -1782,6 +1782,14 @@ A task is BLOCKED only when you CANNOT fix it yourself:
 - User decision required (ambiguous requirements)
 - External API unavailable
 - Dev server fails to start after trying
+- 1Password auth timeout (see below)
+
+**1Password/Biometric Auth Timeout:**
+If \`op\` commands fail with "authorization timeout" or similar auth errors:
+1. Retry up to 3 times with 30 second waits between attempts
+2. After 3 failed attempts, mark story as BLOCKED with reason: "1Password authentication timeout - user not present"
+3. Do NOT keep retrying indefinitely - user may be AFK
+4. Detection: check stderr for "authorization timeout", "biometric", "Touch ID", or exit code from op commands
 
 **When you find a BLOCKED task:**
 1. In the story JSON, set blockedBy field: \`\"blockedBy\": \"[specific reason]\"\`
