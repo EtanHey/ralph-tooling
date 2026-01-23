@@ -1,0 +1,21 @@
+{
+  "id": "US-036",
+  "title": "Install Wizard skill",
+  "description": "Create an install wizard skill that helps new users set up ralphtools and dependencies. Checks for required CLIs (gh, op, gum, fswatch), guides token configuration, sets up symlinks, and validates the installation.",
+  "acceptanceCriteria": [
+    { "text": "Create ~/.claude/commands/ralph-install/ directory structure", "checked": false },
+    { "text": "Create SKILL.md router (~50 lines) with workflow references", "checked": false },
+    { "text": "Create workflows/check-deps.md for dependency verification", "checked": false },
+    { "text": "Create workflows/install-deps.md for installing missing deps via brew", "checked": false },
+    { "text": "Create workflows/setup-tokens.md for API token configuration", "checked": false },
+    { "text": "Create workflows/setup-symlinks.md for skill symlink creation", "checked": false },
+    { "text": "Create workflows/validate.md for post-install validation", "checked": false },
+    { "text": "Check for: gh, op, gum, fswatch, jq, git", "checked": false },
+    { "text": "Guide user through 1Password setup for API keys", "checked": false },
+    { "text": "Create ~/.config/ralphtools/ if it doesn't exist", "checked": false },
+    { "text": "Symlink to ~/.claude/commands/ralph-install", "checked": false },
+    { "text": "Typecheck passes (zsh -n on any scripts)", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}

@@ -1,0 +1,17 @@
+{
+  "id": "V-008",
+  "title": "Verify all v2 skills work end-to-end",
+  "description": "Verification story to ensure all v2 skills are properly installed, discoverable, and functional. Run /skills to list all, test each skill's basic workflow.",
+  "acceptanceCriteria": [
+    { "text": "/skills lists all 6 new skills (skills, linear, convex, worktrees, ralph-install, plus existing)", "checked": false },
+    { "text": "/skills --search convex returns Convex skill", "checked": false },
+    { "text": "Linear skill SKILL.md routes to correct workflows", "checked": false },
+    { "text": "Convex skill detects convex project correctly", "checked": false },
+    { "text": "Worktrees skill can list existing worktrees", "checked": false },
+    { "text": "Install wizard check-deps workflow runs without error", "checked": false },
+    { "text": "All skills have proper symlinks in ~/.claude/commands/", "checked": false },
+    { "text": "No broken references in any SKILL.md files", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": "US-032"
+}
