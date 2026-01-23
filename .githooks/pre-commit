@@ -219,9 +219,8 @@ echo ""
 # ═══════════════════════════════════════════════════════════════
 echo "${YELLOW}[7/8] Test Suite${NC}"
 
-# Find test-ralph.zsh (check common locations)
+# Run ralph tests
 TEST_SCRIPT=""
-
 if [[ -f "$REPO_ROOT/tests/test-ralph.zsh" ]]; then
   TEST_SCRIPT="$REPO_ROOT/tests/test-ralph.zsh"
 elif [[ -f "$HOME/.config/ralphtools/tests/test-ralph.zsh" ]]; then
@@ -229,7 +228,7 @@ elif [[ -f "$HOME/.config/ralphtools/tests/test-ralph.zsh" ]]; then
 fi
 
 if [[ -n "$TEST_SCRIPT" && -x "$TEST_SCRIPT" ]]; then
-  echo "  Running test suite..."
+  echo "  Running ralph tests..."
   echo ""
 
   # Capture test output and exit code
@@ -241,14 +240,43 @@ if [[ -n "$TEST_SCRIPT" && -x "$TEST_SCRIPT" ]]; then
 
   if [[ $TEST_EXIT_CODE -ne 0 ]]; then
     echo ""
-    echo "  ${RED}✗ Test suite failed${NC}"
+    echo "  ${RED}✗ Ralph tests failed${NC}"
     ERRORS=$((ERRORS + 1))
   else
-    echo "  ${GREEN}✓${NC} All tests passed"
+    echo "  ${GREEN}✓${NC} Ralph tests passed"
   fi
 else
-  echo "  ${YELLOW}⚠${NC} test-ralph.zsh not found - skipping test suite"
+  echo "  ${YELLOW}⚠${NC} test-ralph.zsh not found - skipping ralph tests"
   WARNINGS=$((WARNINGS + 1))
+fi
+
+# Run skills tests
+SKILLS_TEST_SCRIPT=""
+if [[ -f "$REPO_ROOT/tests/test-skills.zsh" ]]; then
+  SKILLS_TEST_SCRIPT="$REPO_ROOT/tests/test-skills.zsh"
+fi
+
+if [[ -n "$SKILLS_TEST_SCRIPT" && -x "$SKILLS_TEST_SCRIPT" ]]; then
+  echo ""
+  echo "  Running skills tests..."
+  echo ""
+
+  # Capture test output and exit code
+  SKILLS_TEST_OUTPUT=$("$SKILLS_TEST_SCRIPT" 2>&1) || SKILLS_TEST_EXIT_CODE=$?
+  SKILLS_TEST_EXIT_CODE=${SKILLS_TEST_EXIT_CODE:-0}
+
+  # Show output (tests have their own formatting)
+  echo "$SKILLS_TEST_OUTPUT"
+
+  if [[ $SKILLS_TEST_EXIT_CODE -ne 0 ]]; then
+    echo ""
+    echo "  ${RED}✗ Skills tests failed${NC}"
+    ERRORS=$((ERRORS + 1))
+  else
+    echo "  ${GREEN}✓${NC} Skills tests passed"
+  fi
+else
+  echo "  ${YELLOW}⚠${NC} test-skills.zsh not found - skipping skills tests"
 fi
 echo ""
 
