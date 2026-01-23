@@ -3519,26 +3519,39 @@ After completing task, check PRD state:
     fi
 
     # Check if all tasks complete (search anywhere in output, not just on own line)
+    # BUG FIX: Verify pending count before trusting Claude's COMPLETE signal
     if grep -q "<promise>COMPLETE</promise>" "$RALPH_TMP" 2>/dev/null; then
-      local total_cost=$(jq -r '.totals.cost // 0' "$RALPH_COSTS_FILE" 2>/dev/null | xargs printf "%.2f")
-      if [[ "$compact_mode" == "true" ]]; then
-        # Compact mode: single line with cost
+      local actual_pending=0
+      if [[ "$use_json_mode" == "true" ]]; then
+        actual_pending=$(jq -r '.pending | length' "$PRD_JSON_DIR/index.json" 2>/dev/null)
+      fi
+
+      if [[ "$actual_pending" -gt 0 ]]; then
+        # Claude said COMPLETE but there are still pending stories - ignore and continue
         echo ""
-        echo -e "✅ $(_ralph_success "COMPLETE") after $i iterations │ $(_ralph_color_cost "$total_cost")"
+        echo -e "  ⚠️  $(_ralph_warning "Claude signaled COMPLETE but $actual_pending stories still pending - continuing...")"
       else
-        # Normal mode: full box
-        echo ""
-        echo -e "${RALPH_COLOR_GREEN}╔═══════════════════════════════════════════════════════════════╗${RALPH_COLOR_RESET}"
-        echo -e "${RALPH_COLOR_GREEN}║${RALPH_COLOR_RESET}  ✅ $(_ralph_success "ALL TASKS COMPLETE") after $(_ralph_bold "$i") iterations!                    ${RALPH_COLOR_GREEN}║${RALPH_COLOR_RESET}"
-        echo -e "${RALPH_COLOR_GREEN}║${RALPH_COLOR_RESET}  ⏱️  $(date '+%H:%M:%S')                                        ${RALPH_COLOR_GREEN}║${RALPH_COLOR_RESET}"
-        echo -e "${RALPH_COLOR_GREEN}╚═══════════════════════════════════════════════════════════════╝${RALPH_COLOR_RESET}"
+        # Actually complete
+        local total_cost=$(jq -r '.totals.cost // 0' "$RALPH_COSTS_FILE" 2>/dev/null | xargs printf "%.2f")
+        if [[ "$compact_mode" == "true" ]]; then
+          # Compact mode: single line with cost
+          echo ""
+          echo -e "✅ $(_ralph_success "COMPLETE") after $i iterations │ $(_ralph_color_cost "$total_cost")"
+        else
+          # Normal mode: full box
+          echo ""
+          echo -e "${RALPH_COLOR_GREEN}╔═══════════════════════════════════════════════════════════════╗${RALPH_COLOR_RESET}"
+          echo -e "${RALPH_COLOR_GREEN}║${RALPH_COLOR_RESET}  ✅ $(_ralph_success "ALL TASKS COMPLETE") after $(_ralph_bold "$i") iterations!                    ${RALPH_COLOR_GREEN}║${RALPH_COLOR_RESET}"
+          echo -e "${RALPH_COLOR_GREEN}║${RALPH_COLOR_RESET}  ⏱️  $(date '+%H:%M:%S')                                        ${RALPH_COLOR_GREEN}║${RALPH_COLOR_RESET}"
+          echo -e "${RALPH_COLOR_GREEN}╚═══════════════════════════════════════════════════════════════╝${RALPH_COLOR_RESET}"
+        fi
+        # Send notification if enabled
+        if $notify_enabled; then
+          _ralph_ntfy "$ntfy_topic" "complete" "" "" "$i" "0 0" "$total_cost"
+        fi
+        rm -f "$RALPH_TMP"
+        return 0
       fi
-      # Send notification if enabled
-      if $notify_enabled; then
-        _ralph_ntfy "$ntfy_topic" "complete" "" "" "$i" "0 0" "$total_cost"
-      fi
-      rm -f "$RALPH_TMP"
-      return 0
     fi
 
     # Check if all remaining tasks are blocked (search anywhere in output, not just on own line)
