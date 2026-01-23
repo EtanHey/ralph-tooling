@@ -1,0 +1,12 @@
+{
+  "id": "V-TEST",
+  "title": "Test verification story for parallel testing",
+  "description": "A simple test verification story to verify parallel agent spawning and aggregation. Agents should verify simple acceptance criteria and pass.",
+  "acceptanceCriteria": [
+    { "text": "Desktop agent can read this story", "checked": false },
+    { "text": "Mobile agent can read this story", "checked": false },
+    { "text": "Both agents pass their verification", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}
