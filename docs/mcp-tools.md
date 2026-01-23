@@ -90,3 +90,20 @@ At each iteration start, Ralph:
 - **Check console** for errors
 
 > **Note:** Ralph works without MCPs, but browser verification stories (V-XXX) require Claude in Chrome or Browser Tools to take screenshots and verify UI.
+
+## Troubleshooting
+
+### Claude in Chrome "Not Connected" (Claude Desktop Conflict)
+
+**Symptom:** `tabs_context_mcp` fails with "extension not connected" even though the extension is installed.
+
+**Cause:** Claude Desktop and Claude Code both register Chrome Native Messaging hosts. Desktop's config takes precedence alphabetically, blocking CLI access.
+
+**Fix:**
+```bash
+cd ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/
+mv com.anthropic.claude_browser_extension.json com.anthropic.claude_browser_extension.json.bak
+# Restart Claude Code and browser
+```
+
+**To restore Desktop:** Rename `.bak` back to `.json`.
