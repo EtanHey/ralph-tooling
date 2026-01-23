@@ -2452,6 +2452,8 @@ function ralph() {
   # Default ntfy topic: etanheys-ralph-<project>-notify (per-project topics)
   local project_name=$(basename "$(pwd)")
   local ntfy_topic="${RALPH_NTFY_TOPIC:-${RALPH_NTFY_PREFIX}-${project_name}-notify}"
+  # DEBUG: Remove after fixing topic issue
+  [[ -n "$RALPH_DEBUG" ]] && echo "DEBUG ntfy: TOPIC='$RALPH_NTFY_TOPIC' PREFIX='$RALPH_NTFY_PREFIX' project='$project_name' result='$ntfy_topic'"
   local app_mode=""
   local target_branch=""
   local original_branch=""
