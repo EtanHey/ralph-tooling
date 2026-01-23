@@ -365,6 +365,32 @@ _ralph_get_story_criteria_progress() {
   echo "$checked $total"
 }
 
+# Get total criteria across ALL stories in PRD
+# Usage: _ralph_get_total_criteria "/path/to/prd-json"
+# Returns: "checked total" space-separated
+_ralph_get_total_criteria() {
+  local json_dir="$1"
+  local stories_dir="$json_dir/stories"
+
+  if [[ ! -d "$stories_dir" ]]; then
+    echo "0 0"
+    return
+  fi
+
+  local total=0
+  local checked=0
+
+  for story_file in "$stories_dir"/*.json; do
+    [[ -f "$story_file" ]] || continue
+    local t=$(jq '[.acceptanceCriteria[]] | length' "$story_file" 2>/dev/null || echo 0)
+    local c=$(jq '[.acceptanceCriteria[] | select(.checked == true)] | length' "$story_file" 2>/dev/null || echo 0)
+    total=$((total + t))
+    checked=$((checked + c))
+  done
+
+  echo "$checked $total"
+}
+
 # ═══════════════════════════════════════════════════════════════════
 # LIVE FILE WATCHER (fswatch/inotifywait)
 # ═══════════════════════════════════════════════════════════════════
@@ -3021,8 +3047,11 @@ function ralph() {
     local project_name=$(basename "$(pwd)")
     local pending=$(jq -r '.stats.pending // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null || echo "?")
     local completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null || echo "?")
+    local criteria_stats=$(_ralph_get_total_criteria "$PRD_JSON_DIR")
+    local crit_done=$(echo "$criteria_stats" | cut -d' ' -f1)
+    local crit_total=$(echo "$criteria_stats" | cut -d' ' -f2)
     echo ""
-    echo "🚀 Ralph v${RALPH_VERSION} │ ${project_name} │ ${completed}/${pending}+${completed} stories │ max ${MAX} iters"
+    echo "🚀 Ralph v${RALPH_VERSION} │ ${project_name} │ ${completed}/${pending}+${completed} stories │ ${crit_done}/${crit_total} criteria │ max ${MAX} iters"
   else
     # Normal mode: full startup banner
     echo ""
@@ -3065,6 +3094,14 @@ function ralph() {
       local status_width=$(_ralph_display_width "$status_str")
       local status_padding=$((BOX_INNER_WIDTH - status_width))
       echo "│  ${status_str}$(printf '%*s' $status_padding '')│"
+      # Show total criteria across all stories
+      local criteria_stats=$(_ralph_get_total_criteria "$PRD_JSON_DIR")
+      local criteria_checked=$(echo "$criteria_stats" | cut -d' ' -f1)
+      local criteria_total=$(echo "$criteria_stats" | cut -d' ' -f2)
+      local criteria_str="📝 Criteria: $criteria_checked/$criteria_total checked"
+      local criteria_width=$(_ralph_display_width "$criteria_str")
+      local criteria_padding=$((BOX_INNER_WIDTH - criteria_width))
+      echo "│  ${criteria_str}$(printf '%*s' $criteria_padding '')│"
     else
       local task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
       local task_str="📋 Tasks remaining: $task_count"
