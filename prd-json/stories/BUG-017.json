@@ -1,18 +1,20 @@
 {
   "id": "BUG-017",
-  "title": "Show total acceptance criteria count across entire PRD",
-  "description": "When Ralph starts, it should show the total number of acceptance criteria across ALL stories in the PRD (e.g., '27 stories, 156 total criteria'). This helps users understand the full scope of work.",
+  "title": "Prettify Ralph startup box - fix notification truncation",
+  "description": "The Ralph startup box has formatting issues: notification topic gets truncated with '...' instead of wrapping to next line. Also improve the overall box appearance and add live criteria updates.",
   "type": "bug",
   "priority": "medium",
-  "storyPoints": 1,
+  "storyPoints": 2,
   "status": "pending",
   "acceptanceCriteria": [
-    {"text": "Find where Ralph displays PRD summary at startup", "checked": false},
-    {"text": "Loop through all story files and sum acceptanceCriteria lengths", "checked": false},
-    {"text": "Calculate: total_criteria = sum of all .acceptanceCriteria | length", "checked": false},
-    {"text": "Calculate: checked_criteria = sum of all checked=true across all stories", "checked": false},
-    {"text": "Display format at startup: 'PRD: X stories, Y/Z criteria checked'", "checked": false},
-    {"text": "Test: Run Ralph, verify total criteria count shown at start", "checked": false}
+    {"text": "Basic criteria count is DONE - this story is for prettification only", "checked": true},
+    {"text": "Fix notification line: split into two lines if topic is long", "checked": false},
+    {"text": "  Line 1: '🔔 Notifications: ON'", "checked": false},
+    {"text": "  Line 2: '   Topic: etanheys-ralph-ralphtools-notify'", "checked": false},
+    {"text": "Ensure box borders align properly with all content", "checked": false},
+    {"text": "Add live criteria update during iteration (like stories)", "checked": false},
+    {"text": "Consider: progress bar for criteria [████░░░░] 45/321", "checked": false},
+    {"text": "Test: Long topic name wraps correctly, box looks clean", "checked": false}
   ],
   "dependencies": [],
   "passes": false
