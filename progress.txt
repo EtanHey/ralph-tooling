@@ -200,3 +200,45 @@ Files modified:
 - Common patterns: `.env.1password` file or `op://` refs in `.env*` files
 - Status display should reflect actual configuration state, not just tool presence
 - Configuration guidance should be actionable with specific commands
+
+## Iteration 9 - US-041: Enhanced archive skill with cleanup option
+**Status**: COMPLETED
+
+Upgraded the archive skill from a single-file knowledge skill to a full progressive disclosure structure with bash functions:
+
+### Skill Structure Created
+- `/Users/etanheyman/Desktop/Gits/ralphtools/skills/archive/SKILL.md` - Main router with quick actions table
+- `/Users/etanheyman/Desktop/Gits/ralphtools/skills/archive/workflows/archive-snapshot.md` - Timestamped archive workflow
+- `/Users/etanheyman/Desktop/Gits/ralphtools/skills/archive/workflows/cleanup-completed.md` - Cleanup and reset workflow
+- Removed old `skills/archive.md` single-file skill
+- Updated symlink: `~/.claude/commands/archive` now points to directory
+
+### New Features in ralph-archive
+- `--keep` flag: Archive only, skip cleanup prompt
+- `--clean` flag: Archive and auto-cleanup without prompt
+- (no flag): Interactive prompt using `gum confirm` (fallback to `read -q`)
+- Archives `progress.txt` alongside PRD files
+- Creates fresh `progress.txt` after cleanup with "Fresh Start" header
+- Proper stats reset: completed=0, recalculates total from remaining stories
+- Preserves blocked array when rebuilding pending
+
+### Functions Modified
+- `ralph-archive()` - Added flag parsing loop (lines 3882-3928)
+- `_ralph_archive_json()` - Added mode parameter, gum confirm support (lines 3930-3989)
+- `_ralph_archive_cleanup()` - New function for cleanup logic (lines 3991-4086)
+- `_ralph_archive_md()` - Updated with mode parameter for consistency (lines 4088-4169)
+
+### Tests Added (6 new tests)
+- `test_archive_parses_keep_flag` - Verifies --keep flag parsing
+- `test_archive_parses_clean_flag` - Verifies --clean flag and story removal
+- `test_archive_copies_progress_txt` - Verifies progress.txt archiving
+- `test_archive_cleanup_creates_fresh_progress` - Verifies fresh progress.txt
+- `test_archive_cleanup_resets_stats` - Verifies index.json stats reset
+- `test_archive_rejects_unknown_flags` - Verifies error on invalid flags
+
+### Learnings
+- `gum confirm` defaults to "No" with `--default=false`
+- ZSH arrays are 1-indexed, so `${array[1]}` is first element
+- When rebuilding index.json, preserve blocked array but rebuild pending from remaining files
+- Archive first, then cleanup - ensures full history preservation
+- Use `(N)` glob qualifier to handle empty directories gracefully

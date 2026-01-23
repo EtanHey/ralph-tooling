@@ -3879,11 +3879,35 @@ function ralph-cleanup() {
   echo ""
 }
 
-# ralph-archive [app] - Archive completed stories to docs.local
+# ralph-archive [app] [--keep|--clean] - Archive completed stories to docs.local
+# Flags:
+#   --keep   Archive only, skip cleanup prompt
+#   --clean  Archive and auto-cleanup without prompt
 function ralph-archive() {
-  local app="$1"
+  local app=""
+  local mode="prompt"  # prompt, keep, or clean
   local prd_dir
   local archive_dir="docs.local/prd-archive"
+
+  # Parse arguments
+  for arg in "$@"; do
+    case "$arg" in
+      --keep)
+        mode="keep"
+        ;;
+      --clean)
+        mode="clean"
+        ;;
+      -*)
+        echo "❌ Unknown flag: $arg"
+        echo "   Usage: ralph-archive [app] [--keep|--clean]"
+        return 1
+        ;;
+      *)
+        app="$arg"
+        ;;
+    esac
+  done
 
   # Determine path
   if [[ -n "$app" ]]; then
@@ -3894,9 +3918,9 @@ function ralph-archive() {
 
   # Check for JSON mode first, fall back to markdown
   if [[ -d "$prd_dir" ]]; then
-    _ralph_archive_json "$prd_dir" "$app"
+    _ralph_archive_json "$prd_dir" "$app" "$mode"
   elif [[ -f "${prd_dir%prd-json}PRD.md" ]]; then
-    _ralph_archive_md "${prd_dir%prd-json}PRD.md" "$app"
+    _ralph_archive_md "${prd_dir%prd-json}PRD.md" "$app" "$mode"
   else
     echo "❌ PRD not found: $prd_dir or PRD.md"
     return 1
@@ -3904,9 +3928,12 @@ function ralph-archive() {
 }
 
 # Archive JSON PRD
+# Usage: _ralph_archive_json <prd_dir> <app> <mode>
+# mode: "prompt" (interactive), "keep" (no cleanup), "clean" (auto cleanup)
 _ralph_archive_json() {
   local prd_dir="$1"
   local app="$2"
+  local mode="${3:-prompt}"
   local archive_dir="docs.local/prd-archive"
   local index_file="$prd_dir/index.json"
 
@@ -3919,50 +3946,151 @@ _ralph_archive_json() {
   local archive_subdir="$archive_dir/${app_prefix}${date_suffix}"
 
   # Copy entire prd-json to archive
-  cp -r "$prd_dir" "$archive_subdir"
+  mkdir -p "$archive_subdir"
+  cp -r "$prd_dir"/* "$archive_subdir/"
 
-  echo "✅ Archived to: $archive_subdir/"
+  # Archive progress.txt if it exists
+  if [[ -f "progress.txt" ]]; then
+    cp "progress.txt" "$archive_subdir/"
+    echo "✅ Archived progress.txt to: $archive_subdir/"
+  fi
 
-  # Ask if user wants to clear completed stories
-  read -q "REPLY?Remove completed stories from prd-json/ for next sprint? (y/n) "
-  echo ""
-  if [[ "$REPLY" == "y" ]]; then
-    # Get completed stories and remove them
-    local completed=$(jq -r '.storyOrder[] | select(. as $id |
-      (input_filename | sub(".*/"; "") | sub("\\.json$"; "")) == $id)' \
-      "$prd_dir/stories"/*.json 2>/dev/null | while read id; do
-        if jq -e '.passes == true' "$prd_dir/stories/${id}.json" >/dev/null 2>&1; then
-          echo "$id"
+  echo "✅ Archived PRD to: $archive_subdir/"
+
+  # Handle cleanup based on mode
+  local do_cleanup=false
+
+  case "$mode" in
+    keep)
+      echo "ℹ️  Keeping working PRD intact (--keep flag)"
+      return 0
+      ;;
+    clean)
+      echo "🧹 Auto-cleanup enabled (--clean flag)"
+      do_cleanup=true
+      ;;
+    prompt)
+      # Interactive prompt using gum if available, fallback to read
+      if command -v gum &>/dev/null; then
+        if gum confirm "Reset PRD for fresh start?" --default=false; then
+          do_cleanup=true
         fi
-      done)
+      else
+        read -q "REPLY?Reset PRD for fresh start? (y/n) "
+        echo ""
+        [[ "$REPLY" == "y" ]] && do_cleanup=true
+      fi
+      ;;
+  esac
 
-    for story_id in $completed; do
-      rm -f "$prd_dir/stories/${story_id}.json"
-      echo "   Removed: $story_id"
-    done
-
-    # Update index.json
-    local pending=$(jq -r '.pending[]' "$index_file" 2>/dev/null)
-    local new_order=$(echo "$pending" | jq -R -s 'split("\n") | map(select(length > 0))')
-    local new_count=$(echo "$new_order" | jq 'length')
-
-    jq --argjson order "$new_order" --argjson count "$new_count" '
-      .storyOrder = $order |
-      .pending = $order |
-      .stats.total = $count |
-      .stats.pending = $count |
-      .stats.completed = 0 |
-      .nextStory = ($order[0] // null)
-    ' "$index_file" > "${index_file}.tmp" && mv "${index_file}.tmp" "$index_file"
-
-    echo "✅ Completed stories archived and removed"
+  if [[ "$do_cleanup" == "true" ]]; then
+    _ralph_archive_cleanup "$prd_dir" "$index_file"
   fi
 }
 
+# Cleanup completed stories and reset PRD
+_ralph_archive_cleanup() {
+  local prd_dir="$1"
+  local index_file="$2"
+
+  echo ""
+  echo "🧹 Cleaning up completed stories..."
+
+  # Find and remove completed stories
+  local removed_count=0
+  for story_file in "$prd_dir/stories"/*.json(N); do
+    if [[ -f "$story_file" ]]; then
+      if jq -e '.passes == true' "$story_file" >/dev/null 2>&1; then
+        local story_id=$(basename "$story_file" .json)
+        rm -f "$story_file"
+        echo "   ✓ Removed: $story_id"
+        ((removed_count++))
+      fi
+    fi
+  done
+
+  # Get remaining stories for pending and blocked
+  local pending_stories=()
+  local blocked_stories=()
+
+  # Read current blocked array
+  blocked_stories=($(jq -r '.blocked[]? // empty' "$index_file" 2>/dev/null))
+
+  # Build pending array from remaining story files
+  for story_file in "$prd_dir/stories"/*.json(N); do
+    if [[ -f "$story_file" ]]; then
+      local story_id=$(basename "$story_file" .json)
+      # Check if it's in blocked array
+      local is_blocked=false
+      for blocked_id in "${blocked_stories[@]}"; do
+        if [[ "$story_id" == "$blocked_id" ]]; then
+          is_blocked=true
+          break
+        fi
+      done
+      if [[ "$is_blocked" == "false" ]]; then
+        pending_stories+=("$story_id")
+      fi
+    fi
+  done
+
+  # Calculate totals
+  local total_count=$((${#pending_stories[@]} + ${#blocked_stories[@]}))
+  local pending_count=${#pending_stories[@]}
+  local blocked_count=${#blocked_stories[@]}
+
+  # Build JSON arrays
+  local pending_json=$(printf '%s\n' "${pending_stories[@]}" | jq -R -s 'split("\n") | map(select(length > 0))')
+  local blocked_json=$(printf '%s\n' "${blocked_stories[@]}" | jq -R -s 'split("\n") | map(select(length > 0))')
+  local story_order_json=$(printf '%s\n' "${pending_stories[@]}" "${blocked_stories[@]}" | jq -R -s 'split("\n") | map(select(length > 0))')
+
+  # Determine next story
+  local next_story="null"
+  if [[ ${#pending_stories[@]} -gt 0 ]]; then
+    next_story="\"${pending_stories[1]}\""  # zsh arrays are 1-indexed
+  fi
+
+  # Update index.json
+  jq --argjson pending "$pending_json" \
+     --argjson blocked "$blocked_json" \
+     --argjson order "$story_order_json" \
+     --argjson total "$total_count" \
+     --argjson pcount "$pending_count" \
+     --argjson bcount "$blocked_count" \
+     --argjson next "$next_story" '
+    .storyOrder = $order |
+    .pending = $pending |
+    .blocked = $blocked |
+    .stats.total = $total |
+    .stats.pending = $pcount |
+    .stats.blocked = $bcount |
+    .stats.completed = 0 |
+    .nextStory = $next
+  ' "$index_file" > "${index_file}.tmp" && mv "${index_file}.tmp" "$index_file"
+
+  # Create fresh progress.txt
+  local progress_file="progress.txt"
+  cat > "$progress_file" << EOF
+# Ralph Progress - Fresh Start
+Started: $(date '+%a %b %d %H:%M:%S %Z %Y')
+
+(Previous progress archived to docs.local/prd-archive/)
+
+EOF
+
+  echo ""
+  echo "✅ Cleanup complete!"
+  echo "   • Removed $removed_count completed stories"
+  echo "   • Remaining: $pending_count pending, $blocked_count blocked"
+  echo "   • Fresh progress.txt created"
+}
+
 # Archive Markdown PRD (legacy)
+# Usage: _ralph_archive_md <prd_path> <app> <mode>
 _ralph_archive_md() {
   local prd_path="$1"
   local app="$2"
+  local mode="${3:-prompt}"
   local archive_dir="docs.local/prd-archive"
 
   mkdir -p "$archive_dir"
@@ -3981,11 +4109,40 @@ _ralph_archive_md() {
   echo "" >> "$archive_file"
   cat "$prd_path" >> "$archive_file"
 
-  echo "✅ Archived to: $archive_file"
+  # Archive progress.txt if it exists
+  if [[ -f "progress.txt" ]]; then
+    cp "progress.txt" "${archive_file%.md}-progress.txt"
+    echo "✅ Archived progress.txt"
+  fi
 
-  read -q "REPLY?Clear PRD.md for next sprint? (y/n) "
-  echo ""
-  if [[ "$REPLY" == "y" ]]; then
+  echo "✅ Archived PRD to: $archive_file"
+
+  # Handle cleanup based on mode
+  local do_cleanup=false
+
+  case "$mode" in
+    keep)
+      echo "ℹ️  Keeping working PRD intact (--keep flag)"
+      return 0
+      ;;
+    clean)
+      echo "🧹 Auto-cleanup enabled (--clean flag)"
+      do_cleanup=true
+      ;;
+    prompt)
+      if command -v gum &>/dev/null; then
+        if gum confirm "Reset PRD for fresh start?" --default=false; then
+          do_cleanup=true
+        fi
+      else
+        read -q "REPLY?Reset PRD for fresh start? (y/n) "
+        echo ""
+        [[ "$REPLY" == "y" ]] && do_cleanup=true
+      fi
+      ;;
+  esac
+
+  if [[ "$do_cleanup" == "true" ]]; then
     local working_dir=$(grep '^\*\*Working Directory:\*\*' "$prd_path" 2>/dev/null)
     echo "# PRD: Next Sprint" > "$prd_path"
     echo "" >> "$prd_path"
@@ -3997,6 +4154,16 @@ _ralph_archive_md() {
     echo "## User Stories" >> "$prd_path"
     echo "" >> "$prd_path"
     echo "(Add new stories here)" >> "$prd_path"
+
+    # Create fresh progress.txt
+    cat > "progress.txt" << EOF
+# Ralph Progress - Fresh Start
+Started: $(date '+%a %b %d %H:%M:%S %Z %Y')
+
+(Previous progress archived to docs.local/prd-archive/)
+
+EOF
+
     echo "✅ PRD cleared for next sprint"
   fi
 }

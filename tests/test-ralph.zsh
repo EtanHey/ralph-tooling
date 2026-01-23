@@ -1023,6 +1023,250 @@ test_framework_assert_file_exists() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# ARCHIVE FUNCTION TESTS
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: ralph-archive parses --keep flag
+test_archive_parses_keep_flag() {
+  test_start "archive parses --keep flag"
+  _setup_test_fixtures
+
+  # Create minimal PRD structure
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 1, "completed": 0, "pending": 1, "blocked": 0 },
+  "storyOrder": ["US-001"],
+  "pending": ["US-001"],
+  "blocked": [],
+  "nextStory": "US-001"
+}
+EOF
+  cat > "$TEST_TMP_DIR/prd-json/stories/US-001.json" << 'EOF'
+{ "id": "US-001", "passes": false }
+EOF
+
+  mkdir -p "$TEST_TMP_DIR/docs.local"
+  cd "$TEST_TMP_DIR"
+
+  # Run archive with --keep flag
+  local output
+  output=$(ralph-archive --keep 2>&1)
+  local exit_code=$?
+
+  assert_equals "0" "$exit_code" "ralph-archive --keep should succeed" || { cd -; _teardown_test_fixtures; return; }
+  assert_contains "$output" "--keep flag" "should mention --keep flag" || { cd -; _teardown_test_fixtures; return; }
+
+  # Verify archive was created
+  local archive_count=$(ls -d "$TEST_TMP_DIR/docs.local/prd-archive"/*/ 2>/dev/null | wc -l | tr -d ' ')
+  assert_equals "1" "$archive_count" "should create one archive directory" || { cd -; _teardown_test_fixtures; return; }
+
+  cd -
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: ralph-archive parses --clean flag
+test_archive_parses_clean_flag() {
+  test_start "archive parses --clean flag"
+  _setup_test_fixtures
+
+  # Create PRD structure with completed story
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 2, "completed": 1, "pending": 1, "blocked": 0 },
+  "storyOrder": ["US-001", "US-002"],
+  "pending": ["US-002"],
+  "blocked": [],
+  "nextStory": "US-002"
+}
+EOF
+  cat > "$TEST_TMP_DIR/prd-json/stories/US-001.json" << 'EOF'
+{ "id": "US-001", "passes": true }
+EOF
+  cat > "$TEST_TMP_DIR/prd-json/stories/US-002.json" << 'EOF'
+{ "id": "US-002", "passes": false }
+EOF
+
+  mkdir -p "$TEST_TMP_DIR/docs.local"
+  cd "$TEST_TMP_DIR"
+
+  # Run archive with --clean flag
+  local output
+  output=$(ralph-archive --clean 2>&1)
+  local exit_code=$?
+
+  assert_equals "0" "$exit_code" "ralph-archive --clean should succeed" || { cd -; _teardown_test_fixtures; return; }
+  assert_contains "$output" "--clean flag" "should mention --clean flag" || { cd -; _teardown_test_fixtures; return; }
+  assert_contains "$output" "Removed: US-001" "should remove completed US-001" || { cd -; _teardown_test_fixtures; return; }
+
+  # Verify US-001 was removed from working prd
+  [[ ! -f "$TEST_TMP_DIR/prd-json/stories/US-001.json" ]] || { test_fail "US-001.json should be deleted"; cd -; _teardown_test_fixtures; return; }
+
+  # Verify US-002 still exists
+  [[ -f "$TEST_TMP_DIR/prd-json/stories/US-002.json" ]] || { test_fail "US-002.json should still exist"; cd -; _teardown_test_fixtures; return; }
+
+  cd -
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: archive copies progress.txt
+test_archive_copies_progress_txt() {
+  test_start "archive copies progress.txt"
+  _setup_test_fixtures
+
+  # Create PRD structure
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 1, "completed": 0, "pending": 1, "blocked": 0 },
+  "storyOrder": ["US-001"],
+  "pending": ["US-001"],
+  "blocked": [],
+  "nextStory": "US-001"
+}
+EOF
+  cat > "$TEST_TMP_DIR/prd-json/stories/US-001.json" << 'EOF'
+{ "id": "US-001", "passes": false }
+EOF
+
+  # Create progress.txt
+  echo "# Ralph Progress - Test" > "$TEST_TMP_DIR/progress.txt"
+
+  mkdir -p "$TEST_TMP_DIR/docs.local"
+  cd "$TEST_TMP_DIR"
+
+  # Run archive
+  local output
+  output=$(ralph-archive --keep 2>&1)
+
+  assert_contains "$output" "progress.txt" "should mention progress.txt" || { cd -; _teardown_test_fixtures; return; }
+
+  # Verify progress.txt was copied to archive
+  local archive_dir=$(ls -d "$TEST_TMP_DIR/docs.local/prd-archive"/*/ 2>/dev/null | head -1)
+  [[ -f "$archive_dir/progress.txt" ]] || { test_fail "progress.txt should be in archive"; cd -; _teardown_test_fixtures; return; }
+
+  cd -
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: cleanup creates fresh progress.txt
+test_archive_cleanup_creates_fresh_progress() {
+  test_start "cleanup creates fresh progress.txt"
+  _setup_test_fixtures
+
+  # Create PRD structure with completed story
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 1, "completed": 1, "pending": 0, "blocked": 0 },
+  "storyOrder": ["US-001"],
+  "pending": [],
+  "blocked": [],
+  "nextStory": null
+}
+EOF
+  cat > "$TEST_TMP_DIR/prd-json/stories/US-001.json" << 'EOF'
+{ "id": "US-001", "passes": true }
+EOF
+
+  echo "# Old progress" > "$TEST_TMP_DIR/progress.txt"
+  mkdir -p "$TEST_TMP_DIR/docs.local"
+  cd "$TEST_TMP_DIR"
+
+  # Run archive with --clean
+  ralph-archive --clean >/dev/null 2>&1
+
+  # Verify fresh progress.txt was created
+  local progress_content
+  progress_content=$(cat "$TEST_TMP_DIR/progress.txt")
+  assert_contains "$progress_content" "Fresh Start" "progress.txt should contain 'Fresh Start'" || { cd -; _teardown_test_fixtures; return; }
+
+  cd -
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: cleanup resets index.json stats
+test_archive_cleanup_resets_stats() {
+  test_start "cleanup resets index.json stats"
+  _setup_test_fixtures
+
+  # Create PRD structure with completed and pending stories
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 3, "completed": 2, "pending": 1, "blocked": 0 },
+  "storyOrder": ["US-001", "US-002", "US-003"],
+  "pending": ["US-003"],
+  "blocked": [],
+  "nextStory": "US-003"
+}
+EOF
+  cat > "$TEST_TMP_DIR/prd-json/stories/US-001.json" << 'EOF'
+{ "id": "US-001", "passes": true }
+EOF
+  cat > "$TEST_TMP_DIR/prd-json/stories/US-002.json" << 'EOF'
+{ "id": "US-002", "passes": true }
+EOF
+  cat > "$TEST_TMP_DIR/prd-json/stories/US-003.json" << 'EOF'
+{ "id": "US-003", "passes": false }
+EOF
+
+  mkdir -p "$TEST_TMP_DIR/docs.local"
+  cd "$TEST_TMP_DIR"
+
+  # Run archive with --clean
+  ralph-archive --clean >/dev/null 2>&1
+
+  # Verify stats were reset
+  local completed=$(jq '.stats.completed' "$TEST_TMP_DIR/prd-json/index.json")
+  local total=$(jq '.stats.total' "$TEST_TMP_DIR/prd-json/index.json")
+  local pending=$(jq '.stats.pending' "$TEST_TMP_DIR/prd-json/index.json")
+
+  assert_equals "0" "$completed" "completed should be 0" || { cd -; _teardown_test_fixtures; return; }
+  assert_equals "1" "$total" "total should be 1 (only US-003 remains)" || { cd -; _teardown_test_fixtures; return; }
+  assert_equals "1" "$pending" "pending should be 1" || { cd -; _teardown_test_fixtures; return; }
+
+  # Verify nextStory is set to remaining story
+  local next_story=$(jq -r '.nextStory' "$TEST_TMP_DIR/prd-json/index.json")
+  assert_equals "US-003" "$next_story" "nextStory should be US-003" || { cd -; _teardown_test_fixtures; return; }
+
+  cd -
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: archive rejects unknown flags
+test_archive_rejects_unknown_flags() {
+  test_start "archive rejects unknown flags"
+  _setup_test_fixtures
+
+  # Create minimal PRD structure
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{ "stats": {}, "storyOrder": [], "pending": [], "blocked": [] }
+EOF
+  mkdir -p "$TEST_TMP_DIR/docs.local"
+  cd "$TEST_TMP_DIR"
+
+  # Run archive with unknown flag
+  local output
+  output=$(ralph-archive --invalid 2>&1)
+  local exit_code=$?
+
+  assert_equals "1" "$exit_code" "should fail with unknown flag" || { cd -; _teardown_test_fixtures; return; }
+  assert_contains "$output" "Unknown flag" "should mention unknown flag" || { cd -; _teardown_test_fixtures; return; }
+
+  cd -
+  _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 
