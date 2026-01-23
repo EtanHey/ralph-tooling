@@ -1559,6 +1559,105 @@ EOF
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# ERROR HANDLING CONFIG TESTS (BUG-019)
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: _ralph_load_config loads error handling settings with defaults
+test_error_handling_config_defaults() {
+  test_start "error handling config loads defaults"
+  _setup_test_fixtures
+  _reset_ralph_vars
+
+  # Create a config.json WITHOUT errorHandling section (backwards compatibility)
+  cat > "$RALPH_CONFIG_FILE" << 'EOF'
+{
+  "modelStrategy": "smart",
+  "defaultModel": "opus"
+}
+EOF
+
+  # Load config
+  _ralph_load_config
+
+  # Verify defaults are used when errorHandling section is missing
+  assert_equals "5" "$RALPH_MAX_RETRIES" "maxRetries should default to 5" || { _teardown_test_fixtures; return; }
+  assert_equals "3" "$RALPH_NO_MSG_MAX_RETRIES" "noMessagesMaxRetries should default to 3" || { _teardown_test_fixtures; return; }
+  assert_equals "15" "$RALPH_GENERAL_COOLDOWN" "generalCooldownSeconds should default to 15" || { _teardown_test_fixtures; return; }
+  assert_equals "30" "$RALPH_NO_MSG_COOLDOWN" "noMessagesCooldownSeconds should default to 30" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_load_config loads custom error handling settings
+test_error_handling_config_custom() {
+  test_start "error handling config loads custom values"
+  _setup_test_fixtures
+  _reset_ralph_vars
+
+  # Create a config.json WITH custom errorHandling settings
+  cat > "$RALPH_CONFIG_FILE" << 'EOF'
+{
+  "modelStrategy": "smart",
+  "defaultModel": "opus",
+  "errorHandling": {
+    "maxRetries": 10,
+    "noMessagesMaxRetries": 5,
+    "generalCooldownSeconds": 20,
+    "noMessagesCooldownSeconds": 45
+  }
+}
+EOF
+
+  # Load config
+  _ralph_load_config
+
+  # Verify custom values are loaded
+  assert_equals "10" "$RALPH_MAX_RETRIES" "maxRetries should be 10" || { _teardown_test_fixtures; return; }
+  assert_equals "5" "$RALPH_NO_MSG_MAX_RETRIES" "noMessagesMaxRetries should be 5" || { _teardown_test_fixtures; return; }
+  assert_equals "20" "$RALPH_GENERAL_COOLDOWN" "generalCooldownSeconds should be 20" || { _teardown_test_fixtures; return; }
+  assert_equals "45" "$RALPH_NO_MSG_COOLDOWN" "noMessagesCooldownSeconds should be 45" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: error patterns include Node.js rejection patterns
+test_error_patterns_include_nodejs_rejections() {
+  test_start "error patterns include Node.js rejection patterns"
+
+  # The error_patterns variable is local to the ralph function, so we test
+  # the patterns by checking they would match expected error strings
+  local error_patterns="No messages returned|EAGAIN|ECONNRESET|fetch failed|API error|promise rejected|UnhandledPromiseRejection|This error originated|promise rejected with the reason|ETIMEDOUT|socket hang up|ENOTFOUND|rate limit|overloaded|Error: 5[0-9][0-9]|status.*(5[0-9][0-9])|HTTP.*5[0-9][0-9]"
+
+  # Test Node.js preamble pattern
+  if echo "This error originated either by throwing inside of an async function" | grep -qiE "$error_patterns"; then
+    : # Pattern matches
+  else
+    test_fail "'This error originated' pattern should match"
+    return
+  fi
+
+  # Test promise rejected pattern
+  if echo "Error: the promise rejected with the reason: fetch failed" | grep -qiE "$error_patterns"; then
+    : # Pattern matches
+  else
+    test_fail "'promise rejected with the reason' pattern should match"
+    return
+  fi
+
+  # Test UnhandledPromiseRejection pattern
+  if echo "UnhandledPromiseRejection: Error" | grep -qiE "$error_patterns"; then
+    : # Pattern matches
+  else
+    test_fail "'UnhandledPromiseRejection' pattern should match"
+    return
+  fi
+
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 

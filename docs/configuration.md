@@ -78,6 +78,42 @@ Configure valid app names:
 export RALPH_VALID_APPS="frontend backend mobile expo"
 ```
 
+## Error Handling
+
+Configure retry behavior for transient API errors in `config.json`:
+
+```json
+{
+  "errorHandling": {
+    "maxRetries": 5,
+    "noMessagesMaxRetries": 3,
+    "generalCooldownSeconds": 15,
+    "noMessagesCooldownSeconds": 30
+  }
+}
+```
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `maxRetries` | Max retries for general API errors | `5` |
+| `noMessagesMaxRetries` | Max retries for "No messages returned" error | `3` |
+| `generalCooldownSeconds` | Wait time between general error retries | `15` |
+| `noMessagesCooldownSeconds` | Wait time between "No messages" retries | `30` |
+
+**Error Patterns Detected:**
+- `No messages returned` - Claude API timeout
+- `EAGAIN`, `ECONNRESET`, `ETIMEDOUT`, `ENOTFOUND` - Network errors
+- `fetch failed`, `socket hang up` - Connection failures
+- `rate limit`, `overloaded` - API rate limiting
+- `UnhandledPromiseRejection`, `This error originated`, `promise rejected with the reason` - Node.js errors
+- `Error: 5XX`, `HTTP.*5XX` - Server errors
+
+**Behavior:**
+1. When an error is detected, Ralph waits `generalCooldownSeconds` before retrying
+2. For "No messages returned", uses longer `noMessagesCooldownSeconds` with fresh session ID
+3. After `maxRetries` exhausted, skips to next story
+4. Errors are logged to `/tmp/ralph_error_*.log` for debugging
+
 ## Debug Output Auditing
 
 To check for unguarded debug output in `ralph.zsh`:

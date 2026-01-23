@@ -184,3 +184,27 @@ Changes:
 - CodeRabbit `cr review --prompt-only` uses `Type: potential_issue` not CRITICAL/HIGH/MEDIUM
 - Need to grep for both output formats to handle different CR versions
 - CR has rate limits (~7 min cooldown after several reviews)
+
+## Iteration 12
+Story: BUG-019 - Configurable error handling and reliable retry logic
+Status: COMPLETED (opus)
+Changes:
+- Added errorHandling section to config.json schema with 4 configurable fields:
+  - maxRetries (default: 5) - max retries for general API errors
+  - noMessagesMaxRetries (default: 3) - max retries for "No messages returned"
+  - generalCooldownSeconds (default: 15) - wait time between general retries
+  - noMessagesCooldownSeconds (default: 30) - wait time between "No messages" retries
+- Updated ralph-config wizard (both gum and fallback modes) to allow customizing error handling
+- Updated _ralph_load_config() to load errorHandling settings with backwards-compatible defaults
+- Changed hardcoded retry/cooldown values to use config-loaded variables
+- Added Node.js unhandled promise rejection error patterns:
+  - "This error originated" (Node.js rejection preamble)
+  - "promise rejected with the reason"
+- Added 3 new unit tests for error handling config (all 46 tests pass)
+- Documented error handling config in docs/configuration.md with full reference table
+
+### Learnings
+- OR sub-criteria in acceptance means implementing ANY ONE satisfies the requirement
+- Existing `2>&1` redirection already captures stderr (the third OR option)
+- Config defaults should use jq's `// value` syntax for backwards compatibility
+- Shell variable expansion in echo uses ${var} for inline text (e.g., "Waiting ${cooldown} seconds...")

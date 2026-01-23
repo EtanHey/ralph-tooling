@@ -1177,6 +1177,10 @@ ralph-config() {
   local default_model=""
   local notifications_enabled=""
   local ntfy_topic=""
+  local max_retries="5"
+  local no_msg_max_retries="3"
+  local general_cooldown="15"
+  local no_msg_cooldown="30"
 
   # Check if gum is available
   if [[ $RALPH_HAS_GUM -eq 0 ]]; then
@@ -1218,6 +1222,43 @@ ralph-config() {
     else
       notifications_enabled="false"
       ntfy_topic=""
+    fi
+
+    echo ""
+    echo "⚙️  Error Handling"
+    echo "   Configure retry behavior for API errors"
+    echo ""
+    if gum confirm "Customize error handling? (defaults recommended)"; then
+      echo ""
+      echo "   Max retries for general errors (default: 5):"
+      local max_retries_input=$(gum input --placeholder "5")
+      [[ -z "$max_retries_input" ]] && max_retries_input="5"
+      max_retries="$max_retries_input"
+      echo "   Selected: $max_retries"
+      echo ""
+      echo "   Max retries for 'No messages returned' error (default: 3):"
+      local no_msg_retries_input=$(gum input --placeholder "3")
+      [[ -z "$no_msg_retries_input" ]] && no_msg_retries_input="3"
+      no_msg_max_retries="$no_msg_retries_input"
+      echo "   Selected: $no_msg_max_retries"
+      echo ""
+      echo "   General cooldown (seconds) (default: 15):"
+      local general_cd_input=$(gum input --placeholder "15")
+      [[ -z "$general_cd_input" ]] && general_cd_input="15"
+      general_cooldown="$general_cd_input"
+      echo "   Selected: $general_cooldown"
+      echo ""
+      echo "   'No messages' cooldown (seconds) (default: 30):"
+      local no_msg_cd_input=$(gum input --placeholder "30")
+      [[ -z "$no_msg_cd_input" ]] && no_msg_cd_input="30"
+      no_msg_cooldown="$no_msg_cd_input"
+      echo "   Selected: $no_msg_cooldown"
+    else
+      max_retries="5"
+      no_msg_max_retries="3"
+      general_cooldown="15"
+      no_msg_cooldown="30"
+      echo "   Using defaults: maxRetries=5, noMessagesMaxRetries=3, cooldowns=15s/30s"
     fi
 
   else
@@ -1282,6 +1323,34 @@ ralph-config() {
         ntfy_topic=""
         ;;
     esac
+
+    echo ""
+    echo "⚙️  Error Handling"
+    echo -n "   Customize error handling? [y/N]: "
+    read error_handling_choice
+    case "$error_handling_choice" in
+      [Yy]*)
+        echo -n "   Max retries for general errors [5]: "
+        read max_retries_input
+        [[ -n "$max_retries_input" ]] && max_retries="$max_retries_input"
+        echo "   Selected: $max_retries"
+        echo -n "   Max retries for 'No messages returned' [3]: "
+        read no_msg_input
+        [[ -n "$no_msg_input" ]] && no_msg_max_retries="$no_msg_input"
+        echo "   Selected: $no_msg_max_retries"
+        echo -n "   General cooldown (seconds) [15]: "
+        read general_cd_input
+        [[ -n "$general_cd_input" ]] && general_cooldown="$general_cd_input"
+        echo "   Selected: $general_cooldown"
+        echo -n "   'No messages' cooldown (seconds) [30]: "
+        read no_msg_cd_input
+        [[ -n "$no_msg_cd_input" ]] && no_msg_cooldown="$no_msg_cd_input"
+        echo "   Selected: $no_msg_cooldown"
+        ;;
+      *)
+        echo "   Using defaults: maxRetries=5, noMessagesMaxRetries=3, cooldowns=15s/30s"
+        ;;
+    esac
   fi
 
   echo ""
@@ -1322,6 +1391,12 @@ ralph-config() {
   "defaults": {
     "maxIterations": $RALPH_MAX_ITERATIONS,
     "sleepSeconds": $RALPH_SLEEP_SECONDS
+  },
+  "errorHandling": {
+    "maxRetries": $max_retries,
+    "noMessagesMaxRetries": $no_msg_max_retries,
+    "generalCooldownSeconds": $general_cooldown,
+    "noMessagesCooldownSeconds": $no_msg_cooldown
   }
 }
 EOF
@@ -1403,6 +1478,12 @@ _ralph_first_run_check() {
   "defaults": {
     "maxIterations": 10,
     "sleepSeconds": 2
+  },
+  "errorHandling": {
+    "maxRetries": 5,
+    "noMessagesMaxRetries": 3,
+    "generalCooldownSeconds": 15,
+    "noMessagesCooldownSeconds": 30
   }
 }
 EOF
@@ -1444,6 +1525,12 @@ EOF
   "defaults": {
     "maxIterations": 10,
     "sleepSeconds": 2
+  },
+  "errorHandling": {
+    "maxRetries": 5,
+    "noMessagesMaxRetries": 3,
+    "generalCooldownSeconds": 15,
+    "noMessagesCooldownSeconds": 30
   }
 }
 EOF
@@ -1489,6 +1576,12 @@ EOF
   "defaults": {
     "maxIterations": 10,
     "sleepSeconds": 2
+  },
+  "errorHandling": {
+    "maxRetries": 5,
+    "noMessagesMaxRetries": 3,
+    "generalCooldownSeconds": 15,
+    "noMessagesCooldownSeconds": 30
   }
 }
 EOF
@@ -1541,6 +1634,12 @@ _ralph_load_config() {
     # Load parallel verification settings
     RALPH_PARALLEL_VERIFICATION=$(jq -r '.parallelVerification // false' "$RALPH_CONFIG_FILE" 2>/dev/null)
     RALPH_PARALLEL_AGENTS=$(jq -r '.parallelAgents // 2' "$RALPH_CONFIG_FILE" 2>/dev/null)
+
+    # Load error handling settings (with defaults for backwards compatibility)
+    RALPH_MAX_RETRIES=$(jq -r '.errorHandling.maxRetries // 5' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_NO_MSG_MAX_RETRIES=$(jq -r '.errorHandling.noMessagesMaxRetries // 3' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_GENERAL_COOLDOWN=$(jq -r '.errorHandling.generalCooldownSeconds // 15' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_NO_MSG_COOLDOWN=$(jq -r '.errorHandling.noMessagesCooldownSeconds // 30' "$RALPH_CONFIG_FILE" 2>/dev/null)
 
     # Load color scheme setting
     RALPH_COLOR_SCHEME=$(jq -r '.colorScheme // "default"' "$RALPH_CONFIG_FILE" 2>/dev/null)
@@ -3528,10 +3627,13 @@ function ralph() {
     fi
 
     # Retry logic for transient API errors like "No messages returned"
-    local max_retries=5
+    # Use config values (loaded from config.json) with fallback defaults
+    local max_retries="${RALPH_MAX_RETRIES:-5}"
     local retry_count=0
     local no_messages_retry_count=0
-    local no_messages_max_retries=3
+    local no_messages_max_retries="${RALPH_NO_MSG_MAX_RETRIES:-3}"
+    local general_cooldown="${RALPH_GENERAL_COOLDOWN:-15}"
+    local no_msg_cooldown="${RALPH_NO_MSG_COOLDOWN:-30}"
     local claude_success=false
 
     while [[ "$retry_count" -lt "$max_retries" ]]; do
@@ -3886,7 +3988,7 @@ After completing task, check PRD state:
       # Check for transient API errors (in output OR non-zero exit)
       # IMPORTANT: Only check LAST 10 lines to avoid false positives from prose text
       # Patterns must be specific to actual errors, not mentions in summaries
-      local error_patterns="No messages returned|EAGAIN|ECONNRESET|fetch failed|API error|promise rejected|UnhandledPromiseRejection|ETIMEDOUT|socket hang up|ENOTFOUND|rate limit|overloaded|Error: 5[0-9][0-9]|status.*(5[0-9][0-9])|HTTP.*5[0-9][0-9]"
+      local error_patterns="No messages returned|EAGAIN|ECONNRESET|fetch failed|API error|promise rejected|UnhandledPromiseRejection|This error originated|promise rejected with the reason|ETIMEDOUT|socket hang up|ENOTFOUND|rate limit|overloaded|Error: 5[0-9][0-9]|status.*(5[0-9][0-9])|HTTP.*5[0-9][0-9]"
       local has_error=false
 
       # Check first 5 AND last 10 lines for error patterns (avoids false positives from prose)
@@ -3941,8 +4043,8 @@ After completing task, check PRD state:
           echo -e "  ⚠️  $(_ralph_warning "'No messages returned' error detected") - Retry $no_messages_retry_count/$no_messages_max_retries"
           echo "  📝 Error log: $no_msg_error_log"
           echo "  🔄 Generating fresh session ID for retry..."
-          echo "  ⏳ Waiting 30 seconds (API cooldown)..."
-          sleep 30
+          echo "  ⏳ Waiting ${no_msg_cooldown} seconds (API cooldown)..."
+          sleep "$no_msg_cooldown"
           # Fresh session ID will be generated at the start of the next loop iteration
           continue
         else
@@ -4001,8 +4103,8 @@ After completing task, check PRD state:
           echo -e "  ⚠️  $(_ralph_warning "Error detected") (exit code: $exit_code) - Retrying ($retry_count/$max_retries)..."
           echo "  📝 Error log: $error_log"
           [[ -f "$RALPH_TMP" ]] && tail -3 "$RALPH_TMP" 2>/dev/null | head -2
-          echo "  ⏳ Waiting 15 seconds before retry..."
-          sleep 15
+          echo "  ⏳ Waiting ${general_cooldown} seconds before retry..."
+          sleep "$general_cooldown"
           continue
         else
           echo ""
