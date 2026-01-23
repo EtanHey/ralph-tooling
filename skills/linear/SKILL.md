@@ -23,6 +23,18 @@ op item create --category "API Credential" --title "linear" --vault "Private" "a
 
 ---
 
+## Available Scripts
+
+Run these directly - they handle errors and authentication:
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `scripts/create-issue.sh` | Create new issue | `bash ~/.claude/commands/linear/scripts/create-issue.sh --team ID --title "Title"` |
+| `scripts/list-issues.sh` | List/search issues | `bash ~/.claude/commands/linear/scripts/list-issues.sh --my` |
+| `scripts/create-worktree.sh` | Worktree from issue | `bash ~/.claude/commands/linear/scripts/create-worktree.sh ENG-123` |
+
+---
+
 ## Quick Actions
 
 | What you want to do | Workflow |

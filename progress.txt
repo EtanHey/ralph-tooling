@@ -379,3 +379,69 @@ All workflow files (dev.md, deploy.md, etc.) now:
 - Workflows become routing docs, not execution instructions
 - Structured output (SUCCESS/ERROR prefix) enables reliable agent parsing
 - Pre-written scripts are more reliable than generated code
+
+## Iteration 14 - US-048: Audit all skills for script-backed pattern compliance
+**Status**: COMPLETED
+
+Audited all skills and upgraded Linear, Archive, and Ralph-install to the script-backed pattern.
+
+### Skills Audit Results
+
+**Already Script-backed (before this iteration):**
+- `convex` - 5 scripts (dev.sh, deploy.sh, run-function.sh, export-data.sh, import-data.sh)
+- `1password` - 2 scripts (migrate-env.sh, scan-mcp-secrets.sh)
+
+**Upgraded to Script-backed:**
+- `linear` - 3 new scripts
+- `archive` - 2 new scripts
+- `ralph-install` - 3 new scripts
+
+**MD-only (no scripts needed):**
+- `skills.md` - Discovery only
+- `github.md` - Routes to gh CLI
+- `brave.md` - Browser tool reference
+- `prd.md` - PRD generation
+- `critique-waves.md` - Agent orchestration
+- `worktrees` - Simple git commands
+
+### Scripts Created
+
+**Linear Skill (`skills/linear/scripts/`):**
+- `create-issue.sh` - Create Linear issues with priority, labels, assignee
+- `list-issues.sh` - List/search issues with filters (--my, --team, --search, --issue)
+- `create-worktree.sh` - Create git worktree from Linear issue with branch name
+
+**Archive Skill (`skills/archive/scripts/`):**
+- `archive-snapshot.sh` - Create timestamped PRD archive
+- `cleanup-completed.sh` - Archive then remove completed stories
+
+**Ralph-install Skill (`skills/ralph-install/scripts/`):**
+- `check-deps.sh` - Check all required dependencies
+- `install-deps.sh` - Install missing deps via Homebrew
+- `validate.sh` - Full installation validation
+
+### SKILL.md Updates
+
+Added "Available Scripts" table to:
+- `skills/linear/SKILL.md`
+- `skills/archive/SKILL.md`
+- `skills/ralph-install/SKILL.md`
+
+### Documentation
+
+Added "When to Use Scripts vs Workflows" section to `docs/skills.md`:
+- When to use scripts: API calls, multi-step operations, validation
+- When to use workflows: Simple CLI commands, decision trees, documentation
+- Script template pattern with colors, help, structured output
+
+### All Scripts Pass Pattern Requirements
+- `set -e` for exit on error
+- Color-coded output (RED/GREEN/YELLOW/BLUE)
+- `-h/--help` flag for usage
+- Structured output (SUCCESS/ERROR prefixes)
+
+### Learnings
+- 8 new scripts total, all pass bash -n typecheck
+- Script-backed skills are more reliable than inline code blocks
+- Workflows become routing docs that point to scripts
+- Pattern: SKILL.md has "Available Scripts" table at top

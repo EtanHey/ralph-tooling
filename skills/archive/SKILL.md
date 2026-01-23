@@ -7,6 +7,17 @@ description: Archive completed PRD stories to docs.local/. Use when planning a s
 
 > Archive completed stories to `docs.local/prd-archive/` with full history preservation. Optionally reset the working PRD for a fresh start.
 
+## Available Scripts
+
+Run these directly - standalone, no ralph.zsh dependency:
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `scripts/archive-snapshot.sh` | Create archive snapshot | `bash ~/.claude/commands/archive/scripts/archive-snapshot.sh` |
+| `scripts/cleanup-completed.sh` | Archive + remove completed | `bash ~/.claude/commands/archive/scripts/cleanup-completed.sh` |
+
+---
+
 ## Quick Actions
 
 | What you want to do | Workflow |
@@ -16,7 +27,7 @@ description: Archive completed PRD stories to docs.local/. Use when planning a s
 
 ---
 
-## CLI Command
+## CLI Command (Requires ralph.zsh)
 
 ```bash
 source ~/.config/ralph/ralph.zsh && ralph-archive [app] [flags]

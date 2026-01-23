@@ -7,6 +7,18 @@ description: Install wizard for ralphtools. Checks dependencies, installs missin
 
 > Guides new users through ralphtools setup. Checks for required CLIs, configures tokens in 1Password, sets up symlinks, and validates everything works.
 
+## Available Scripts
+
+Run these directly - standalone setup and validation:
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `scripts/check-deps.sh` | Check dependencies | `bash ~/.claude/commands/ralph-install/scripts/check-deps.sh` |
+| `scripts/install-deps.sh` | Install missing | `bash ~/.claude/commands/ralph-install/scripts/install-deps.sh --all` |
+| `scripts/validate.sh` | Full validation | `bash ~/.claude/commands/ralph-install/scripts/validate.sh` |
+
+---
+
 ## Quick Start
 
 For a full installation, run through these workflows in order:

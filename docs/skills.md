@@ -2,6 +2,80 @@
 
 Ralph can leverage these skills during execution.
 
+---
+
+## When to Use Scripts vs Workflows
+
+Skills can contain both **scripts** (executable bash files) and **workflows** (markdown documentation). Here's when to use each:
+
+### Use Scripts When:
+
+| Scenario | Why Scripts? |
+|----------|--------------|
+| API calls (GraphQL, REST) | Complex curl commands with auth, headers, JSON |
+| Multi-step operations | Error handling, retries, structured output |
+| Validation/verification | Consistent pass/fail output format |
+| Dependency installation | Package managers, version checks |
+| File processing | Archive creation, cleanup, migrations |
+
+**Benefits:**
+- Execute without loading code into context (only output enters conversation)
+- Pre-tested, proven error handling
+- Consistent structured output (SUCCESS/ERROR prefixes)
+- Agent invokes script, gets clean result - no interpretation needed
+
+### Use Workflows (Markdown) When:
+
+| Scenario | Why Workflows? |
+|----------|----------------|
+| Simple CLI commands | `git checkout`, `npm install` - no script needed |
+| Decision trees | "If X, do Y; if Z, do W" - markdown is clearer |
+| User guidance | Instructions requiring human judgment |
+| Documentation | API reference, troubleshooting guides |
+| Routing | "For issue creation, use scripts/create-issue.sh" |
+
+### Pattern: Script-Backed Skills
+
+The recommended pattern for skills with bash operations:
+
+```
+skills/my-skill/
+├── SKILL.md              # Router with "Available Scripts" table
+├── scripts/
+│   ├── operation-1.sh    # Standalone executable
+│   └── operation-2.sh
+└── workflows/
+    ├── operation-1.md    # Routes to script, documents options
+    └── troubleshoot.md   # Pure documentation
+```
+
+### Script Template
+
+All scripts should follow this pattern:
+
+```bash
+#!/bin/bash
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+show_help() {
+    echo "Usage: script.sh [options]"
+    # ...
+}
+
+# Parse args, validate, execute...
+
+echo -e "${GREEN}SUCCESS: Operation complete${NC}"
+```
+
+See `docs/skill-creation-guide.md` for the full pattern.
+
+---
+
 ## Core Skills (Custom)
 
 | Skill | File | Description |

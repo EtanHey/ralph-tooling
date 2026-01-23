@@ -6,45 +6,45 @@
   "acceptanceCriteria": [
     {
       "text": "Audit: List all skills and classify as 'script-backed' or 'md-only'",
-      "checked": false
+      "checked": true
     },
     {
       "text": "For each 'md-only' skill: Identify bash operations that should be scripts",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Priority order: convex (done in US-047), linear, archive, ralph-install",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Linear skill: Add scripts/create-issue.sh, scripts/list-issues.sh, scripts/create-worktree.sh",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Archive skill: Add scripts/archive-snapshot.sh, scripts/cleanup-completed.sh",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Ralph-install skill: Add scripts/check-deps.sh, scripts/install-deps.sh, scripts/validate.sh",
-      "checked": false
+      "checked": true
     },
     {
       "text": "All scripts follow pattern: set -e, colors, usage help, structured output",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update each SKILL.md with 'Available Scripts' table",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Document pattern in docs/skills.md: 'When to use scripts vs workflows'",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Typecheck passes (bash -n on all new scripts)",
-      "checked": false
+      "checked": true
     }
   ],
-  "passes": false,
+  "passes": true,
   "blockedBy": null
 }
