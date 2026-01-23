@@ -76,3 +76,20 @@ Changes:
 - jq's `.[0] * .[1]` merge operator means updateStories fields must be at top level with id
 - Documentation discrepancies can lead to silent failures (storyOrder/pending were being ignored)
 - Adding validation warnings helps users catch format mistakes early
+
+## Iteration 6
+Story: US-052 - Audit Skills for Structure Compliance
+Status: COMPLETED (opus)
+Changes:
+- Scanned ~/.claude/commands/ for all 14 skills (11 directory-based, 3 single-file)
+- Checked against reference pattern: github skill (SKILL.md + workflows/ + scripts/)
+- Created comprehensive audit report at docs.local/skill-audit-report.md
+- Found 6 fully compliant, 5 partially compliant, 3 non-compliant (single files)
+- Critical finding: brave.md and brave/ both exist (duplicate skill)
+- Medium priority: brave/, coderabbit/, worktrees/ have bash refs but no scripts/
+- Low priority: critique-waves and update have sparse scripts/
+
+### Learnings
+- Single-file skills may be appropriate if simple/linear (prd.md, skills.md)
+- Duplicate skills cause confusion (brave.md vs brave/ directory)
+- Skills referencing external CLIs don't necessarily need scripts/ (already have CLI)
