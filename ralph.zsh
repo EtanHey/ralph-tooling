@@ -2239,6 +2239,7 @@ _ralph_json_remaining_count() {
 
 # Get remaining stats as space-separated numbers: "stories criteria"
 _ralph_json_remaining_stats() {
+  setopt localoptions noxtrace  # Prevent debug output leaking to terminal
   local json_dir="$1"
   local index_file="$json_dir/index.json"
 
@@ -3258,7 +3259,7 @@ After completing task, check PRD state:
           if $notify_enabled; then
             local skip_stats
             if [[ "$use_json_mode" == "true" ]]; then
-              skip_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR")
+              skip_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR" 2>/dev/null)
             else
               skip_stats="? ?"
             fi
@@ -3313,7 +3314,7 @@ After completing task, check PRD state:
           if $notify_enabled; then
             local error_stats
             if [[ "$use_json_mode" == "true" ]]; then
-              error_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR")
+              error_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR" 2>/dev/null)
             else
               error_stats="? ?"
             fi
@@ -3385,7 +3386,7 @@ After completing task, check PRD state:
       if $notify_enabled; then
         local blocked_stats
         if [[ "$use_json_mode" == "true" ]]; then
-          blocked_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR")
+          blocked_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR" 2>/dev/null)
         else
           blocked_stats="? ?"
         fi

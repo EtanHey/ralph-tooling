@@ -552,3 +552,34 @@ Compact mode:
 - Check for empty story BEFORE the iteration starts, not just at completion signals
 - The `<promise>COMPLETE</promise>` signal was intended for when Claude reports completion, but Ralph itself needs to detect the empty-pending case
 - Exit early, not late - don't burn an iteration asking Claude "what's the next task?" when there are none
+
+## Iteration 18 - BUG-006: Debug output 'remaining_stats' leaking to display
+**Status**: COMPLETED
+
+Fixed the debug output `remaining_stats='0 0'` that was leaking to the terminal when user's shell had xtrace enabled.
+
+### Root Cause
+When a user's shell has `set -x` (xtrace) enabled globally, ZSH outputs debug traces to stderr for each command/assignment. The `_ralph_json_remaining_stats` function was being called in several places WITHOUT `2>/dev/null`, allowing xtrace output to leak to the terminal.
+
+Lines 3261, 3316, and 3388 were calling `_ralph_json_remaining_stats` without stderr redirection, while lines 3403 and 3475 already had `2>/dev/null`.
+
+### Solution
+1. Added `2>/dev/null` to all calls of `_ralph_json_remaining_stats` that were missing it:
+   - Line 3261: `skip_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR" 2>/dev/null)`
+   - Line 3316: `error_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR" 2>/dev/null)`
+   - Line 3388: `blocked_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR" 2>/dev/null)`
+
+2. Added belt-and-suspenders protection by adding `setopt localoptions noxtrace` at the start of the `_ralph_json_remaining_stats` function itself.
+
+### Files Modified
+- `/Users/etanheyman/Desktop/Gits/ralphtools/ralph.zsh`
+  - `_ralph_json_remaining_stats()`: Added `setopt localoptions noxtrace` (line 2242)
+  - Line 3261: Added `2>/dev/null` to skip_stats assignment
+  - Line 3316: Added `2>/dev/null` to error_stats assignment
+  - Line 3388: Added `2>/dev/null` to blocked_stats assignment
+
+### Learnings
+- ZSH xtrace outputs to stderr, so `2>/dev/null` suppresses it when capturing command output
+- `setopt localoptions noxtrace` only takes effect AFTER it executes, so the setopt line itself may still produce trace output
+- For belt-and-suspenders protection, use BOTH: noxtrace in the function AND `2>/dev/null` at call sites
+- The output format `varname='value'` is the telltale sign of xtrace debug output
