@@ -3,17 +3,17 @@
   "title": "Verify smart 1Password organization",
   "description": "Test that ralph-secrets migrate correctly categorizes secrets into project/service/key structure. Verify auto-detection works for common services and global vars go to _global/.",
   "acceptanceCriteria": [
-    { "text": "Source ralph.zsh successfully", "checked": false },
-    { "text": "Create test .env with: ANTHROPIC_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, DATABASE_URL, EDITOR, CUSTOM_VAR", "checked": false },
-    { "text": "Run ralph-secrets migrate --dry-run on test .env", "checked": false },
-    { "text": "Verify ANTHROPIC_API_KEY → {project}/anthropic/API_KEY", "checked": false },
-    { "text": "Verify SUPABASE_URL → {project}/supabase/URL", "checked": false },
-    { "text": "Verify DATABASE_URL → {project}/db/URL", "checked": false },
-    { "text": "Verify EDITOR → _global/misc/EDITOR or _global/editor/PATH", "checked": false },
-    { "text": "Verify CUSTOM_VAR → {project}/misc/CUSTOM_VAR", "checked": false },
-    { "text": "Verify .env.template has correct op:// paths with nesting", "checked": false },
-    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+    { "text": "Source ralph.zsh successfully", "checked": true },
+    { "text": "Create test .env with: ANTHROPIC_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, DATABASE_URL, EDITOR, CUSTOM_VAR", "checked": true },
+    { "text": "Run ralph-secrets migrate --dry-run on test .env", "checked": true },
+    { "text": "Verify ANTHROPIC_API_KEY → {project}/anthropic/API_KEY", "checked": true },
+    { "text": "Verify SUPABASE_URL → {project}/supabase/URL", "checked": true },
+    { "text": "Verify DATABASE_URL → {project}/db/URL", "checked": true },
+    { "text": "Verify EDITOR → _global/misc/EDITOR or _global/editor/PATH", "checked": true },
+    { "text": "Verify CUSTOM_VAR → {project}/misc/CUSTOM_VAR", "checked": true },
+    { "text": "Verify .env.template has correct op:// paths with nesting", "checked": true },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": true }
   ],
-  "passes": false,
+  "passes": true,
   "blockedBy": null
 }
