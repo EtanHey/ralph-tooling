@@ -1,0 +1,26 @@
+{
+  "id": "AUDIT-001",
+  "title": "Audit README.md for accuracy and relevance",
+  "description": "Thoroughly review README.md against actual codebase. Remove outdated examples (like -G -H -K flags), update feature descriptions, ensure all documented commands actually work, and verify installation instructions are current. This is a comprehensive audit - use Opus for thoroughness.",
+  "type": "audit",
+  "priority": "high",
+  "storyPoints": 3,
+  "status": "pending",
+  "model": "opus",
+  "acceptanceCriteria": [
+    {"text": "Read entire README.md and cross-reference with ralph.zsh", "checked": false},
+    {"text": "Remove -G -H -K examples (deprecated per US-073)", "checked": false},
+    {"text": "Verify all CLI flags in README actually exist in code", "checked": false},
+    {"text": "Verify all example commands work as documented", "checked": false},
+    {"text": "Update feature list to match current capabilities", "checked": false},
+    {"text": "Verify installation instructions are accurate", "checked": false},
+    {"text": "Verify smart routing documentation is current", "checked": false},
+    {"text": "Remove any references to renamed paths (ralphtools → claude-golem)", "checked": false},
+    {"text": "Ensure MCP integration docs are accurate", "checked": false},
+    {"text": "Verify skills documentation matches actual skills", "checked": false},
+    {"text": "Check all external links still work", "checked": false},
+    {"text": "Typecheck passes", "checked": false}
+  ],
+  "dependencies": ["US-073"],
+  "passes": false
+}
