@@ -53,23 +53,24 @@ ralph 20                      # Execute 20 iterations
 
 ### Model Flags
 
-Specify up to two model flags: **first = main stories**, **second = verification stories**.
+Model selection is handled automatically by **smart routing**:
+- AUDIT-* stories → Opus (thorough analysis)
+- US-* stories → Sonnet (balanced)
+- V-* stories → Haiku (fast verification)
+- Story-level override via `"model": "opus"` in JSON
 
 | Flag | Model | Browser Automation |
 |------|-------|-------------------|
-| `-O` | Claude Opus (default) | Claude-in-Chrome MCP |
+| `-O` | Claude Opus | Claude-in-Chrome MCP |
 | `-S` | Claude Sonnet | Claude-in-Chrome MCP |
-| `-H` | Claude Haiku | Claude-in-Chrome MCP |
-| `-K` | [Kiro CLI](https://kiro.dev/) | brave-manager (built-in) |
-| `-G` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | brave-manager (built-in) |
+
+Use `ralph-setup` to configure your default model preferences.
 
 ### Examples
 
 ```bash
-ralph 50              # Opus main, Haiku verify (default)
-ralph 50 -G -H        # Gemini main, Haiku verify
-ralph 50 -K -G        # Kiro main, Gemini verify
-ralph 50 -G -G        # Gemini for all stories
+ralph 50              # Run 50 iterations with smart routing
+ralph myapp 20        # Run on apps/myapp/ (monorepo)
 ```
 
 ---
@@ -117,6 +118,64 @@ cd ~/.config/ralph && git pull
 
 ---
 
+## CodeRabbit Integration
+
+Ralph integrates with [CodeRabbit](https://coderabbit.ai) for free AI-powered code reviews before commits.
+
+### How It Works
+
+1. After Claude finishes implementing a story, Ralph instructs it to run `cr review`
+2. If issues (CRITICAL/HIGH/MEDIUM) are found, Claude fixes them
+3. Re-runs CodeRabbit until clean
+4. Only then commits the changes
+
+### Setup
+
+```bash
+# Install CodeRabbit CLI
+npm install -g coderabbit
+
+# Configure via ralph-setup
+ralph-setup
+# Choose "Configure CodeRabbit"
+# Enable and specify repos (or * for all)
+```
+
+### Configuration
+
+CodeRabbit is **opt-in** per repo. Configure in `~/.config/ralphtools/registry.json`:
+
+```json
+{
+  "coderabbit": {
+    "enabled": true,
+    "repos": ["claude-golem", "songscript"]
+  }
+}
+```
+
+Or use `*` for all repos:
+```json
+{
+  "coderabbit": {
+    "enabled": true,
+    "repos": ["*"]
+  }
+}
+```
+
+### Adding More Repos
+
+```bash
+# Via wizard
+ralph-setup → Configure CodeRabbit
+
+# Or manually edit ~/.config/ralphtools/registry.json
+# Add repo names to coderabbit.repos array
+```
+
+---
+
 ## Why Fresh Context?
 
 Long sessions accumulate confusion. Ralph solves this by **spawning fresh Claude every iteration**:
@@ -126,45 +185,11 @@ Long sessions accumulate confusion. Ralph solves this by **spawning fresh Claude
 
 ---
 
-## Alternative: Kiro CLI
-
-[Kiro CLI](https://kiro.dev/) is AWS's agentic coding assistant — good when you're out of Claude tokens. Ralph uses the CLI (not the IDE) so it can run Kiro in a loop just like Claude Code.
-
-**Note:** Ralph includes an internal **Brave Browser Manager** (`scripts/brave-manager.js`) that allows Kiro to perform browser verification even though it lacks native MCP support.
-
-### Free Credits Deal
-
-New users get **500 bonus credits** (30 days) when signing up with:
-- GitHub / Google / AWS Builder ID
-
-No AWS account required. ~50% of Kiro Pro's monthly allocation.
-
-```bash
-ralph -K 20    # Run with Kiro instead of Claude
-```
-
-| Feature | Claude Code | Kiro |
-|---------|-------------|------|
-| MCP tools | Full support | Limited (Ralph Fallback ✅) |
-| Context window | Large | Smaller |
-| Cost | Per-token | Credit-based |
-
----
-
-## Alternative: Gemini CLI
-
-[Gemini CLI](https://github.com/google-gemini/gemini-cli) is Google's AI terminal agent. Like Kiro, it uses Ralph's built-in **Brave Browser Manager** for browser verification stories.
-
-**Note:** Gemini also supports chrome-devtools-mcp if you prefer native MCP integration.
-
----
-
 ## Requirements
 
 - **zsh** (bash may work)
-- **Claude CLI**, **Kiro CLI**, or **Gemini CLI**
+- **Claude Code CLI**
 - **git**
-- **For Kiro/Gemini browser automation:** Run `npm install` in `~/.config/ralph/` (installs puppeteer)
 - Optional: Claude-in-Chrome extension, ntfy, [Superpowers plugin](https://github.com/obra/superpowers)
 
 ---
@@ -213,7 +238,7 @@ Detailed docs for AI agents in [`docs/`](docs/):
 - **Multi-agent audit**: AUDIT-001 pattern with parallel verification
 - **Test framework**: zsh test suite with unit tests for config, cost tracking, notifications
 - **GitHub Actions CI**: automated testing workflow (TEST-005)
-- **Brave Browser Manager**: internal fallback for Kiro/Gemini browser automation
+- **Brave Browser Manager**: internal fallback for browser automation
 - Per-iteration cost tracking with model-aware pricing
 - Per-project MCP configuration (`ralph-projects`)
 - Project launcher auto-generation (US-009)
@@ -228,11 +253,8 @@ Detailed docs for AI agents in [`docs/`](docs/):
 
 ### v1.3.0
 - **JSON-based PRD format** (`prd-json/` replaces markdown PRD)
-- **Kiro CLI support** (`-K` flag for AWS's agentic coding assistant)
-- **Gemini CLI support** (`-G` flag)
-- **Claude Haiku support** (`-H` flag for faster verification)
+- **Smart model routing** for story types (auto-select appropriate model)
 - **Configuration system** (`ralph-config.local` for project settings)
-- **Model routing** for V-* stories (auto-select Haiku for verification)
 - **Per-iteration cost tracking**: costs.json with token estimates
 - **Archive skill** (`/archive` command pointing to `ralph-archive`)
 - `completedAt` timestamp tracking

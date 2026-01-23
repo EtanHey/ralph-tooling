@@ -2,9 +2,9 @@
   "$schema": "https://ralph.dev/schemas/prd-index.schema.json",
   "generatedAt": "2026-01-23T17:49:00Z",
   "stats": {
-    "total": 30,
+    "total": 31,
     "completed": 9,
-    "pending": 15,
+    "pending": 16,
     "blocked": 6
   },
   "nextStory": "US-074",
@@ -33,6 +33,7 @@
     "US-083",
     "US-084",
     "US-085",
+    "US-086",
     "V-013",
     "V-014",
     "BUG-012",
@@ -54,6 +55,7 @@
     "US-083",
     "US-084",
     "US-085",
+    "US-086",
     "V-013",
     "V-014"
   ],

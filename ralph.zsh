@@ -421,6 +421,125 @@ _ralph_verify_pending_count() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# CODERABBIT PRE-COMMIT CHECK
+# ═══════════════════════════════════════════════════════════════════
+# Free AI code review before committing. Catches issues early.
+# Configure: coderabbit.enabled, coderabbit.repos[] in registry
+
+# Global CodeRabbit state
+RALPH_CODERABBIT_ENABLED="${RALPH_CODERABBIT_ENABLED:-true}"
+RALPH_CODERABBIT_ALLOWED_REPOS="${RALPH_CODERABBIT_ALLOWED_REPOS:-}"
+
+# Check if CodeRabbit should run for current repo
+# Returns: 0 if should run, 1 if should skip
+_ralph_coderabbit_should_run() {
+  # Check if globally disabled
+  if [[ "$RALPH_CODERABBIT_ENABLED" != "true" ]]; then
+    return 1
+  fi
+
+  # Check if cr CLI exists
+  if ! command -v cr >/dev/null 2>&1; then
+    return 1
+  fi
+
+  # Check if current repo is in allowed list
+  local current_repo
+  current_repo=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")
+
+  # If allowed repos not set, skip (opt-in)
+  if [[ -z "$RALPH_CODERABBIT_ALLOWED_REPOS" ]]; then
+    return 1
+  fi
+
+  # Check if * (all repos allowed) or specific repo in list
+  if [[ "$RALPH_CODERABBIT_ALLOWED_REPOS" == "*" ]]; then
+    return 0
+  fi
+
+  # Check comma-separated list
+  local IFS=','
+  local repo
+  for repo in $RALPH_CODERABBIT_ALLOWED_REPOS; do
+    # Trim whitespace
+    repo="${repo#"${repo%%[![:space:]]*}"}"
+    repo="${repo%"${repo##*[![:space:]]}"}"
+    if [[ "$repo" == "$current_repo" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+# Run CodeRabbit review on uncommitted changes
+# Usage: _ralph_coderabbit_review
+# Returns: 0 if no issues, 1 if issues found (output in RALPH_CODERABBIT_OUTPUT)
+# Exit codes:
+#   0 - No issues found (or CodeRabbit skipped)
+#   1 - Issues found, stored in RALPH_CODERABBIT_OUTPUT
+#   2 - CodeRabbit failed to run
+_ralph_coderabbit_review() {
+  setopt localoptions noxtrace
+
+  RALPH_CODERABBIT_OUTPUT=""
+
+  # Check if we should run
+  if ! _ralph_coderabbit_should_run; then
+    return 0
+  fi
+
+  local CYAN='\033[0;36m'
+  local YELLOW='\033[0;33m'
+  local GREEN='\033[0;32m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+
+  echo "${CYAN}🐰 Running CodeRabbit pre-commit review...${NC}"
+
+  # Run cr review with --prompt-only for AI-parseable output
+  # --type uncommitted reviews staged and unstaged changes
+  local cr_output
+  cr_output=$(cr review --prompt-only --type uncommitted 2>&1)
+  local cr_exit=$?
+
+  # Check if cr failed to run
+  if [[ $cr_exit -ne 0 ]]; then
+    echo "${YELLOW}⚠️  CodeRabbit review failed (exit $cr_exit). Continuing without review.${NC}"
+    return 0
+  fi
+
+  # Check for issues in output
+  # Look for severity markers: CRITICAL, HIGH, MEDIUM
+  local issue_count=0
+  if echo "$cr_output" | grep -qiE '\b(CRITICAL|HIGH|MEDIUM)\b.*:'; then
+    issue_count=$(echo "$cr_output" | grep -ciE '\b(CRITICAL|HIGH|MEDIUM)\b.*:')
+  fi
+
+  if [[ $issue_count -gt 0 ]]; then
+    echo "${YELLOW}⚠️  CodeRabbit found $issue_count issue(s)${NC}"
+    RALPH_CODERABBIT_OUTPUT="$cr_output"
+    return 1
+  fi
+
+  echo "${GREEN}✓ CodeRabbit review passed${NC}"
+  return 0
+}
+
+# Get CodeRabbit configuration from registry
+# Sets RALPH_CODERABBIT_ENABLED and RALPH_CODERABBIT_ALLOWED_REPOS from registry
+_ralph_load_coderabbit_config() {
+  if [[ -f "$RALPH_REGISTRY_FILE" ]]; then
+    local cr_enabled cr_repos
+    cr_enabled=$(jq -r '.coderabbit.enabled // "true"' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+    cr_repos=$(jq -r '.coderabbit.repos // [] | join(",")' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+
+    RALPH_CODERABBIT_ENABLED="${cr_enabled:-true}"
+    RALPH_CODERABBIT_ALLOWED_REPOS="${cr_repos:-}"
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # LIVE FILE WATCHER (fswatch/inotifywait)
 # ═══════════════════════════════════════════════════════════════════
 # Provides real-time progress updates without terminal flashing.
@@ -1437,6 +1556,9 @@ _ralph_load_config() {
 # ═══════════════════════════════════════════════════════════════════
 
 RALPH_REGISTRY_FILE="${RALPH_CONFIG_DIR}/registry.json"
+
+# Load CodeRabbit configuration from registry
+_ralph_load_coderabbit_config
 
 # Migrate existing configs to registry.json
 # Sources: projects.json, shared-project-mcps.json, repo-claude-v2.zsh
@@ -3694,10 +3816,14 @@ The next Ralph is a FRESH instance with NO MEMORY of your work. The ONLY way the
 **If typecheck PASSES (JSON mode):**
 1. **UPDATE story JSON**: Set checked=true for completed criteria, passes=true if all done, AND add completedAt with ISO timestamp AND completedBy with the model name (e.g. \"completedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"completedBy\": \"${active_model}\")
 2. **UPDATE index.json**: Remove from pending, update stats, set nextStory
-3. **UPDATE progress.txt**: Add iteration summary
-4. **COMMIT**: git add prd-json/ progress.txt && git commit -m \"feat: [story-id] [description]\"
-5. **VERIFY**: git log -1 (confirm commit succeeded)
-6. If commit fails, STOP and report error
+3. **UPDATE progress.txt**: Add iteration summary (include CodeRabbit results if run)
+4. **CODERABBIT** (if enabled): Run \`cr review --prompt-only --type uncommitted\` before commit
+   - If CRITICAL/HIGH/MEDIUM issues found: fix them, then re-run CodeRabbit
+   - Only proceed to commit when CodeRabbit passes (or use --skip-coderabbit flag)
+   - Log CodeRabbit results in progress.txt
+5. **COMMIT**: git add prd-json/ progress.txt && git commit -m \"feat: [story-id] [description]\"
+6. **VERIFY**: git log -1 (confirm commit succeeded)
+7. If commit fails, STOP and report error
 
 **If typecheck FAILS:**
 - Do NOT mark complete
@@ -6334,6 +6460,7 @@ function ralph-setup() {
         "➕ Manage MCP definitions" \
         "🔐 Configure 1Password Environments" \
         "🔑 Migrate secrets to 1Password" \
+        "🐰 Configure CodeRabbit" \
         "📋 View current configuration" \
         "🚪 Exit setup")
     else
@@ -6345,10 +6472,11 @@ function ralph-setup() {
       echo "  3) ➕ Manage MCP definitions"
       echo "  4) 🔐 Configure 1Password Environments"
       echo "  5) 🔑 Migrate secrets to 1Password"
-      echo "  6) 📋 View current configuration"
-      echo "  7) 🚪 Exit setup"
+      echo "  6) 🐰 Configure CodeRabbit"
+      echo "  7) 📋 View current configuration"
+      echo "  8) 🚪 Exit setup"
       echo ""
-      echo -n "Choose [1-7]: "
+      echo -n "Choose [1-8]: "
       read menu_choice
       case "$menu_choice" in
         1) choice="📂 Add new project" ;;
@@ -6356,8 +6484,9 @@ function ralph-setup() {
         3) choice="➕ Manage MCP definitions" ;;
         4) choice="🔐 Configure 1Password Environments" ;;
         5) choice="🔑 Migrate secrets to 1Password" ;;
-        6) choice="📋 View current configuration" ;;
-        7|*) choice="🚪 Exit setup" ;;
+        6) choice="🐰 Configure CodeRabbit" ;;
+        7) choice="📋 View current configuration" ;;
+        8|*) choice="🚪 Exit setup" ;;
       esac
     fi
 
@@ -6403,6 +6532,9 @@ function ralph-setup() {
         ;;
       *"View current configuration"*)
         _ralph_setup_view_config
+        ;;
+      *"Configure CodeRabbit"*)
+        _ralph_setup_configure_coderabbit
         ;;
       *"Exit"*)
         echo ""
@@ -7178,6 +7310,133 @@ function _ralph_setup_generate_env_files() {
     echo "${GREEN}✓ Generated: $env_file${NC}"
   done <<< "$projects_with_secrets"
 
+  echo ""
+}
+
+# Helper: Configure CodeRabbit pre-commit reviews
+function _ralph_setup_configure_coderabbit() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local CYAN='\033[0;36m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  🐰 Configure CodeRabbit                                    │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+
+  # Check if cr CLI is installed
+  if ! command -v cr >/dev/null 2>&1; then
+    echo "${YELLOW}⚠️  CodeRabbit CLI (cr) not installed${NC}"
+    echo ""
+    echo "Install with: npm install -g coderabbit"
+    echo "Or: brew install coderabbit/tap/coderabbit"
+    echo ""
+    echo "CodeRabbit provides free AI code reviews for open source projects."
+    echo ""
+    return 0
+  fi
+
+  local cr_version=$(cr --version 2>/dev/null || echo "unknown")
+  echo "${GREEN}✓ CodeRabbit CLI installed (v$cr_version)${NC}"
+  echo ""
+
+  # Get current settings
+  local current_enabled="true"
+  local current_repos=""
+  if [[ -f "$RALPH_REGISTRY_FILE" ]]; then
+    current_enabled=$(jq -r '.coderabbit.enabled // "true"' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+    current_repos=$(jq -r '.coderabbit.repos // [] | join(", ")' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+  fi
+
+  echo "CodeRabbit runs 'cr review' before commits to catch issues early."
+  echo "This is ${GREEN}free for open source repos${NC}."
+  echo ""
+  echo "Current settings:"
+  echo "  ${CYAN}Enabled:${NC} $current_enabled"
+  echo "  ${CYAN}Repos:${NC}   ${current_repos:-"(none - opt-in required)"}"
+  echo ""
+
+  # Enable/disable
+  local enable_cr="true"
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    if gum confirm "Enable CodeRabbit pre-commit checks?"; then
+      enable_cr="true"
+    else
+      enable_cr="false"
+    fi
+  else
+    echo -n "Enable CodeRabbit pre-commit checks? [Y/n]: "
+    read enable_choice
+    if [[ "$enable_choice" == [Nn]* ]]; then
+      enable_cr="false"
+    fi
+  fi
+
+  if [[ "$enable_cr" == "false" ]]; then
+    # Update registry with disabled state
+    if [[ -f "$RALPH_REGISTRY_FILE" ]]; then
+      local tmp=$(mktemp)
+      jq '.coderabbit = {"enabled": false, "repos": []}' "$RALPH_REGISTRY_FILE" > "$tmp" && mv "$tmp" "$RALPH_REGISTRY_FILE"
+    fi
+    RALPH_CODERABBIT_ENABLED="false"
+    RALPH_CODERABBIT_ALLOWED_REPOS=""
+    echo ""
+    echo "${GREEN}✓ CodeRabbit disabled${NC}"
+    return 0
+  fi
+
+  # Which repos?
+  echo ""
+  echo "Which repos should use CodeRabbit?"
+  echo "  • Enter repo names comma-separated (e.g., claude-golem, songscript)"
+  echo "  • Enter * for all repos"
+  echo ""
+
+  local repos_input=""
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    repos_input=$(gum input --placeholder "Repo names (comma-separated) or * for all" --value "$current_repos")
+  else
+    echo -n "Repos (comma-separated or * for all): "
+    read repos_input
+  fi
+
+  # Parse repos into array
+  local repos_array=""
+  if [[ "$repos_input" == "*" ]]; then
+    repos_array='["*"]'
+  elif [[ -n "$repos_input" ]]; then
+    # Convert comma-separated to JSON array
+    repos_array=$(echo "$repos_input" | sed 's/,/","/g' | sed 's/^/["/g' | sed 's/$/"]/g' | sed 's/ //g')
+  else
+    repos_array='[]'
+  fi
+
+  # Update registry
+  mkdir -p "$RALPH_CONFIG_DIR"
+  if [[ -f "$RALPH_REGISTRY_FILE" ]]; then
+    local tmp=$(mktemp)
+    jq --argjson repos "$repos_array" '.coderabbit = {"enabled": true, "repos": $repos}' "$RALPH_REGISTRY_FILE" > "$tmp" && mv "$tmp" "$RALPH_REGISTRY_FILE"
+  else
+    # Create minimal registry with CodeRabbit config
+    echo "{\"version\": 1, \"coderabbit\": {\"enabled\": true, \"repos\": $repos_array}}" > "$RALPH_REGISTRY_FILE"
+  fi
+
+  # Update runtime variables
+  RALPH_CODERABBIT_ENABLED="true"
+  if [[ "$repos_input" == "*" ]]; then
+    RALPH_CODERABBIT_ALLOWED_REPOS="*"
+  else
+    RALPH_CODERABBIT_ALLOWED_REPOS="$repos_input"
+  fi
+
+  echo ""
+  echo "${GREEN}✓ CodeRabbit configured${NC}"
+  echo "  Enabled: true"
+  echo "  Repos: $repos_input"
+  echo ""
+  echo "Ralph will now run 'cr review' before commits in these repos."
   echo ""
 }
 
