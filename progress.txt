@@ -812,3 +812,47 @@
 - All 8 acceptance criteria completed
 - Updated stats: completed=48, pending=1, blocked=0
 ---
+
+## Iteration 42 - US-028 ralph-setup wizard with gum
+- Model: opus
+- Implemented interactive setup wizard for new users:
+  1. ✓ ralph-setup command launches gum menu with 5 options:
+     - Add new project
+     - Configure MCPs for a project
+     - Migrate secrets to 1Password
+     - View current configuration
+     - Exit setup
+  2. ✓ Add new project option auto-detects path and name from cwd
+     - Uses gum confirm and gum input for user interaction
+     - Falls back to numbered prompts when gum not installed
+     - Validates path exists before adding
+  3. ✓ Configure MCPs option with multi-select
+     - Select project first, then select MCPs using gum choose --no-limit
+     - Available MCPs: figma, linear, supabase, browser-tools, context7
+     - Updates registry.json with selected MCPs
+  4. ✓ Migrate secrets option invokes 1Password skill
+     - Shows instructions for ralph-secrets migrate
+     - Links to /1password skill for .env and MCP migration
+     - Generates .env.1password files for projects with secrets
+  5. ✓ View current config pretty-prints registry.json
+     - Shows projects with paths, MCPs, and secrets counts
+     - Shows global MCPs
+     - Shows config.json summary (model strategy, default model, notifications)
+  6. ✓ Setup detects 1Password CLI and sign-in status
+     - Shows status in menu header (Available & signed in / CLI installed, not signed in / Not installed)
+     - Prompts to skip secrets migration if 1Password not available
+  7. ✓ Generates .env.1password files via _ralph_setup_generate_env_files()
+     - Calls _ralph_generate_env_1password() for each project with secrets
+  8. ✓ _ralph_generate_launchers_from_registry() creates {project}Claude functions
+     - New registry-based launcher generation function
+     - Creates run{Name}(), open{Name}(), {name}Claude() for each project
+  9. ✓ First-run experience with _ralph_setup_first_run_check() and _ralph_setup_welcome()
+     - Detects no registry or empty projects
+     - Guides user through setup wizard
+  10. ✓ Typecheck passes (zsh -n ralph.zsh)
+- Added RALPH_AVAILABLE_MCPS array for MCP list
+- All helper functions use consistent box drawing and color formatting
+- Both gum mode and fallback mode work for all options
+- All 10 acceptance criteria completed
+- Updated stats: completed=49, pending=0, blocked=0
+---

@@ -5010,6 +5010,662 @@ function _ralph_setup_mcps() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# RALPH-SETUP - Interactive setup wizard for new users
+# ═══════════════════════════════════════════════════════════════════
+# Usage: ralph-setup
+# Interactive gum-based wizard for:
+#   - Adding new projects
+#   - Configuring MCPs
+#   - Migrating secrets to 1Password
+#   - Viewing current configuration
+# ═══════════════════════════════════════════════════════════════════
+
+# List of available MCPs for multi-select
+RALPH_AVAILABLE_MCPS=("figma" "linear" "supabase" "browser-tools" "context7")
+
+function ralph-setup() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local BLUE='\033[0;34m'
+  local CYAN='\033[0;36m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+  local BOLD='\033[1m'
+
+  # Check if 1Password CLI is available
+  local has_1password=false
+  local op_signed_in=false
+  if command -v op &>/dev/null; then
+    has_1password=true
+    if op account list &>/dev/null 2>&1; then
+      op_signed_in=true
+    fi
+  fi
+
+  # Main menu loop
+  while true; do
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│  🛠️  Ralph Setup Wizard                                      │"
+    echo "├─────────────────────────────────────────────────────────────┤"
+    if $has_1password; then
+      if $op_signed_in; then
+        echo "│  🔐 1Password: ${GREEN}Available & signed in${NC}                      │"
+      else
+        echo "│  🔐 1Password: ${YELLOW}CLI installed, not signed in${NC}              │"
+      fi
+    else
+      echo "│  🔐 1Password: ${YELLOW}Not installed${NC}                               │"
+    fi
+    echo "└─────────────────────────────────────────────────────────────┘"
+    echo ""
+
+    local choice=""
+
+    if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+      # GUM mode - beautiful interactive menu
+      choice=$(gum choose \
+        "📂 Add new project" \
+        "🔧 Configure MCPs for a project" \
+        "🔑 Migrate secrets to 1Password" \
+        "📋 View current configuration" \
+        "🚪 Exit setup")
+    else
+      # Fallback mode - numbered menu
+      echo "What would you like to do?"
+      echo ""
+      echo "  1) 📂 Add new project"
+      echo "  2) 🔧 Configure MCPs for a project"
+      echo "  3) 🔑 Migrate secrets to 1Password"
+      echo "  4) 📋 View current configuration"
+      echo "  5) 🚪 Exit setup"
+      echo ""
+      echo -n "Choose [1-5]: "
+      read menu_choice
+      case "$menu_choice" in
+        1) choice="📂 Add new project" ;;
+        2) choice="🔧 Configure MCPs for a project" ;;
+        3) choice="🔑 Migrate secrets to 1Password" ;;
+        4) choice="📋 View current configuration" ;;
+        5|*) choice="🚪 Exit setup" ;;
+      esac
+    fi
+
+    case "$choice" in
+      *"Add new project"*)
+        _ralph_setup_add_project
+        ;;
+      *"Configure MCPs"*)
+        _ralph_setup_configure_mcps
+        ;;
+      *"Migrate secrets"*)
+        if ! $has_1password; then
+          echo ""
+          echo "${YELLOW}⚠️  1Password CLI not installed${NC}"
+          echo "   Install with: brew install 1password-cli"
+          echo "   Or skip secrets management for now."
+          echo ""
+          if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+            gum confirm "Continue without 1Password?" || continue
+          else
+            echo -n "Continue without 1Password? [y/N]: "
+            read skip_choice
+            [[ "$skip_choice" != [Yy]* ]] && continue
+          fi
+        elif ! $op_signed_in; then
+          echo ""
+          echo "${YELLOW}⚠️  Not signed in to 1Password${NC}"
+          echo "   Run: op signin"
+          echo ""
+          continue
+        fi
+        _ralph_setup_migrate_secrets
+        ;;
+      *"View current configuration"*)
+        _ralph_setup_view_config
+        ;;
+      *"Exit"*)
+        echo ""
+        echo "${GREEN}✓ Setup complete!${NC}"
+        echo ""
+        return 0
+        ;;
+    esac
+  done
+}
+
+# Helper: Add a new project to the registry
+function _ralph_setup_add_project() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  📂 Add New Project                                         │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+
+  # Auto-detect from current directory
+  local detected_path="$(pwd)"
+  local detected_name="$(basename "$detected_path")"
+
+  local project_name=""
+  local project_path=""
+
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    # GUM mode
+    echo "Detected: ${YELLOW}$detected_name${NC} at ${YELLOW}$detected_path${NC}"
+    echo ""
+
+    if gum confirm "Use current directory?"; then
+      project_path="$detected_path"
+      project_name=$(gum input --value "$detected_name" --placeholder "Project name")
+    else
+      project_path=$(gum input --placeholder "Full path to project (e.g., ~/projects/myapp)")
+      project_name=$(gum input --placeholder "Project name")
+    fi
+  else
+    # Fallback mode
+    echo "Detected: $detected_name at $detected_path"
+    echo ""
+    echo -n "Use current directory? [Y/n]: "
+    read use_cwd
+    if [[ "$use_cwd" != [Nn]* ]]; then
+      project_path="$detected_path"
+      echo -n "Project name [$detected_name]: "
+      read project_name
+      [[ -z "$project_name" ]] && project_name="$detected_name"
+    else
+      echo -n "Full path to project: "
+      read project_path
+      echo -n "Project name: "
+      read project_name
+    fi
+  fi
+
+  # Validate inputs
+  if [[ -z "$project_name" || -z "$project_path" ]]; then
+    echo "${RED}Error: Project name and path are required${NC}"
+    return 1
+  fi
+
+  # Expand ~ in path
+  project_path="${project_path/#\~/$HOME}"
+
+  # Validate path exists
+  if [[ ! -d "$project_path" ]]; then
+    echo "${RED}Error: Path does not exist: $project_path${NC}"
+    return 1
+  fi
+
+  # Ensure registry exists
+  if [[ ! -f "$RALPH_REGISTRY_FILE" ]]; then
+    _ralph_migrate_to_registry
+  fi
+
+  # Check if project already exists
+  local existing=$(jq -r --arg name "$project_name" '.projects[$name] // empty' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+  if [[ -n "$existing" ]]; then
+    echo "${RED}Error: Project '$project_name' already exists${NC}"
+    return 1
+  fi
+
+  # Add to registry
+  local timestamp=$(/bin/date -u +"%Y-%m-%dT%H:%M:%SZ")
+  jq --arg name "$project_name" \
+     --arg path "$project_path" \
+     --arg created "$timestamp" \
+     '.projects[$name] = {path: $path, mcps: [], secrets: {}, created: $created}' \
+     "$RALPH_REGISTRY_FILE" > "${RALPH_REGISTRY_FILE}.tmp"
+  mv "${RALPH_REGISTRY_FILE}.tmp" "$RALPH_REGISTRY_FILE"
+
+  echo ""
+  echo "${GREEN}✓ Project '$project_name' added!${NC}"
+  echo "  Path: $project_path"
+  echo ""
+
+  # Offer to configure MCPs immediately
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    if gum confirm "Configure MCPs for this project now?"; then
+      _ralph_setup_configure_mcps_for_project "$project_name"
+    fi
+  else
+    echo -n "Configure MCPs for this project? [y/N]: "
+    read config_mcps
+    if [[ "$config_mcps" == [Yy]* ]]; then
+      _ralph_setup_configure_mcps_for_project "$project_name"
+    fi
+  fi
+
+  # Regenerate launchers
+  _ralph_generate_launchers_from_registry
+
+  echo ""
+}
+
+# Helper: Configure MCPs (select project first, then MCPs)
+function _ralph_setup_configure_mcps() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  🔧 Configure MCPs                                          │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+
+  # Ensure registry exists
+  if [[ ! -f "$RALPH_REGISTRY_FILE" ]]; then
+    echo "${YELLOW}No registry found. Creating one...${NC}"
+    _ralph_migrate_to_registry
+  fi
+
+  # Get list of projects
+  local projects=($(jq -r '.projects | keys[]' "$RALPH_REGISTRY_FILE" 2>/dev/null))
+
+  if [[ ${#projects[@]} -eq 0 ]]; then
+    echo "${YELLOW}No projects registered. Add a project first.${NC}"
+    return 1
+  fi
+
+  local selected_project=""
+
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    selected_project=$(printf '%s\n' "${projects[@]}" | gum choose --header "Select a project:")
+  else
+    echo "Available projects:"
+    local i=1
+    for proj in "${projects[@]}"; do
+      echo "  $i) $proj"
+      ((i++))
+    done
+    echo -n "Choose project [1-${#projects[@]}]: "
+    read proj_choice
+    if [[ "$proj_choice" =~ ^[0-9]+$ ]] && [[ "$proj_choice" -ge 1 ]] && [[ "$proj_choice" -le ${#projects[@]} ]]; then
+      selected_project="${projects[$proj_choice]}"
+    else
+      echo "${RED}Invalid selection${NC}"
+      return 1
+    fi
+  fi
+
+  if [[ -z "$selected_project" ]]; then
+    return 1
+  fi
+
+  _ralph_setup_configure_mcps_for_project "$selected_project"
+}
+
+# Helper: Configure MCPs for a specific project
+function _ralph_setup_configure_mcps_for_project() {
+  local project_name="$1"
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "Configuring MCPs for: ${YELLOW}$project_name${NC}"
+  echo ""
+
+  # Get current MCPs for this project
+  local current_mcps=$(jq -r --arg name "$project_name" '.projects[$name].mcps // [] | join(",")' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+
+  local selected_mcps=()
+
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    # GUM mode - multi-select
+    echo "Available MCPs (space to select, enter to confirm):"
+    local mcp_list=""
+    for mcp in "${RALPH_AVAILABLE_MCPS[@]}"; do
+      if [[ "$current_mcps" == *"$mcp"* ]]; then
+        mcp_list+="$mcp (current),"
+      else
+        mcp_list+="$mcp,"
+      fi
+    done
+    mcp_list="${mcp_list%,}"
+
+    local selections=$(printf '%s\n' "${RALPH_AVAILABLE_MCPS[@]}" | gum choose --no-limit --header "Select MCPs:")
+    while IFS= read -r mcp; do
+      [[ -n "$mcp" ]] && selected_mcps+=("$mcp")
+    done <<< "$selections"
+  else
+    # Fallback mode - numbered multi-select
+    echo "Available MCPs:"
+    local i=1
+    for mcp in "${RALPH_AVAILABLE_MCPS[@]}"; do
+      local marker=" "
+      [[ "$current_mcps" == *"$mcp"* ]] && marker="*"
+      echo "  $i) [$marker] $mcp"
+      ((i++))
+    done
+    echo ""
+    echo "Enter numbers separated by spaces (e.g., '1 3 5'):"
+    echo -n "> "
+    read mcp_choices
+    for choice in $mcp_choices; do
+      if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le ${#RALPH_AVAILABLE_MCPS[@]} ]]; then
+        selected_mcps+=("${RALPH_AVAILABLE_MCPS[$choice]}")
+      fi
+    done
+  fi
+
+  # Convert to JSON array
+  local mcps_json="[]"
+  if [[ ${#selected_mcps[@]} -gt 0 ]]; then
+    mcps_json=$(printf '%s\n' "${selected_mcps[@]}" | jq -R . | jq -s .)
+  fi
+
+  # Update registry
+  jq --arg name "$project_name" \
+     --argjson mcps "$mcps_json" \
+     '.projects[$name].mcps = $mcps' \
+     "$RALPH_REGISTRY_FILE" > "${RALPH_REGISTRY_FILE}.tmp"
+  mv "${RALPH_REGISTRY_FILE}.tmp" "$RALPH_REGISTRY_FILE"
+
+  echo ""
+  if [[ ${#selected_mcps[@]} -gt 0 ]]; then
+    echo "${GREEN}✓ MCPs configured: ${selected_mcps[*]}${NC}"
+  else
+    echo "${YELLOW}No MCPs selected${NC}"
+  fi
+
+  # Regenerate launchers
+  _ralph_generate_launchers_from_registry
+}
+
+# Helper: Migrate secrets (invokes 1Password workflow)
+function _ralph_setup_migrate_secrets() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local CYAN='\033[0;36m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  🔑 Migrate Secrets to 1Password                            │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+
+  local migrate_choice=""
+
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    migrate_choice=$(gum choose \
+      "📄 Migrate .env file to 1Password" \
+      "⚙️  Migrate MCP config secrets" \
+      "⬅️  Back to main menu")
+  else
+    echo "What would you like to migrate?"
+    echo ""
+    echo "  1) 📄 Migrate .env file to 1Password"
+    echo "  2) ⚙️  Migrate MCP config secrets"
+    echo "  3) ⬅️  Back to main menu"
+    echo ""
+    echo -n "Choose [1-3]: "
+    read migrate_opt
+    case "$migrate_opt" in
+      1) migrate_choice="📄 Migrate .env file" ;;
+      2) migrate_choice="⚙️  Migrate MCP config" ;;
+      *) migrate_choice="⬅️  Back" ;;
+    esac
+  fi
+
+  case "$migrate_choice" in
+    *".env file"*)
+      echo ""
+      echo "${CYAN}For .env migration, use the ralph-secrets command:${NC}"
+      echo ""
+      echo "  ${YELLOW}ralph-secrets migrate .env --dry-run${NC}  # Preview first"
+      echo "  ${YELLOW}ralph-secrets migrate .env${NC}            # Actually migrate"
+      echo ""
+      echo "Or invoke the /1password skill in Claude:"
+      echo "  ${YELLOW}/1password${NC} → Select 'Migrate .env to 1Password'"
+      echo ""
+      ;;
+    *"MCP config"*)
+      echo ""
+      echo "${CYAN}To migrate MCP config secrets:${NC}"
+      echo ""
+      echo "  1. Scan for hardcoded secrets:"
+      echo "     ${YELLOW}bash ~/.claude/commands/1password/scripts/scan-mcp-secrets.sh${NC}"
+      echo ""
+      echo "  2. Or invoke the /1password skill in Claude:"
+      echo "     ${YELLOW}/1password${NC} → Select 'Migrate MCP config secrets'"
+      echo ""
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+
+  # Generate .env.1password for projects with secrets
+  _ralph_setup_generate_env_files
+}
+
+# Helper: Generate .env.1password files for all projects with secrets
+function _ralph_setup_generate_env_files() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local NC='\033[0m'
+
+  if [[ ! -f "$RALPH_REGISTRY_FILE" ]]; then
+    return 0
+  fi
+
+  # Get projects with secrets
+  local projects_with_secrets=$(jq -r '.projects | to_entries[] | select(.value.secrets | length > 0) | .key' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+
+  if [[ -z "$projects_with_secrets" ]]; then
+    echo "${YELLOW}No projects have secrets configured in the registry.${NC}"
+    echo "Use 'ralph-secrets migrate' to add secrets first."
+    return 0
+  fi
+
+  echo ""
+  echo "Generating .env.1password files..."
+
+  while IFS= read -r project; do
+    [[ -z "$project" ]] && continue
+    local project_path=$(jq -r --arg name "$project" '.projects[$name].path' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+    local env_file="${project_path}/.env.1password"
+
+    _ralph_generate_env_1password "$project" "$env_file"
+    echo "${GREEN}✓ Generated: $env_file${NC}"
+  done <<< "$projects_with_secrets"
+
+  echo ""
+}
+
+# Helper: View current configuration
+function _ralph_setup_view_config() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local CYAN='\033[0;36m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  📋 Current Configuration                                   │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+
+  # Show registry
+  if [[ -f "$RALPH_REGISTRY_FILE" ]]; then
+    echo "${CYAN}Registry: $RALPH_REGISTRY_FILE${NC}"
+    echo ""
+
+    # Projects
+    local project_count=$(jq '.projects | length' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+    echo "${YELLOW}Projects ($project_count):${NC}"
+
+    jq -r '.projects | to_entries[] | "  \(.key)\n    Path: \(.value.path)\n    MCPs: \(if .value.mcps | length > 0 then (.value.mcps | join(", ")) else "(none)" end)\n    Secrets: \(if .value.secrets | length > 0 then (.value.secrets | keys | length | tostring) + " configured" else "(none)" end)"' "$RALPH_REGISTRY_FILE" 2>/dev/null
+
+    echo ""
+
+    # Global MCPs
+    local global_mcp_count=$(jq '.global.mcps | length' "$RALPH_REGISTRY_FILE" 2>/dev/null)
+    if [[ "$global_mcp_count" -gt 0 ]]; then
+      echo "${YELLOW}Global MCPs ($global_mcp_count):${NC}"
+      jq -r '.global.mcps | keys[]' "$RALPH_REGISTRY_FILE" 2>/dev/null | while read -r mcp; do
+        echo "  • $mcp"
+      done
+      echo ""
+    fi
+  else
+    echo "${YELLOW}No registry found.${NC}"
+    echo "Run 'ralph-setup' and add a project to create one."
+    echo ""
+  fi
+
+  # Show config.json summary
+  if [[ -f "$RALPH_CONFIG_FILE" ]]; then
+    echo "${CYAN}Config: $RALPH_CONFIG_FILE${NC}"
+    echo ""
+    local strategy=$(jq -r '.modelStrategy // "smart"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    local default_model=$(jq -r '.defaultModel // "sonnet"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    local notifications=$(jq -r '.notifications.enabled // false' "$RALPH_CONFIG_FILE" 2>/dev/null)
+
+    echo "  Model Strategy: $strategy"
+    echo "  Default Model: $default_model"
+    echo "  Notifications: $notifications"
+    echo ""
+  fi
+}
+
+# Generate launchers from registry (new registry-based function)
+function _ralph_generate_launchers_from_registry() {
+  local launchers_file="$HOME/.config/ralphtools/launchers.zsh"
+  local GREEN='\033[0;32m'
+  local NC='\033[0m'
+
+  # Create config directory if needed
+  /bin/mkdir -p "$HOME/.config/ralphtools"
+
+  # Start with header
+  cat > "$launchers_file" << 'HEADER'
+# ═══════════════════════════════════════════════════════════════════
+# AUTO-GENERATED by Ralph - do not edit manually
+# Regenerate with: _ralph_generate_launchers_from_registry
+# ═══════════════════════════════════════════════════════════════════
+
+HEADER
+
+  # If no registry, create empty launchers
+  if [[ ! -f "$RALPH_REGISTRY_FILE" ]]; then
+    echo "# No registry found" >> "$launchers_file"
+    return 0
+  fi
+
+  local project_count=$(jq '.projects | length' "$RALPH_REGISTRY_FILE" 2>/dev/null || echo "0")
+  if [[ "$project_count" -eq 0 ]]; then
+    echo "# No projects registered" >> "$launchers_file"
+    return 0
+  fi
+
+  # Generate functions for each project
+  jq -r '.projects | to_entries[] | "\(.key)|\(.value.path)|\(.value.mcps | @json)"' "$RALPH_REGISTRY_FILE" 2>/dev/null | while IFS='|' read -r name path mcps_json; do
+    # Capitalize first letter for function names: myProject -> MyProject
+    local capitalized_name="${(C)name[1]}${name[2,-1]}"
+    # Lowercase name for {name}Claude: MyProject -> myproject
+    local lowercase_name="${(L)name}"
+
+    # Expand ~ in path
+    path="${path/#\~/$HOME}"
+
+    /bin/cat >> "$launchers_file" << EOF
+# Project: $name
+# Path: $path
+# MCPs: $mcps_json
+
+function run${capitalized_name}() {
+  cd "$path" || return 1
+  if [[ -f "package.json" ]]; then
+    if [[ -f "bun.lockb" ]] || command -v bun &>/dev/null && grep -q '"bun"' package.json 2>/dev/null; then
+      bun run dev
+    else
+      npm run dev
+    fi
+  else
+    echo "No package.json found in $path"
+    return 1
+  fi
+}
+
+function open${capitalized_name}() {
+  cd "$path" || return 1
+  echo "Changed to: \$(pwd)"
+}
+
+function ${lowercase_name}Claude() {
+  cd "$path" || return 1
+  # Set up project-specific MCPs
+  _ralph_setup_mcps '$mcps_json'
+  claude
+}
+
+EOF
+  done
+
+  echo "${GREEN}✓ Launchers regenerated: $launchers_file${NC}"
+}
+
+# First-run detection for ralph-setup
+function _ralph_setup_first_run_check() {
+  # Check if registry exists and has projects
+  if [[ ! -f "$RALPH_REGISTRY_FILE" ]]; then
+    return 0  # Needs setup
+  fi
+
+  local project_count=$(jq '.projects | length' "$RALPH_REGISTRY_FILE" 2>/dev/null || echo "0")
+  if [[ "$project_count" -eq 0 ]]; then
+    return 0  # Needs setup
+  fi
+
+  return 1  # Already set up
+}
+
+# Show first-run welcome and guide through setup
+function _ralph_setup_welcome() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local CYAN='\033[0;36m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  👋 Welcome to Ralph!                                       │"
+  echo "│                                                             │"
+  echo "│  Let's set up your first project.                           │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    if gum confirm "Would you like to run the setup wizard?"; then
+      ralph-setup
+    else
+      echo ""
+      echo "${YELLOW}You can run 'ralph-setup' later to configure Ralph.${NC}"
+      echo ""
+    fi
+  else
+    echo -n "Would you like to run the setup wizard? [Y/n]: "
+    read setup_choice
+    if [[ "$setup_choice" != [Nn]* ]]; then
+      ralph-setup
+    else
+      echo ""
+      echo "${YELLOW}You can run 'ralph-setup' later to configure Ralph.${NC}"
+      echo ""
+    fi
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # LAUNCHER GENERATION - Auto-generate project launcher functions
 # ═══════════════════════════════════════════════════════════════════
 # Generates: run{Name}(), open{Name}(), {name}Claude() for each project

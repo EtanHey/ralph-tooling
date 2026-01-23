@@ -3,17 +3,17 @@
   "title": "ralph-setup wizard with gum",
   "description": "Interactive gum-based wizard for adding projects, selecting MCPs, and migrating secrets. Uses 1Password skill (US-030) for migration workflows. Makes setup easy for new users installing Ralph.",
   "acceptanceCriteria": [
-    { "text": "ralph-setup command launches gum menu with options", "checked": false },
-    { "text": "Option: Add new project (auto-detects path and name from cwd)", "checked": false },
-    { "text": "Option: Configure MCPs (multi-select from available definitions)", "checked": false },
-    { "text": "Option: Migrate secrets (invokes /1password skill for .env and MCP migration)", "checked": false },
-    { "text": "Option: View current config (pretty-prints registry.json)", "checked": false },
-    { "text": "Setup detects if 1Password CLI installed, offers to skip secrets if not", "checked": false },
-    { "text": "Generates .env.1password files for projects with secrets", "checked": false },
-    { "text": "_ralph_generate_launchers() creates {project}Claude functions from registry", "checked": false },
-    { "text": "First-run experience: detects no registry, guides through full setup", "checked": false },
-    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+    { "text": "ralph-setup command launches gum menu with options", "checked": true },
+    { "text": "Option: Add new project (auto-detects path and name from cwd)", "checked": true },
+    { "text": "Option: Configure MCPs (multi-select from available definitions)", "checked": true },
+    { "text": "Option: Migrate secrets (invokes /1password skill for .env and MCP migration)", "checked": true },
+    { "text": "Option: View current config (pretty-prints registry.json)", "checked": true },
+    { "text": "Setup detects if 1Password CLI installed, offers to skip secrets if not", "checked": true },
+    { "text": "Generates .env.1password files for projects with secrets", "checked": true },
+    { "text": "_ralph_generate_launchers() creates {project}Claude functions from registry", "checked": true },
+    { "text": "First-run experience: detects no registry, guides through full setup", "checked": true },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": true }
   ],
-  "passes": false,
+  "passes": true,
   "blockedBy": null
 }
