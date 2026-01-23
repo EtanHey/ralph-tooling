@@ -2180,7 +2180,10 @@ function ralph() {
     # Normal mode: full startup banner
     echo ""
     echo "╔═══════════════════════════════════════════════════════════════╗"
-    echo "║  🚀 RALPH v${RALPH_VERSION}                                         ║"
+    local title_str="🚀 RALPH v${RALPH_VERSION}"
+    local title_width=$(_ralph_display_width "$title_str")
+    local title_padding=$((59 - title_width))
+    echo "║  ${title_str}$(printf '%*s' $title_padding '')║"
     echo "╠───────────────────────────────────────────────────────────────╣"
     local pwd_str=$(pwd | head -c 55)
     local pwd_width=$(_ralph_display_width "$pwd_str")
@@ -2227,7 +2230,10 @@ function ralph() {
       local notify_padding=$((28 - (notify_width - ${#notify_str})))
       echo "│  ${notify_str}$(printf '%*s' $notify_padding '')│"
     else
-      echo "│  🔕 Notifications: OFF                                      │"
+      local notify_off_str="🔕 Notifications: OFF"
+      local notify_off_width=$(_ralph_display_width "$notify_off_str")
+      local notify_off_padding=$((55 - notify_off_width))
+      echo "│  ${notify_off_str}$(printf '%*s' $notify_off_padding '')│"
     fi
     echo "└─────────────────────────────────────────────────────────────┘"
     echo ""
@@ -2259,15 +2265,27 @@ function ralph() {
       # Normal mode: full iteration header
       echo ""
       echo "╔═══════════════════════════════════════════════════════════════╗"
-      echo -e "║  🔄 $(_ralph_bold "ITERATION $i") of $MAX                                       ║"
+      local iter_title="🔄 ITERATION $i of $MAX"
+      local iter_title_width=$(_ralph_display_width "$iter_title")
+      local iter_title_padding=$((59 - iter_title_width))
+      echo -e "║  $(_ralph_bold "$iter_title")$(printf '%*s' $iter_title_padding '')║"
       echo "╠───────────────────────────────────────────────────────────────╣"
-      echo "║  ⏱️  $(date '+%H:%M:%S')                                        ║"
+      local time_str="⏱️  $(date '+%H:%M:%S')"
+      local time_width=$(_ralph_display_width "$time_str")
+      local time_padding=$((59 - time_width))
+      echo "║  ${time_str}$(printf '%*s' $time_padding '')║"
       # Show iteration progress bar
       local iter_progress=$(_ralph_iteration_progress "$i" "$MAX")
-      echo -e "║  📊 Iteration: ${iter_progress}$(printf '%*s' $((36 - ${#i} - ${#MAX})) '')║"
+      local iter_str="📊 Iteration: ${iter_progress} $i/$MAX"
+      local iter_width=$(_ralph_display_width "$iter_str")
+      local iter_padding=$((59 - iter_width))
+      echo -e "║  ${iter_str}$(printf '%*s' $iter_padding '')║"
       if [[ -n "$current_story" ]]; then
         local colored_story=$(_ralph_color_story_id "$current_story")
-        echo -e "║  📖 Story: ${colored_story}$(printf '%*s' $((47 - ${#current_story})) '')║"
+        local story_str="📖 Story: ${current_story}"
+        local story_width=$(_ralph_display_width "$story_str")
+        local story_padding=$((59 - story_width))
+        echo -e "║  📖 Story: ${colored_story}$(printf '%*s' $story_padding '')║"
         # Show criteria progress for current story (JSON mode only)
         if [[ "$use_json_mode" == "true" ]]; then
           local criteria_stats=$(_ralph_get_story_criteria_progress "$current_story" "$PRD_JSON_DIR")
@@ -2275,18 +2293,27 @@ function ralph() {
           local criteria_total=$(echo "$criteria_stats" | awk '{print $2}')
           if [[ "$criteria_total" -gt 0 ]]; then
             local criteria_bar=$(_ralph_criteria_progress "$criteria_checked" "$criteria_total")
-            echo -e "║  ☐ Criteria:  ${criteria_bar}$(printf '%*s' $((35 - ${#criteria_checked} - ${#criteria_total})) '')║"
+            local criteria_str="☐ Criteria:  ${criteria_bar} $criteria_checked/$criteria_total"
+            local criteria_width=$(_ralph_display_width "$criteria_str")
+            local criteria_padding=$((59 - criteria_width))
+            echo -e "║  ${criteria_str}$(printf '%*s' $criteria_padding '')║"
           fi
         fi
       fi
       local colored_model=$(_ralph_color_model "$effective_model")
-      echo -e "║  🧠 Model: ${colored_model}$(printf '%*s' $((47 - ${#effective_model})) '')║"
+      local model_str="🧠 Model: ${effective_model}"
+      local model_width=$(_ralph_display_width "$model_str")
+      local model_padding=$((59 - model_width))
+      echo -e "║  🧠 Model: ${colored_model}$(printf '%*s' $model_padding '')║"
       # Show story progress (JSON mode only)
       if [[ "$use_json_mode" == "true" ]]; then
         local story_completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
         local story_total=$(jq -r '.stats.total // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
         local story_bar=$(_ralph_story_progress "$story_completed" "$story_total")
-        echo -e "║  📚 Stories:  ${story_bar}$(printf '%*s' $((35 - ${#story_completed} - ${#story_total})) '')║"
+        local stories_str="📚 Stories:  ${story_bar} $story_completed/$story_total"
+        local stories_width=$(_ralph_display_width "$stories_str")
+        local stories_padding=$((59 - stories_width))
+        echo -e "║  ${stories_str}$(printf '%*s' $stories_padding '')║"
       fi
       echo "╚═══════════════════════════════════════════════════════════════╝"
       echo ""
