@@ -1,0 +1,28 @@
+{
+  "id": "MP-001",
+  "title": "Consolidate CLAUDE.md files into modular context system",
+  "description": "Extract common patterns from 26 CLAUDE.md files (7,864 lines total) into a modular context system. Create base.md for universal rules, tech-specific contexts (nextjs.md, convex.md, supabase.md), and a migration wizard. Projects then reference shared contexts instead of duplicating rules.",
+  "type": "infrastructure",
+  "priority": "high",
+  "storyPoints": 8,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Analyze all 26 CLAUDE.md files and extract common patterns", "checked": false},
+    {"text": "Create ~/.claude/contexts/ directory structure", "checked": false},
+    {"text": "Create base.md with universal rules (git, commits, no push, etc.)", "checked": false},
+    {"text": "Create tech contexts: nextjs.md, convex.md, supabase.md, react-native.md", "checked": false},
+    {"text": "Create workflow contexts: rtl.md, testing.md, debugging.md", "checked": false},
+    {"text": "Document context inheritance: base + tech + workflow = full context", "checked": false},
+    {"text": "Create migration script: analyze project CLAUDE.md → suggest contexts", "checked": false},
+    {"text": "Migration script shows diff: what gets removed vs kept as project-specific", "checked": false},
+    {"text": "Test: Migrate one project (ralphtools) as proof of concept", "checked": false},
+    {"text": "Test: Migrate domica (complex, multi-app) as stress test", "checked": false},
+    {"text": "Create ralph-migrate-contexts command for wizard-style migration", "checked": false},
+    {"text": "Update project CLAUDE.mds to reference shared contexts", "checked": false},
+    {"text": "Document how to add new shared contexts", "checked": false},
+    {"text": "Verify: After migration, Claude behavior unchanged", "checked": false},
+    {"text": "Verify: Total context size reduced (measure before/after)", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}

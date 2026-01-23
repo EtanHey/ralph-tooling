@@ -209,6 +209,7 @@ _ralph_color_story_id() {
     TEST)  color="$RALPH_COLOR_YELLOW" ;;
     BUG)   color="$RALPH_COLOR_RED" ;;
     AUDIT) color="$RALPH_COLOR_MAGENTA" ;;
+    MP)    color="$RALPH_COLOR_CYAN" ;;
     *)     color="$RALPH_COLOR_RESET" ;;
   esac
 
@@ -1518,6 +1519,7 @@ _ralph_load_config() {
     RALPH_MODEL_TEST=$(jq -r '.models.TEST // "haiku"' "$RALPH_CONFIG_FILE" 2>/dev/null)
     RALPH_MODEL_BUG=$(jq -r '.models.BUG // "sonnet"' "$RALPH_CONFIG_FILE" 2>/dev/null)
     RALPH_MODEL_AUDIT=$(jq -r '.models.AUDIT // "opus"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_MODEL_MP=$(jq -r '.models.MP // "opus"' "$RALPH_CONFIG_FILE" 2>/dev/null)
 
     # Load notification settings
     local notify_enabled=$(jq -r '.notifications.enabled // false' "$RALPH_CONFIG_FILE" 2>/dev/null)
@@ -2197,6 +2199,9 @@ _ralph_get_model_for_story() {
       AUDIT)
         echo "${RALPH_MODEL_AUDIT:-opus}"
         ;;
+      MP)
+        echo "${RALPH_MODEL_MP:-opus}"
+        ;;
       *)
         # Unknown prefix - use fallback
         echo "${RALPH_UNKNOWN_TASK_MODEL:-sonnet}"
@@ -2219,6 +2224,7 @@ _ralph_show_routing() {
     echo -e "   $(_ralph_color_story_id "TEST") → $(_ralph_color_model "${RALPH_MODEL_TEST:-haiku}")"
     echo -e "   $(_ralph_color_story_id "BUG")  → $(_ralph_color_model "${RALPH_MODEL_BUG:-sonnet}")"
     echo -e "   $(_ralph_color_story_id "AUDIT")→ $(_ralph_color_model "${RALPH_MODEL_AUDIT:-opus}")"
+    echo -e "   $(_ralph_color_story_id "MP")   → $(_ralph_color_model "${RALPH_MODEL_MP:-opus}")"
     echo -e "   ???  → $(_ralph_color_model "${RALPH_UNKNOWN_TASK_MODEL:-sonnet}")"
   else
     echo -e "🧠 Single Model: $(_ralph_color_model "${RALPH_DEFAULT_MODEL_CFG:-opus}")"
