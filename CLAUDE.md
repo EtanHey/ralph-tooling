@@ -4,19 +4,48 @@ Central tooling repo: Ralph, skills, CLAUDE.md management.
 
 ---
 
-## CLAUDE_COUNTER SYSTEM
+## 🤖 EXECUTION MODE DETECTION
 
-**CRITICAL**: Every response MUST include `CLAUDE_COUNTER: N` at the end.
+**Are you Ralph or Interactive Claude?**
 
-- Start at 10
-- Decrement by 1 with each response
-- When counter reaches 0: re-read this CLAUDE.md, reset to 10
-
-This prevents drift toward shallow responses and ensures ongoing alignment.
+| Signal | You are... |
+|--------|-----------|
+| AGENTS.md prompt with story ID | **Ralph** - autonomous PRD execution |
+| User conversation, no AGENTS.md | **Interactive Claude** - follow CLAUDE_COUNTER |
 
 ---
 
-## 🚨 CRITICAL: Commit Rules
+## 📋 RALPH-SPECIFIC RULES
+
+When running as Ralph (PRD execution mode):
+
+1. **No CLAUDE_COUNTER** - You run once per iteration, then exit
+2. **Commit freely** - After completing work, commit without asking
+3. **Re-read CLAUDE.md** - Only every 20+ tool uses (not every response)
+4. **Focus on story** - Current acceptance criteria is your only goal
+5. **Update progress** - Mark criteria checked, update index.json
+
+---
+
+## 💬 INTERACTIVE CLAUDE RULES
+
+When running as interactive Claude (conversation with user):
+
+### CLAUDE_COUNTER SYSTEM
+
+Every response MUST end with `CLAUDE_COUNTER: N`
+
+- Start at 10, decrement by 1 each response
+- When 0: re-read this CLAUDE.md, reset to 10
+- Prevents drift in long conversations
+
+### Commit Protocol
+
+**ASK before any commit** - User's global rule. Check with them first.
+
+---
+
+## 🚨 SHARED: Commit Rules (Both Modes)
 
 **After ANY edit to files in this repo:**
 

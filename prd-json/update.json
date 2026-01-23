@@ -1,0 +1,116 @@
+{
+  "newStories": [
+    {
+      "id": "BUG-005",
+      "title": "Ralph keeps looping after PRD complete",
+      "description": "When all stories are complete (pending=0, nextStory=null), Ralph should exit gracefully instead of continuing to loop and saying 'PRD complete' every iteration.",
+      "type": "bug",
+      "priority": "critical",
+      "storyPoints": 2,
+      "status": "pending",
+      "acceptanceCriteria": [
+        "When nextStory is null AND pending array is empty, Ralph exits the loop",
+        "Print completion message: '✅ PRD Complete! All N stories finished.'",
+        "Show final stats summary (time, cost, stories completed)",
+        "Exit with code 0 (success)",
+        "Do NOT keep looping and burning tokens"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "BUG-006",
+      "title": "Debug output 'remaining_stats' leaking to display",
+      "description": "The line 'remaining_stats='0 0'' is being printed to the terminal. This debug output should be suppressed.",
+      "type": "bug",
+      "priority": "high",
+      "storyPoints": 1,
+      "status": "pending",
+      "acceptanceCriteria": [
+        "Find the echo/print statement outputting remaining_stats",
+        "Remove or redirect to /dev/null",
+        "No debug output visible in normal Ralph runs",
+        "Test by running Ralph and confirming no 'remaining_stats' output"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "BUG-007",
+      "title": "Per-project ntfy topics not working - config overrides",
+      "description": "The per-project notification topic feature (etans-ralph-{project}) is bypassed because the config file stores a fixed ntfyTopic that overrides the per-project logic. Parallel Ralphs on different projects all send to the same topic.",
+      "type": "bug",
+      "priority": "high",
+      "storyPoints": 2,
+      "status": "pending",
+      "acceptanceCriteria": [
+        "Config ntfyTopic value of '' or 'auto' enables per-project topics",
+        "Per-project topic format: {RALPH_NTFY_PREFIX}-{project_name}",
+        "Ralph on ralphtools sends to etans-ralph-ralphtools",
+        "Ralph on songscript sends to etans-ralph-songscript",
+        "Display shows actual topic being used",
+        "Config can still override with explicit topic if desired",
+        "Update docs/notifications.md with how to enable per-project vs fixed topic"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "US-052",
+      "title": "Audit Skills for Structure Compliance",
+      "description": "Scan all skills in ~/.claude/commands/ and identify those that don't follow the proper skill structure pattern (SKILL.md + workflows/ + scripts/).",
+      "type": "feature",
+      "priority": "high",
+      "storyPoints": 3,
+      "status": "pending",
+      "acceptanceCriteria": [
+        "Scan ~/.claude/commands/ for all skill directories",
+        "Check each skill against the reference pattern: github skill (SKILL.md, workflows/, scripts/)",
+        "Identify skills that are single .md files but should be expanded",
+        "Identify skills missing workflows/ directory",
+        "Identify skills missing scripts/ when they reference bash commands",
+        "Create a report file: docs.local/skill-audit-report.md",
+        "Report lists: compliant skills, non-compliant skills with specific issues",
+        "Do NOT fix anything - audit only"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "US-053",
+      "title": "Generate Fix Stories for Non-Compliant Skills",
+      "description": "Based on the skill audit report, create individual stories in update.json to fix each non-compliant skill.",
+      "type": "feature",
+      "priority": "high",
+      "storyPoints": 2,
+      "status": "pending",
+      "acceptanceCriteria": [
+        "Read docs.local/skill-audit-report.md from previous story",
+        "For each non-compliant skill, create a story in update.json",
+        "Story should specify exactly what needs to be added/changed",
+        "Story should reference the github skill as the pattern to follow",
+        "Each fix story should be independent (no dependencies between them)",
+        "Set all fix stories to priority: medium",
+        "Do NOT implement fixes - only create the stories"
+      ],
+      "dependencies": ["US-052"]
+    },
+    {
+      "id": "US-054",
+      "title": "Add Tests for All Skills",
+      "description": "Create a test suite that validates all skills follow the correct structure and their scripts/workflows are functional.",
+      "type": "feature",
+      "priority": "medium",
+      "storyPoints": 5,
+      "status": "pending",
+      "acceptanceCriteria": [
+        "Create tests/test-skills.zsh test file",
+        "Test: Each skill directory has SKILL.md",
+        "Test: SKILL.md contains required sections (When to Use, Quick Start)",
+        "Test: If skill has workflows/, each .md file has proper structure",
+        "Test: If skill references scripts, scripts/ directory exists",
+        "Test: All referenced scripts are executable",
+        "Test: Scripts have shebang and basic syntax validation",
+        "Add test to main test runner",
+        "All tests pass on current compliant skills (github, convex)"
+      ],
+      "dependencies": ["US-053"]
+    }
+  ]
+}
