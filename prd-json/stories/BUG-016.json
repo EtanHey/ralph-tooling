@@ -1,0 +1,19 @@
+{
+  "id": "BUG-016",
+  "title": "update.json format undocumented and confusing",
+  "description": "The _ralph_apply_update_queue function only processes .newStories[] and .updateStories[] arrays. But the /update skill and documentation suggest putting stories in storyOrder/pending arrays directly. This causes updates to be silently ignored.",
+  "type": "bug",
+  "priority": "high",
+  "storyPoints": 2,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Document correct update.json format in skills/update/SKILL.md", "checked": false},
+    {"text": "newStories: array of full story objects to create", "checked": false},
+    {"text": "updateStories: array of partial story updates (id + fields to change)", "checked": false},
+    {"text": "Update /update skill workflows to use correct format", "checked": false},
+    {"text": "Add validation: warn if update.json has storyOrder/pending (ignored)", "checked": false},
+    {"text": "Test: Create update.json with newStories, verify merge works", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}

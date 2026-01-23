@@ -1,0 +1,17 @@
+{
+  "id": "BUG-015",
+  "title": "Ralph says 'PRD Complete' when stories are blocked",
+  "description": "Ralph exits with 'PRD Complete! All X stories finished' when pending=0, but ignores blocked stories. Should only show complete when pending=0 AND blocked=0. Currently at line 3126: checks pending_count but not blocked_count.",
+  "type": "bug",
+  "priority": "high",
+  "storyPoints": 1,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Find completion check at line ~3126 in ralph.zsh", "checked": false},
+    {"text": "Add blocked_count check: only complete if pending=0 AND blocked=0", "checked": false},
+    {"text": "If blocked > 0, show 'PRD Blocked: X stories need manual intervention'", "checked": false},
+    {"text": "Test: Create blocked story, verify Ralph doesn't say 'Complete'", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}
