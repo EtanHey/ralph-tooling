@@ -5,11 +5,12 @@
   "type": "bug",
   "priority": "low",
   "storyPoints": 1,
-  "status": "pending",
+  "status": "completed",
+  "passes": true,
   "acceptanceCriteria": [
-    {"text": "Topic names up to 40 chars display without overflow", "checked": false},
-    {"text": "Longer topics are truncated with ellipsis or wrapped", "checked": false},
-    {"text": "Box alignment remains consistent", "checked": false}
+    {"text": "Topic names up to 40 chars display without overflow", "checked": true},
+    {"text": "Longer topics are truncated with ellipsis or wrapped", "checked": true},
+    {"text": "Box alignment remains consistent", "checked": true}
   ],
   "dependencies": []
 }

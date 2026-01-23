@@ -3054,35 +3054,44 @@ function ralph() {
       # No CLI override - show config-based routing
       _ralph_show_routing
     fi
-    # Count and display based on mode
-    echo "┌─────────────────────────────────────────────────────────────┐"
+    # Count and display based on mode (BOX_INNER_WIDTH=61 to match header)
+    local BOX_INNER_WIDTH=61
+    echo "┌───────────────────────────────────────────────────────────────┐"
     if [[ "$use_json_mode" == "true" ]]; then
       local pending=$(jq -r '.stats.pending // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
       local completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
       local blocked=$(jq -r '.stats.blocked // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
       local status_str="📋 Stories: $pending pending │ $completed completed │ $blocked blocked"
       local status_width=$(_ralph_display_width "$status_str")
-      local status_padding=$((59 - status_width))
+      local status_padding=$((BOX_INNER_WIDTH - status_width))
       echo "│  ${status_str}$(printf '%*s' $status_padding '')│"
     else
       local task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
       local task_str="📋 Tasks remaining: $task_count"
       local task_width=$(_ralph_display_width "$task_str")
-      local task_padding=$((59 - task_width))
+      local task_padding=$((BOX_INNER_WIDTH - task_width))
       echo "│  ${task_str}$(printf '%*s' $task_padding '')│"
     fi
     if $notify_enabled; then
-      local notify_str="🔔 Notifications: ON (topic: ${ntfy_topic})"
+      # BUG-011: Truncate long topic names to fit box width
+      # "🔔 Notifications: ON (topic: " = 29 display chars, ")" = 1 char
+      # Max topic length = BOX_INNER_WIDTH - 30 = 31 chars (with 28+3 for ellipsis)
+      local max_topic_len=31
+      local display_topic="$ntfy_topic"
+      if [[ ${#ntfy_topic} -gt $max_topic_len ]]; then
+        display_topic="${ntfy_topic:0:$((max_topic_len - 3))}..."
+      fi
+      local notify_str="🔔 Notifications: ON (topic: ${display_topic})"
       local notify_width=$(_ralph_display_width "$notify_str")
-      local notify_padding=$((59 - notify_width))
+      local notify_padding=$((BOX_INNER_WIDTH - notify_width))
       echo "│  ${notify_str}$(printf '%*s' $notify_padding '')│"
     else
       local notify_off_str="🔕 Notifications: OFF"
       local notify_off_width=$(_ralph_display_width "$notify_off_str")
-      local notify_off_padding=$((59 - notify_off_width))
+      local notify_off_padding=$((BOX_INNER_WIDTH - notify_off_width))
       echo "│  ${notify_off_str}$(printf '%*s' $notify_off_padding '')│"
     fi
-    echo "└─────────────────────────────────────────────────────────────┘"
+    echo "└───────────────────────────────────────────────────────────────┘"
     echo ""
   fi
 
