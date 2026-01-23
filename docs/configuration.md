@@ -12,8 +12,9 @@ cp ~/.config/ralph/ralph-config.local.example ~/.config/ralph/ralph-config.local
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RALPH_NTFY_TOPIC` | Notification topic | `ralph-notifications` |
-| `RALPH_NTFY_TOPIC_PATTERN` | App-mode topic pattern | `{project}-{app}` |
+| `RALPH_NTFY_PREFIX` | Prefix for per-project topics | `etanheys-ralph` |
+| `RALPH_NTFY_TOPIC` | Override topic (bypasses per-project) | (none) |
+| `CLAUDE_NTFY_TOPIC` | Claude's notification topic | `etanheys-ralphclaude-notify` |
 | `RALPH_DEFAULT_MODEL` | Default model | `opus` |
 | `RALPH_MAX_ITERATIONS` | Default iteration limit | `10` |
 | `RALPH_SLEEP_SECONDS` | Seconds between iterations | `2` |
@@ -41,9 +42,17 @@ Enable with `-QN` flag. Uses [ntfy.sh](https://ntfy.sh) for push notifications.
 
 Configure in `ralph-config.local`:
 ```bash
-export RALPH_NTFY_TOPIC="your-topic-name"
-export RALPH_NTFY_TOPIC_PATTERN="{project}-{app}"  # For app mode
+# Per-project topics (default): etanheys-ralph-{project}-notify
+export RALPH_NTFY_PREFIX="etanheys-ralph"
+
+# Or override with fixed topic:
+export RALPH_NTFY_TOPIC="my-custom-topic"
+
+# Claude notifications (separate from Ralph):
+export CLAUDE_NTFY_TOPIC="etanheys-ralphclaude-notify"
 ```
+
+See [docs/notifications.md](notifications.md) for full details.
 
 Notifications sent:
 - Iteration complete (with remaining task count)

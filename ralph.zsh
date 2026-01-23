@@ -143,13 +143,13 @@ RALPH_CONFIG_DIR="${RALPH_CONFIG_DIR:-$HOME/.config/ralphtools}"
 
 # Defaults (can be overridden in ralph-config.local or environment)
 # Notification topic configuration:
-#   RALPH_NTFY_PREFIX: Base prefix for Ralph topics (default: "etans-ralph")
-#   RALPH_NTFY_TOPIC: Ralph's topic, defaults to "{prefix}-{project}" format
-#   CLAUDE_NTFY_TOPIC: Claude's topic (default: "etans-ralphClaude") - separate from Ralph
-RALPH_NTFY_PREFIX="${RALPH_NTFY_PREFIX:-etans-ralph}"
+#   RALPH_NTFY_PREFIX: Base prefix for Ralph topics (default: "etanheys-ralph")
+#   RALPH_NTFY_TOPIC: Ralph's topic, defaults to "{prefix}-{project}-notify" format
+#   CLAUDE_NTFY_TOPIC: Claude's topic (default: "etanheys-ralphclaude-notify") - separate from Ralph
+RALPH_NTFY_PREFIX="${RALPH_NTFY_PREFIX:-etanheys-ralph}"
 # Note: RALPH_NTFY_TOPIC will be set per-project in ralph() function
 RALPH_NTFY_TOPIC="${RALPH_NTFY_TOPIC:-}"
-CLAUDE_NTFY_TOPIC="${CLAUDE_NTFY_TOPIC:-etans-ralphClaude}"
+CLAUDE_NTFY_TOPIC="${CLAUDE_NTFY_TOPIC:-etanheys-ralphclaude-notify}"
 RALPH_DEFAULT_MODEL="${RALPH_DEFAULT_MODEL:-opus}"
 RALPH_MAX_ITERATIONS="${RALPH_MAX_ITERATIONS:-10}"
 RALPH_SLEEP_SECONDS="${RALPH_SLEEP_SECONDS:-2}"
@@ -2449,9 +2449,9 @@ function ralph() {
   local PRD_JSON_DIR="$REPO_ROOT/prd-json"
   local use_json_mode=false
   local project_key="ralph"
-  # Default ntfy topic: etans-ralph-<project> (per-project topics)
+  # Default ntfy topic: etanheys-ralph-<project>-notify (per-project topics)
   local project_name=$(basename "$(pwd)")
-  local ntfy_topic="${RALPH_NTFY_TOPIC:-${RALPH_NTFY_PREFIX}-${project_name}}"
+  local ntfy_topic="${RALPH_NTFY_TOPIC:-${RALPH_NTFY_PREFIX}-${project_name}-notify}"
   local app_mode=""
   local target_branch=""
   local original_branch=""
