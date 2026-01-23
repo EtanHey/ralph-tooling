@@ -116,12 +116,15 @@ _ralph_display_width() {
   # Pattern matches: ESC[ followed by any number of digits/semicolons, ending with a letter
   local clean_str=$(echo "$str" | sed 's/\x1b\[[0-9;]*m//g' | sed 's/\x1b\[[0-9;]*[A-Za-z]//g')
 
+  # Strip Unicode variation selectors (U+FE0F = ️) - zero display width but counted in ${#str}
+  clean_str=$(echo "$clean_str" | sed 's/️//g')
+
   local width=${#clean_str}  # Start with basic character count
 
   # Count known emojis that are width 2 (display width extends)
   # Each emoji found adds 1 to width (since it's counted as 1 in ${#str} but displayed as 2)
   local emoji_count=0
-  for emoji in 🚀 📋 🆕 💰 ⏱ ✓ 🔄 📚 ☐ 💵 🏁 🎯 ✨ ⚠ 🆘 🔴 🟢 🟡 ⚡ ❌ ✅ 🛑 🔥 🔕 🔔 📂 📱 📊 📖 🧠 ⏱️; do
+  for emoji in 🚀 📋 🆕 💰 ⏱ 🔄 📚 💵 🏁 🎯 ✨ 🆘 🔴 🟢 🟡 ⚡ ❌ ✅ 🛑 🔥 🔕 🔔 📂 📱 📊 📖 🧠; do
     emoji_count=$((emoji_count + $(echo "$clean_str" | grep -o "$emoji" | wc -l)))
   done
   width=$((width + emoji_count))
@@ -2184,23 +2187,23 @@ function ralph() {
     echo "╔═══════════════════════════════════════════════════════════════╗"
     local title_str="🚀 RALPH v${RALPH_VERSION}"
     local title_width=$(_ralph_display_width "$title_str")
-    local title_padding=$((59 - title_width))
+    local title_padding=$((61 - title_width))
     echo "║  ${title_str}$(printf '%*s' $title_padding '')║"
     echo "╠───────────────────────────────────────────────────────────────╣"
-    local pwd_str=$(pwd | head -c 55)
+    local pwd_str="📂 $(pwd | head -c 50)"
     local pwd_width=$(_ralph_display_width "$pwd_str")
-    local pwd_padding=$((55 - (pwd_width - ${#pwd_str})))
-    echo "║  📂 ${pwd_str}$(printf '%*s' $pwd_padding '')║"
+    local pwd_padding=$((61 - pwd_width))
+    echo "║  ${pwd_str}$(printf '%*s' $pwd_padding '')║"
     if [[ -n "$app_mode" ]]; then
-      local app_str="App: $app_mode (branch: $target_branch)"
+      local app_str="📱 App: $app_mode (branch: $target_branch)"
       local app_width=$(_ralph_display_width "$app_str")
-      local app_padding=$((45 - (app_width - ${#app_str})))
-      echo "║  📱 ${app_str}$(printf '%*s' $app_padding '')║"
+      local app_padding=$((61 - app_width))
+      echo "║  ${app_str}$(printf '%*s' $app_padding '')║"
     fi
-    local max_str="Max iterations: $MAX"
+    local max_str="🔄 Max iterations: $MAX"
     local max_width=$(_ralph_display_width "$max_str")
-    local max_padding=$((42 - (max_width - ${#max_str})))
-    echo "║  🔄 ${max_str}$(printf '%*s' $max_padding '')║"
+    local max_padding=$((61 - max_width))
+    echo "║  ${max_str}$(printf '%*s' $max_padding '')║"
     echo "╚═══════════════════════════════════════════════════════════════╝"
     echo ""
 
@@ -2217,24 +2220,24 @@ function ralph() {
       local blocked=$(jq -r '.stats.blocked // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
       local status_str="📋 Stories: $pending pending │ $completed completed │ $blocked blocked"
       local status_width=$(_ralph_display_width "$status_str")
-      local status_padding=$((27 - (status_width - ${#status_str})))
+      local status_padding=$((59 - status_width))
       echo "│  ${status_str}$(printf '%*s' $status_padding '')│"
     else
       local task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
       local task_str="📋 Tasks remaining: $task_count"
       local task_width=$(_ralph_display_width "$task_str")
-      local task_padding=$((38 - (task_width - ${#task_str})))
+      local task_padding=$((59 - task_width))
       echo "│  ${task_str}$(printf '%*s' $task_padding '')│"
     fi
     if $notify_enabled; then
       local notify_str="🔔 Notifications: ON (topic: ${ntfy_topic})"
       local notify_width=$(_ralph_display_width "$notify_str")
-      local notify_padding=$((28 - (notify_width - ${#notify_str})))
+      local notify_padding=$((59 - notify_width))
       echo "│  ${notify_str}$(printf '%*s' $notify_padding '')│"
     else
       local notify_off_str="🔕 Notifications: OFF"
       local notify_off_width=$(_ralph_display_width "$notify_off_str")
-      local notify_off_padding=$((55 - notify_off_width))
+      local notify_off_padding=$((59 - notify_off_width))
       echo "│  ${notify_off_str}$(printf '%*s' $notify_off_padding '')│"
     fi
     echo "└─────────────────────────────────────────────────────────────┘"
@@ -2269,24 +2272,24 @@ function ralph() {
       echo "╔═══════════════════════════════════════════════════════════════╗"
       local iter_title="🔄 ITERATION $i of $MAX"
       local iter_title_width=$(_ralph_display_width "$iter_title")
-      local iter_title_padding=$((59 - iter_title_width))
+      local iter_title_padding=$((61 - iter_title_width))
       echo -e "║  $(_ralph_bold "$iter_title")$(printf '%*s' $iter_title_padding '')║"
       echo "╠───────────────────────────────────────────────────────────────╣"
       local time_str="⏱️  $(date '+%H:%M:%S')"
       local time_width=$(_ralph_display_width "$time_str")
-      local time_padding=$((59 - time_width))
+      local time_padding=$((61 - time_width))
       echo "║  ${time_str}$(printf '%*s' $time_padding '')║"
       # Show iteration progress bar
       local iter_progress=$(_ralph_iteration_progress "$i" "$MAX")
       local iter_str="📊 Iteration: ${iter_progress}"
       local iter_width=$(_ralph_display_width "$iter_str")
-      local iter_padding=$((59 - iter_width))
+      local iter_padding=$((61 - iter_width))
       echo -e "║  ${iter_str}$(printf '%*s' $iter_padding '')║"
       if [[ -n "$current_story" ]]; then
         local colored_story=$(_ralph_color_story_id "$current_story")
         local story_str="📖 Story: ${current_story}"
         local story_width=$(_ralph_display_width "$story_str")
-        local story_padding=$((59 - story_width))
+        local story_padding=$((61 - story_width))
         echo -e "║  📖 Story: ${colored_story}$(printf '%*s' $story_padding '')║"
         # Show criteria progress for current story (JSON mode only)
         if [[ "$use_json_mode" == "true" ]]; then
@@ -2297,7 +2300,7 @@ function ralph() {
             local criteria_bar=$(_ralph_criteria_progress "$criteria_checked" "$criteria_total")
             local criteria_str="☐ Criteria:  ${criteria_bar}"
             local criteria_width=$(_ralph_display_width "$criteria_str")
-            local criteria_padding=$((59 - criteria_width))
+            local criteria_padding=$((61 - criteria_width))
             echo -e "║  ${criteria_str}$(printf '%*s' $criteria_padding '')║"
           fi
         fi
@@ -2305,7 +2308,7 @@ function ralph() {
       local colored_model=$(_ralph_color_model "$effective_model")
       local model_str="🧠 Model: ${effective_model}"
       local model_width=$(_ralph_display_width "$model_str")
-      local model_padding=$((59 - model_width))
+      local model_padding=$((61 - model_width))
       echo -e "║  🧠 Model: ${colored_model}$(printf '%*s' $model_padding '')║"
       # Show story progress (JSON mode only)
       if [[ "$use_json_mode" == "true" ]]; then
@@ -2314,7 +2317,7 @@ function ralph() {
         local story_bar=$(_ralph_story_progress "$story_completed" "$story_total")
         local stories_str="📚 Stories:  ${story_bar}"
         local stories_width=$(_ralph_display_width "$stories_str")
-        local stories_padding=$((59 - stories_width))
+        local stories_padding=$((61 - stories_width))
         echo -e "║  ${stories_str}$(printf '%*s' $stories_padding '')║"
       fi
       echo "╚═══════════════════════════════════════════════════════════════╝"
