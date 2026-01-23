@@ -12,7 +12,15 @@ description: Add stories to a PRD safely. Handles both active Ralph (update.json
 | Task | Workflow |
 |------|----------|
 | Add a single story | [add-story](workflows/add-story.md) |
+| Add a bug report | [add-bug](workflows/add-bug.md) |
+| Modify an existing story | [update-story](workflows/update-story.md) |
 | Add multiple stories at once | [add-multiple](workflows/add-multiple.md) |
+
+## Available Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `scripts/add-story.sh` | Add story with auto-detection | `bash ~/.claude/commands/update/scripts/add-story.sh --id US-070 --title "..." --priority high` |
 
 ## Ralph Detection
 

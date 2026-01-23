@@ -5,59 +5,60 @@
   "type": "feature",
   "priority": "high",
   "storyPoints": 5,
-  "status": "pending",
+  "status": "completed",
+  "passes": true,
   "acceptanceCriteria": [
     {
       "text": "Create skills/update/ directory with SKILL.md + workflows/",
-      "checked": false
+      "checked": true
     },
     {
       "text": "SKILL.md explains when to use /update vs manual edits",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create workflows/add-story.md for adding new stories",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create workflows/add-bug.md for adding bug reports",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create workflows/update-story.md for modifying existing stories",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Auto-detect Ralph running: check for lock file or pgrep for ralph tee process",
-      "checked": false
+      "checked": true
     },
     {
       "text": "If Ralph running: write to prd-json/update.json with newStories array",
-      "checked": false
+      "checked": true
     },
     {
       "text": "If Ralph NOT running: write directly to stories/ and update index.json",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Always convert string criteria to {text, checked: false} objects",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create scripts/add-story.sh that handles the detection and routing logic",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Symlink to ~/.claude/commands/update",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Run /update while Ralph is running - verify goes to update.json",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Run /update while Ralph is NOT running - verify goes to index.json",
-      "checked": false
+      "checked": true
     }
   ],
   "dependencies": []
