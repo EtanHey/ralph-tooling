@@ -7,12 +7,12 @@
   "storyPoints": 2,
   "status": "pending",
   "acceptanceCriteria": [
-    {"text": "Document 3-tier hierarchy: global > project > (optional) personal", "checked": false},
-    {"text": "Define what belongs at global level (user preferences, browser choice, commit rules)", "checked": false},
-    {"text": "Define what belongs at project level (project-specific tooling, paths, patterns)", "checked": false},
-    {"text": "Document how Claude merges/prioritizes layers", "checked": false},
-    {"text": "Create template for each layer with clear sections", "checked": false},
-    {"text": "Add 'use /prd for PRD work' and 'use /1password for secrets' pointers", "checked": false},
+    {"text": "Document 3-tier hierarchy: global > project > (optional) personal", "checked": true},
+    {"text": "Define what belongs at global level (user preferences, browser choice, commit rules)", "checked": true},
+    {"text": "Define what belongs at project level (project-specific tooling, paths, patterns)", "checked": true},
+    {"text": "Document how Claude merges/prioritizes layers", "checked": true},
+    {"text": "Create template for each layer with clear sections", "checked": true},
+    {"text": "Add 'use /prd for PRD work' and 'use /1password for secrets' pointers", "checked": true},
     {"text": "Update ~/.claude/CLAUDE.md with layer documentation", "checked": false}
   ],
   "dependencies": []
