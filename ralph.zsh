@@ -3099,6 +3099,221 @@ function ralph-projects() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# SECRETS MANAGEMENT - 1Password integration for project secrets
+# ═══════════════════════════════════════════════════════════════════
+# ralph-secrets setup   - Configure 1Password vault
+# ralph-secrets status  - Show 1Password configuration and sign-in status
+# ralph-secrets migrate - Migrate environment variables to 1Password (future)
+# ═══════════════════════════════════════════════════════════════════
+
+function ralph-secrets() {
+  local RED='\033[0;31m'
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local NC='\033[0m'
+  local config_file="$HOME/.config/ralphtools/config.json"
+  local subcommand="${1:-status}"
+
+  # Helper function: Check if op CLI is installed
+  _ralph_check_op_cli() {
+    if ! command -v op &>/dev/null; then
+      echo "${RED}Error: 1Password CLI (op) is not installed${NC}"
+      echo ""
+      echo "Install with:"
+      echo "  brew install 1password-cli"
+      echo ""
+      echo "Or download from:"
+      echo "  https://1password.com/downloads/command-line/"
+      return 1
+    fi
+    return 0
+  }
+
+  # Helper function: Check if user is signed into 1Password
+  _ralph_check_op_signin() {
+    if ! op account list &>/dev/null; then
+      echo "${RED}Error: Not signed into 1Password${NC}"
+      echo ""
+      echo "Sign in with:"
+      echo "  eval \$(op signin)"
+      echo ""
+      echo "Or if using biometric unlock:"
+      echo "  op signin"
+      return 1
+    fi
+    return 0
+  }
+
+  case "$subcommand" in
+    setup)
+      echo ""
+      echo "┌─────────────────────────────────────────────────────────────┐"
+      echo "│  🔐 Ralph Secrets Setup (1Password)                         │"
+      echo "└─────────────────────────────────────────────────────────────┘"
+      echo ""
+
+      # Check op CLI is installed
+      if ! _ralph_check_op_cli; then
+        return 1
+      fi
+      echo "${GREEN}✓ 1Password CLI installed${NC}"
+
+      # Check user is signed in
+      if ! _ralph_check_op_signin; then
+        return 1
+      fi
+      echo "${GREEN}✓ Signed into 1Password${NC}"
+      echo ""
+
+      # Get available vaults
+      echo "📁 Available vaults:"
+      local vaults
+      vaults=$(op vault list --format=json 2>/dev/null | /usr/bin/jq -r '.[].name')
+      if [[ -z "$vaults" ]]; then
+        echo "${RED}Error: No vaults found${NC}"
+        return 1
+      fi
+
+      local vault_array=()
+      while IFS= read -r vault; do
+        vault_array+=("$vault")
+        echo "   - $vault"
+      done <<< "$vaults"
+      echo ""
+
+      local selected_vault=""
+
+      # Select vault
+      if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+        echo "Select vault to use for Ralph secrets:"
+        selected_vault=$(gum choose "${vault_array[@]}")
+      else
+        echo "Enter vault name to use for Ralph secrets:"
+        echo -n "   Vault name: "
+        read selected_vault
+        # Validate vault exists
+        local vault_exists=false
+        for v in "${vault_array[@]}"; do
+          if [[ "$v" == "$selected_vault" ]]; then
+            vault_exists=true
+            break
+          fi
+        done
+        if ! $vault_exists; then
+          echo "${RED}Error: Vault '$selected_vault' not found${NC}"
+          return 1
+        fi
+      fi
+
+      echo ""
+      echo "${GREEN}✓ Selected vault: $selected_vault${NC}"
+      echo ""
+
+      # Update config.json with secrets configuration
+      # Ensure config file exists
+      if [[ ! -f "$config_file" ]]; then
+        mkdir -p "$HOME/.config/ralphtools"
+        echo '{}' > "$config_file"
+      fi
+
+      # Add secrets section to config using jq
+      /usr/bin/jq ".secrets = {\"provider\": \"1password\", \"vault\": \"$selected_vault\"}" "$config_file" > "${config_file}.tmp"
+      /bin/mv "${config_file}.tmp" "$config_file"
+
+      echo "✅ Secrets configuration saved!"
+      echo ""
+      echo "   Provider: 1password"
+      echo "   Vault: $selected_vault"
+      echo ""
+      echo "Ralph will now look for credentials in this vault."
+      ;;
+
+    status)
+      echo ""
+      echo "┌─────────────────────────────────────────────────────────────┐"
+      echo "│  🔐 Ralph Secrets Status                                    │"
+      echo "└─────────────────────────────────────────────────────────────┘"
+      echo ""
+
+      # Check op CLI
+      echo "1Password CLI:"
+      if command -v op &>/dev/null; then
+        local op_version
+        op_version=$(op --version 2>/dev/null || echo "unknown")
+        echo "   ${GREEN}✓ Installed (version $op_version)${NC}"
+      else
+        echo "   ${RED}✗ Not installed${NC}"
+        echo "     Install with: brew install 1password-cli"
+        return 0
+      fi
+
+      # Check sign-in status
+      echo ""
+      echo "Sign-in Status:"
+      if op account list &>/dev/null; then
+        local account
+        account=$(op account list --format=json 2>/dev/null | /usr/bin/jq -r '.[0].email // "Unknown"')
+        echo "   ${GREEN}✓ Signed in as: $account${NC}"
+      else
+        echo "   ${RED}✗ Not signed in${NC}"
+        echo "     Sign in with: eval \$(op signin)"
+        return 0
+      fi
+
+      # Check config
+      echo ""
+      echo "Ralph Configuration:"
+      if [[ -f "$config_file" ]]; then
+        local provider
+        local vault
+        provider=$(/usr/bin/jq -r '.secrets.provider // "not configured"' "$config_file" 2>/dev/null)
+        vault=$(/usr/bin/jq -r '.secrets.vault // "not configured"' "$config_file" 2>/dev/null)
+
+        if [[ "$provider" != "not configured" && "$provider" != "null" ]]; then
+          echo "   ${GREEN}✓ Provider: $provider${NC}"
+          echo "   ${GREEN}✓ Vault: $vault${NC}"
+
+          # Check if vault exists
+          if op vault get "$vault" &>/dev/null; then
+            echo "   ${GREEN}✓ Vault accessible${NC}"
+          else
+            echo "   ${YELLOW}⚠ Vault '$vault' not accessible${NC}"
+          fi
+        else
+          echo "   ${YELLOW}⚠ Not configured${NC}"
+          echo "     Run: ralph-secrets setup"
+        fi
+      else
+        echo "   ${YELLOW}⚠ No config file found${NC}"
+        echo "     Run: ralph-secrets setup"
+      fi
+      ;;
+
+    migrate)
+      echo ""
+      echo "┌─────────────────────────────────────────────────────────────┐"
+      echo "│  🔐 Ralph Secrets Migration                                 │"
+      echo "└─────────────────────────────────────────────────────────────┘"
+      echo ""
+      echo "${YELLOW}Migration feature coming soon...${NC}"
+      echo ""
+      echo "This will help you migrate existing environment variables"
+      echo "to 1Password for more secure secret management."
+      ;;
+
+    *)
+      echo "Usage: ralph-secrets [setup|status|migrate]"
+      echo ""
+      echo "Subcommands:"
+      echo "  setup   - Configure 1Password vault for Ralph secrets"
+      echo "  status  - Show 1Password configuration and sign-in status"
+      echo "  migrate - Migrate environment variables to 1Password (coming soon)"
+      return 1
+      ;;
+  esac
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MCP SETUP - Configure MCPs for project launchers
 # ═══════════════════════════════════════════════════════════════════
 # Supported MCPs: figma, linear, supabase, browser-tools, context7

@@ -343,3 +343,25 @@
 - All 8 acceptance criteria completed
 - Updated stats: completed=21, pending=10, blocked=1
 ---
+
+## Iteration 23 - US-011 Add ralph secrets command for 1Password setup
+- Model: opus
+- Implemented ralph-secrets() function with three subcommands: setup, status, migrate
+- Features:
+  1. ✓ ralph-secrets setup: Interactive wizard to configure 1Password vault
+     - Checks if op CLI is installed, prompts to install if missing
+     - Verifies user is signed into 1Password using op account list
+     - Lists available vaults and allows selection (gum choose or fallback)
+     - Saves secrets.provider and secrets.vault to config.json
+  2. ✓ ralph-secrets status: Shows current 1Password configuration
+     - Displays op CLI version and installation status
+     - Shows sign-in status with email address
+     - Shows configured vault and checks if it's accessible
+  3. ✓ ralph-secrets migrate: Placeholder for future environment variable migration
+- Added new SECRETS MANAGEMENT section between ralph-projects and MCP SETUP
+- Uses consistent patterns: colored output, box drawing, jq for JSON manipulation
+- All 29 unit tests still pass
+- Typecheck passes (zsh -n ralph.zsh)
+- All 7 acceptance criteria completed
+- Updated stats: completed=22, pending=9, blocked=1
+---
