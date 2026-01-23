@@ -1472,3 +1472,51 @@ Encountered infrastructure blocker while attempting V-011 (verification story).
 - Document blocker clearly so user understands required manual steps
 - Create bug story to track user-facing prerequisites
 
+## Iteration 40 - ALL STORIES BLOCKED: User Action Required
+**Status**: PRD BLOCKED PENDING USER ACTION
+
+### Situation
+Attempted to work on BUG-012 but realized it is a USER-ACTION story, not a Ralph-actionable story. All acceptance criteria require manual user steps:
+1. User must manually rename ~/Desktop/Gits/ralphtools → ~/Desktop/Gits/claude-golem
+2. User must run scripts/rename-to-claude-golem.sh after rename
+3. User must update ~/.zshrc as prompted by script
+4. User must reload Ralph or start new session
+
+### Blocked Stories (4 total)
+- **V-011**: Blocked by infrastructure - directory rename required
+- **BUG-012**: Blocked by USER_ACTION_REQUIRED - all criteria require manual user steps
+- **V-012**: Blocked by V-011 - verification depends on rename completion
+- **US-065**: Blocked by V-012 - documentation update depends on verification
+
+### What User Must Do
+After Ralph exits:
+```bash
+# 1. Rename the directory
+mv ~/Desktop/Gits/ralphtools ~/Desktop/Gits/claude-golem
+
+# 2. Run the migration script
+cd ~/Desktop/Gits/claude-golem
+bash scripts/rename-to-claude-golem.sh
+
+# 3. Update ~/.zshrc (script shows which lines to change)
+
+# 4. Reload Ralph
+source ~/.config/ralphtools/ralph.zsh
+```
+
+After completing these steps, restart Ralph and the blocked stories can be unblocked:
+1. Mark BUG-012 as complete (user action done)
+2. Move V-011 from blocked to pending (directory renamed)
+3. V-012 and US-065 will unblock in chain
+
+### Files Modified
+- prd-json/stories/BUG-012.json - Added blockedBy field
+- prd-json/stories/V-012.json - Added blockedBy field, status=blocked
+- prd-json/stories/US-065.json - Added blockedBy field, status=blocked
+- prd-json/index.json - All 4 remaining stories moved to blocked, nextStory=null, pending=[]
+
+### Learnings
+- Stories that require user manual action should be marked with blockedBy: USER_ACTION_REQUIRED
+- When all pending stories are blocked, set nextStory to null
+- Clear documentation of user steps enables resumption after manual work
+

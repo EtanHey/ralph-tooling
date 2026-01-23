@@ -5,7 +5,8 @@
   "type": "verification",
   "priority": "high",
   "storyPoints": 2,
-  "status": "pending",
+  "status": "blocked",
+  "blockedBy": "V-011 - Cannot verify until directory rename and symlink update complete",
   "acceptanceCriteria": [
     {"text": "Run grep -r 'ralphtools' in home directory - should find minimal/no results", "checked": false},
     {"text": "Test /github skill invocation works", "checked": false},
