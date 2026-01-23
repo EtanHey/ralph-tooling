@@ -164,3 +164,39 @@ Files modified:
 - Padding formula should be `(BOX_INNER_WIDTH - display_width)` not complex subtraction
 - Always cap percentages defensively even if input should be valid
 - Log warnings for data inconsistencies to help debug root causes
+
+## Iteration 8 - US-040: 1Password detection fix (check actual config)
+**Status**: COMPLETED
+
+Fixed 1Password status display to accurately reflect whether 1Password Environments are configured:
+
+Problem:
+- Previously showed "Available (secrets via 1Password Environments)" just because op CLI was installed
+- User hadn't actually configured 1Password Environments for the project
+
+Solution:
+- Added `_ralph_check_op_environments()` function that checks for actual configuration:
+  - Looks for `.env.1password` file
+  - Checks for `op://` references in `.env`, `.env.local`, `.env.development`, etc.
+  - Checks for `op://` references in `package.json`
+- Updated status display in main `ralph` function to show three states:
+  1. "Available (secrets via 1Password Environments)" - CLI + signed in + configured
+  2. "CLI available (environments not configured)" - CLI + signed in but no op:// refs
+  3. "CLI available but not signed in" - CLI installed but not authenticated
+  4. "Not installed (using environment variables)" - no op CLI
+- Added new "Configure 1Password Environments" option to `ralph-setup` wizard
+- Created `_ralph_setup_configure_op_environments()` helper function
+
+Files modified:
+- /Users/etanheyman/Desktop/Gits/ralphtools/ralph.zsh
+  - Added `_ralph_check_op_environments()` global function (lines 4703-4729)
+  - Updated main ralph function 1Password status display (lines 2441-2457)
+  - Updated ralph-setup wizard status display (lines 5346-5380)
+  - Added new menu option "Configure 1Password Environments" (lines 5385-5430)
+  - Added `_ralph_setup_configure_op_environments()` helper (lines 5711-5812)
+
+### Learnings
+- 1Password Environments use `op://` reference format: `op://vault/item/field`
+- Common patterns: `.env.1password` file or `op://` refs in `.env*` files
+- Status display should reflect actual configuration state, not just tool presence
+- Configuration guidance should be actionable with specific commands

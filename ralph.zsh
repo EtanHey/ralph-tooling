@@ -2438,11 +2438,17 @@ function ralph() {
   # Try to detect project from registry
   ralph_project_name=$(_ralph_current_project 2>/dev/null)
 
-  # Check if op CLI is available and user is signed in
+  # Check if op CLI is available, user is signed in, and environments are configured
   if command -v op &> /dev/null; then
     if op account list &> /dev/null; then
-      ralph_use_op=true
-      echo "🔐 1Password: Available (secrets via 1Password Environments)"
+      # CLI is installed and signed in - now check if environments are configured
+      if _ralph_check_op_environments "."; then
+        ralph_use_op=true
+        echo "🔐 1Password: Available (secrets via 1Password Environments)"
+      else
+        echo "🔐 1Password: CLI available (environments not configured)"
+        echo "   Run 'ralph-setup' → Configure 1Password Environments"
+      fi
     else
       echo "🔐 1Password: CLI available but not signed in"
     fi
@@ -4693,6 +4699,46 @@ function _ralph_is_global_var() {
   return 1
 }
 
+# ═══════════════════════════════════════════════════════════════════
+# 1PASSWORD ENVIRONMENT DETECTION
+# Check if 1Password Environments are configured in a project
+# Looks for .env.1password files or op:// references in env files
+# ═══════════════════════════════════════════════════════════════════
+
+# Returns 0 if 1Password Environments are configured, 1 if not
+function _ralph_check_op_environments() {
+  local project_path="${1:-.}"
+
+  # Check for .env.1password file
+  if [[ -f "$project_path/.env.1password" ]]; then
+    return 0
+  fi
+
+  # Check for op:// references in common env files
+  local env_files=(".env" ".env.local" ".env.development" ".env.production" ".env.example")
+  for env_file in "${env_files[@]}"; do
+    if [[ -f "$project_path/$env_file" ]]; then
+      if grep -q "op://" "$project_path/$env_file" 2>/dev/null; then
+        return 0
+      fi
+    fi
+  done
+
+  # Check for op:// in package.json scripts (some projects use this pattern)
+  if [[ -f "$project_path/package.json" ]]; then
+    if grep -q "op://" "$project_path/package.json" 2>/dev/null; then
+      return 0
+    fi
+  fi
+
+  # Not configured
+  return 1
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# SECRETS MANAGEMENT - 1Password integration
+# ═══════════════════════════════════════════════════════════════════
+
 function ralph-secrets() {
   local RED='\033[0;31m'
   local GREEN='\033[0;32m'
@@ -5297,13 +5343,18 @@ function ralph-setup() {
   local NC='\033[0m'
   local BOLD='\033[1m'
 
-  # Check if 1Password CLI is available
+  # Check if 1Password CLI is available and environments are configured
   local has_1password=false
   local op_signed_in=false
+  local op_env_configured=false
   if command -v op &>/dev/null; then
     has_1password=true
     if op account list &>/dev/null 2>&1; then
       op_signed_in=true
+      # Check if environments are configured in current directory
+      if _ralph_check_op_environments "."; then
+        op_env_configured=true
+      fi
     fi
   fi
 
@@ -5315,7 +5366,11 @@ function ralph-setup() {
     echo "├─────────────────────────────────────────────────────────────┤"
     if $has_1password; then
       if $op_signed_in; then
-        echo "│  🔐 1Password: ${GREEN}Available & signed in${NC}                      │"
+        if $op_env_configured; then
+          echo "│  🔐 1Password: ${GREEN}Configured (environments ready)${NC}             │"
+        else
+          echo "│  🔐 1Password: ${YELLOW}CLI ready (environments not configured)${NC}    │"
+        fi
       else
         echo "│  🔐 1Password: ${YELLOW}CLI installed, not signed in${NC}              │"
       fi
@@ -5332,6 +5387,7 @@ function ralph-setup() {
       choice=$(gum choose \
         "📂 Add new project" \
         "🔧 Configure MCPs for a project" \
+        "🔐 Configure 1Password Environments" \
         "🔑 Migrate secrets to 1Password" \
         "📋 View current configuration" \
         "🚪 Exit setup")
@@ -5341,18 +5397,20 @@ function ralph-setup() {
       echo ""
       echo "  1) 📂 Add new project"
       echo "  2) 🔧 Configure MCPs for a project"
-      echo "  3) 🔑 Migrate secrets to 1Password"
-      echo "  4) 📋 View current configuration"
-      echo "  5) 🚪 Exit setup"
+      echo "  3) 🔐 Configure 1Password Environments"
+      echo "  4) 🔑 Migrate secrets to 1Password"
+      echo "  5) 📋 View current configuration"
+      echo "  6) 🚪 Exit setup"
       echo ""
-      echo -n "Choose [1-5]: "
+      echo -n "Choose [1-6]: "
       read menu_choice
       case "$menu_choice" in
         1) choice="📂 Add new project" ;;
         2) choice="🔧 Configure MCPs for a project" ;;
-        3) choice="🔑 Migrate secrets to 1Password" ;;
-        4) choice="📋 View current configuration" ;;
-        5|*) choice="🚪 Exit setup" ;;
+        3) choice="🔐 Configure 1Password Environments" ;;
+        4) choice="🔑 Migrate secrets to 1Password" ;;
+        5) choice="📋 View current configuration" ;;
+        6|*) choice="🚪 Exit setup" ;;
       esac
     fi
 
@@ -5362,6 +5420,13 @@ function ralph-setup() {
         ;;
       *"Configure MCPs"*)
         _ralph_setup_configure_mcps
+        ;;
+      *"Configure 1Password Environments"*)
+        _ralph_setup_configure_op_environments
+        # Refresh state after configuration
+        if _ralph_check_op_environments "."; then
+          op_env_configured=true
+        fi
         ;;
       *"Migrate secrets"*)
         if ! $has_1password; then
@@ -5641,6 +5706,109 @@ function _ralph_setup_configure_mcps_for_project() {
 
   # Regenerate launchers
   _ralph_generate_launchers_from_registry
+}
+
+# Helper: Configure 1Password Environments for the current project
+function _ralph_setup_configure_op_environments() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local CYAN='\033[0;36m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  🔐 Configure 1Password Environments                        │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+
+  # Check prerequisites
+  if ! command -v op &>/dev/null; then
+    echo "${RED}Error: 1Password CLI (op) is not installed${NC}"
+    echo ""
+    echo "Install with:"
+    echo "  ${YELLOW}brew install 1password-cli${NC}"
+    echo ""
+    return 1
+  fi
+
+  if ! op account list &>/dev/null 2>&1; then
+    echo "${RED}Error: Not signed in to 1Password${NC}"
+    echo ""
+    echo "Sign in with:"
+    echo "  ${YELLOW}eval \$(op signin)${NC}"
+    echo ""
+    return 1
+  fi
+
+  echo "${GREEN}✓ 1Password CLI installed and signed in${NC}"
+  echo ""
+
+  # Check current state
+  if _ralph_check_op_environments "."; then
+    echo "${GREEN}✓ 1Password Environments already configured!${NC}"
+    echo ""
+    # Show what's configured
+    if [[ -f ".env.1password" ]]; then
+      echo "Found: ${CYAN}.env.1password${NC}"
+      local op_refs=$(grep -c "op://" ".env.1password" 2>/dev/null || echo "0")
+      echo "       Contains $op_refs secret references"
+    fi
+    local env_files=(".env" ".env.local" ".env.development" ".env.production" ".env.example")
+    for env_file in "${env_files[@]}"; do
+      if [[ -f "$env_file" ]] && grep -q "op://" "$env_file" 2>/dev/null; then
+        local op_refs=$(grep -c "op://" "$env_file" 2>/dev/null || echo "0")
+        echo "Found: ${CYAN}$env_file${NC} with $op_refs op:// references"
+      fi
+    done
+    echo ""
+    echo "To add more secrets, use:"
+    echo "  ${YELLOW}ralph-secrets migrate .env${NC}"
+    echo ""
+    return 0
+  fi
+
+  # Not configured - guide setup
+  echo "${YELLOW}1Password Environments not yet configured for this project.${NC}"
+  echo ""
+  echo "1Password Environments allow you to securely inject secrets into"
+  echo "your project using op:// references instead of hardcoded values."
+  echo ""
+  echo "${CYAN}Setup options:${NC}"
+  echo ""
+  echo "  ${YELLOW}Option 1:${NC} Migrate existing .env file"
+  echo "    Converts hardcoded secrets to op:// references"
+  echo "    Command: ${YELLOW}ralph-secrets migrate .env${NC}"
+  echo ""
+  echo "  ${YELLOW}Option 2:${NC} Create .env.1password manually"
+  echo "    Create a file with op:// references like:"
+  echo "    ${CYAN}DATABASE_URL=op://Private/Database/password${NC}"
+  echo "    ${CYAN}API_KEY=op://Private/MyAPI/credential${NC}"
+  echo ""
+  echo "  ${YELLOW}Option 3:${NC} Use /1password skill in Claude"
+  echo "    Run ${CYAN}/1password${NC} for guided setup"
+  echo ""
+
+  # Offer to run migration if .env exists
+  if [[ -f ".env" ]]; then
+    echo "Detected: ${CYAN}.env${NC} file exists in this project"
+    echo ""
+    if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+      if gum confirm "Would you like to preview migrating .env to 1Password?"; then
+        echo ""
+        ralph-secrets migrate .env --dry-run
+      fi
+    else
+      echo -n "Would you like to preview migrating .env to 1Password? [y/N]: "
+      read migrate_choice
+      if [[ "$migrate_choice" == [Yy]* ]]; then
+        echo ""
+        ralph-secrets migrate .env --dry-run
+      fi
+    fi
+  fi
+
+  echo ""
 }
 
 # Helper: Migrate secrets (invokes 1Password workflow)

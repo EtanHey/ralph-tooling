@@ -3,15 +3,15 @@
   "title": "1Password detection fix (check actual config)",
   "description": "Currently shows '1Password: Available (secrets via 1Password Environments)' just because op CLI exists, but user hasn't configured 1Password Environments. Should check if environments are actually set up, not just CLI presence.",
   "acceptanceCriteria": [
-    { "text": "Check op CLI exists (current behavior)", "checked": false },
-    { "text": "Check if 1Password Environments actually configured", "checked": false },
-    { "text": "Look for .env.1password or op:// references in project", "checked": false },
-    { "text": "Show 'Available' only if environments configured", "checked": false },
-    { "text": "Show 'CLI available (environments not configured)' otherwise", "checked": false },
-    { "text": "Show 'Not installed' if op CLI missing", "checked": false },
-    { "text": "Add ralph-setup step to configure 1Password Environments", "checked": false },
-    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+    { "text": "Check op CLI exists (current behavior)", "checked": true },
+    { "text": "Check if 1Password Environments actually configured", "checked": true },
+    { "text": "Look for .env.1password or op:// references in project", "checked": true },
+    { "text": "Show 'Available' only if environments configured", "checked": true },
+    { "text": "Show 'CLI available (environments not configured)' otherwise", "checked": true },
+    { "text": "Show 'Not installed' if op CLI missing", "checked": true },
+    { "text": "Add ralph-setup step to configure 1Password Environments", "checked": true },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": true }
   ],
-  "passes": false,
+  "passes": true,
   "blockedBy": null
 }
