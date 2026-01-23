@@ -29,6 +29,20 @@ Example:
 
 ---
 
+## Environment Setup (Automatic)
+
+Worktrees automatically handle:
+- **Env files**: Uses 1Password `op inject` if `.env.template` exists, else copies `.env*.local` from source
+- **Dependencies**: Auto-detects package manager (bun/pnpm/yarn/npm) and installs
+
+| Condition | Action |
+|-----------|--------|
+| `.env.template` + `op` available | `op inject -i .env.template -o .env.local` |
+| `op inject` fails | Fallback: copy from source repo |
+| No `.env.template` | Copy all `.env*.local` from source |
+
+---
+
 ## Quick Commands
 
 ```bash

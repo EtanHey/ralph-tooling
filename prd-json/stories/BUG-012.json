@@ -1,19 +1,27 @@
 {
   "id": "BUG-012",
-  "title": "Live criteria bar doesn't update during iteration",
-  "description": "The criteria progress bar and stories progress bar don't update in real-time during Claude execution. The _ralph_get_cursor_row function has no timeout and can fail silently, causing RALPH_CRITERIA_ROW and RALPH_STORIES_ROW to remain at 0. The polling loop then skips because row positions aren't set.",
+  "title": "V-011 blocked: Cannot verify rename while Ralph running",
   "type": "bug",
-  "priority": "medium",
-  "storyPoints": 2,
-  "status": "pending",
+  "priority": "high",
+  "storyPoints": 0,
+  "description": "V-011 is a verification story for the rename from ralphtools → claude-golem, but cannot be verified until the directory is actually renamed. The directory rename cannot occur while Ralph is running in that directory. This is an infrastructure blocker that prevents the verification chain (V-011 → V-012 → US-065) from proceeding.",
+  "blockedBy": "USER_ACTION_REQUIRED - All criteria require manual user steps outside of Ralph",
   "acceptanceCriteria": [
-    {"text": "_ralph_get_cursor_row has timeout (-t 1) to prevent hangs", "checked": false},
-    {"text": "Function returns non-zero exit code on failure", "checked": false},
-    {"text": "Debug output added: echo row positions after capture", "checked": false},
-    {"text": "Fallback: if cursor position fails, use line counting from box top", "checked": false},
-    {"text": "Polling loop logs to /tmp/ralph-live-debug.log when RALPH_DEBUG_LIVE=true", "checked": false},
-    {"text": "Test: run with RALPH_DEBUG_LIVE=true and verify log shows row positions", "checked": false}
-  ],
-  "dependencies": [],
-  "technicalNotes": "Key functions: _ralph_get_cursor_row (line 527), _ralph_start_polling_loop (line 670), row position capture (line 3015-3022). The issue is IFS=';' read -sdR -p $'\\E[6n' has no timeout and can fail if terminal doesn't support Device Status Report."
+    {
+      "text": "User must manually rename ~/Desktop/Gits/ralphtools → ~/Desktop/Gits/claude-golem",
+      "checked": false
+    },
+    {
+      "text": "User must run scripts/rename-to-claude-golem.sh after rename",
+      "checked": false
+    },
+    {
+      "text": "User must update ~/.zshrc as prompted by script",
+      "checked": false
+    },
+    {
+      "text": "User must reload Ralph or start new session",
+      "checked": false
+    }
+  ]
 }

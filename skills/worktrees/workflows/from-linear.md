@@ -119,8 +119,40 @@ else
   git worktree add "$WORKTREE_PATH" -b "$BRANCH_NAME"
 fi
 
+cd "$WORKTREE_PATH"
+
+# --- ENV FILE HANDLING (1Password first, fallback to copy) ---
+SOURCE_REPO=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [[ -f ".env.template" ]] && command -v op &>/dev/null; then
+  echo "Injecting secrets via 1Password..."
+  op inject -i .env.template -o .env.local 2>/dev/null || {
+    echo "1Password failed, copying from source..."
+    [[ -n "$SOURCE_REPO" && -f "$SOURCE_REPO/.env.local" ]] && cp "$SOURCE_REPO/.env.local" .env.local
+  }
+else
+  # Copy all .env*.local files
+  for envfile in "$SOURCE_REPO"/.env*.local; do
+    [[ -f "$envfile" ]] && cp "$envfile" . && echo "Copied $(basename "$envfile")"
+  done
+fi
+
+# --- INSTALL DEPENDENCIES ---
+if [[ -f "package.json" ]]; then
+  echo "Installing dependencies..."
+  if [[ -f "bun.lockb" ]]; then bun install
+  elif [[ -f "pnpm-lock.yaml" ]]; then pnpm install
+  elif [[ -f "yarn.lock" ]]; then yarn install
+  else npm install
+  fi
+fi
+
+[[ -f "requirements.txt" ]] && pip install -r requirements.txt
+[[ -f "pyproject.toml" ]] && poetry install 2>/dev/null
+[[ -f "Cargo.toml" ]] && cargo build
+[[ -f "go.mod" ]] && go mod download
+
 echo ""
-echo "Worktree created successfully!"
+echo "✓ Worktree created successfully!"
 echo ""
 echo "Run: cd $WORKTREE_PATH"
 ```

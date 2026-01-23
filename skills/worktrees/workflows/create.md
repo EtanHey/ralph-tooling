@@ -1,6 +1,6 @@
 # Create Worktree
 
-Create an isolated git worktree for a new branch.
+Create an isolated git worktree for a new branch with full environment setup.
 
 ---
 
@@ -26,6 +26,7 @@ Replace `feature-name` with your branch name:
 REPO_NAME=$(basename "$(git rev-parse --show-toplevel)")
 BRANCH_NAME="feature-name"
 WORKTREE_PATH="$HOME/worktrees/$REPO_NAME/$BRANCH_NAME"
+SOURCE_REPO=$(git rev-parse --show-toplevel)
 
 # Ensure parent directory exists
 mkdir -p "$HOME/worktrees/$REPO_NAME"
@@ -34,7 +35,67 @@ mkdir -p "$HOME/worktrees/$REPO_NAME"
 git worktree add "$WORKTREE_PATH" -b "$BRANCH_NAME"
 
 echo "Worktree created at: $WORKTREE_PATH"
-echo "Run: cd $WORKTREE_PATH"
+```
+
+### Step 4: Setup Environment (CRITICAL)
+
+After creating worktree, set up environment files and dependencies:
+
+```bash
+cd "$WORKTREE_PATH"
+
+# --- ENV FILE HANDLING ---
+# Priority: 1Password > Copy from source
+
+# Check if .env.template exists (1Password mode)
+if [[ -f ".env.template" ]] && command -v op &>/dev/null; then
+  echo "Found .env.template - using 1Password to inject secrets..."
+  if op inject -i .env.template -o .env.local 2>/dev/null; then
+    echo "✓ Created .env.local via 1Password"
+  else
+    echo "⚠ 1Password inject failed, falling back to copy..."
+    [[ -f "$SOURCE_REPO/.env.local" ]] && cp "$SOURCE_REPO/.env.local" .env.local && echo "✓ Copied .env.local"
+  fi
+else
+  # No template - copy all .env*.local files from source
+  echo "Copying environment files from source repo..."
+  for envfile in "$SOURCE_REPO"/.env*.local; do
+    [[ -f "$envfile" ]] && cp "$envfile" . && echo "✓ Copied $(basename "$envfile")"
+  done
+fi
+
+# --- DEPENDENCY INSTALLATION ---
+# Auto-detect package manager and install
+
+if [[ -f "package.json" ]]; then
+  echo "Installing Node.js dependencies..."
+  if [[ -f "bun.lockb" ]]; then
+    bun install
+  elif [[ -f "pnpm-lock.yaml" ]]; then
+    pnpm install
+  elif [[ -f "yarn.lock" ]]; then
+    yarn install
+  else
+    npm install
+  fi
+  echo "✓ Dependencies installed"
+fi
+
+# Python
+if [[ -f "requirements.txt" ]]; then
+  pip install -r requirements.txt
+elif [[ -f "pyproject.toml" ]]; then
+  poetry install 2>/dev/null || pip install -e .
+fi
+
+# Rust
+[[ -f "Cargo.toml" ]] && cargo build
+
+# Go
+[[ -f "go.mod" ]] && go mod download
+
+echo ""
+echo "✓ Worktree ready at: $WORKTREE_PATH"
 ```
 
 ---
@@ -49,6 +110,7 @@ set -e
 
 BRANCH_NAME="${1:-feature-new-branch}"
 REPO_NAME=$(basename "$(git rev-parse --show-toplevel)")
+SOURCE_REPO=$(git rev-parse --show-toplevel)
 WORKTREE_PATH="$HOME/worktrees/$REPO_NAME/$BRANCH_NAME"
 
 # Verify in git repo
@@ -68,8 +130,38 @@ else
   git worktree add "$WORKTREE_PATH" -b "$BRANCH_NAME"
 fi
 
+cd "$WORKTREE_PATH"
+
+# --- ENV FILE HANDLING (1Password first, fallback to copy) ---
+if [[ -f ".env.template" ]] && command -v op &>/dev/null; then
+  echo "Injecting secrets via 1Password..."
+  op inject -i .env.template -o .env.local 2>/dev/null || {
+    echo "1Password failed, copying from source..."
+    [[ -f "$SOURCE_REPO/.env.local" ]] && cp "$SOURCE_REPO/.env.local" .env.local
+  }
+else
+  # Copy all .env*.local files
+  for envfile in "$SOURCE_REPO"/.env*.local; do
+    [[ -f "$envfile" ]] && cp "$envfile" .
+  done
+fi
+
+# --- INSTALL DEPENDENCIES ---
+if [[ -f "package.json" ]]; then
+  if [[ -f "bun.lockb" ]]; then bun install
+  elif [[ -f "pnpm-lock.yaml" ]]; then pnpm install
+  elif [[ -f "yarn.lock" ]]; then yarn install
+  else npm install
+  fi
+fi
+
+[[ -f "requirements.txt" ]] && pip install -r requirements.txt
+[[ -f "pyproject.toml" ]] && poetry install 2>/dev/null
+[[ -f "Cargo.toml" ]] && cargo build
+[[ -f "go.mod" ]] && go mod download
+
 echo ""
-echo "Worktree created successfully!"
+echo "✓ Worktree created successfully!"
 echo "Path: $WORKTREE_PATH"
 echo ""
 echo "Run: cd $WORKTREE_PATH"
@@ -85,6 +177,17 @@ echo "Run: cd $WORKTREE_PATH"
 | Bug fix | `fix/<description>` | `fix/login-redirect` |
 | Refactor | `refactor/<description>` | `refactor/api-client` |
 | Docs | `docs/<description>` | `docs/readme-update` |
+
+---
+
+## Environment Strategy
+
+| Condition | Action |
+|-----------|--------|
+| `.env.template` exists + `op` available | Use `op inject` to generate `.env.local` |
+| `op inject` fails | Fallback: copy from source repo |
+| No `.env.template` | Copy all `.env*.local` from source |
+| No env files in source | Skip (worktree starts without env) |
 
 ---
 
@@ -111,7 +214,7 @@ git worktree add "$HOME/worktrees/$REPO_NAME/detached" -d abc123
 
 After creating worktree:
 1. `cd ~/worktrees/<repo>/<branch>`
-2. Install dependencies (`npm install`, `pip install -r requirements.txt`, etc.)
+2. Verify environment: `cat .env.local | head -5`
 3. Start development
 
 When done, use [cleanup.md](cleanup.md) to remove the worktree.
