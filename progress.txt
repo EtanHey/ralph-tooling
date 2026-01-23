@@ -1301,3 +1301,54 @@ Completed comprehensive end-to-end verification of all Ralph v1.5 features:
 - Per-project topics improve notification organization for multi-project workflows
 - Skill structure audit revealed all skills follow correct pattern
 
+
+
+## Iteration 36 - US-062: Audit and Plan Rename: ralphtools → claude-golem
+**Status**: COMPLETED
+
+Created comprehensive migration plan for renaming the repository from `ralphtools` to `claude-golem`.
+
+### Audit Results
+
+**Symlinks in ~/.claude/commands/ (10 total):**
+- 1password, archive, brave, convex, critique-waves, linear, ralph-install, skills.md, update, worktrees
+- All point to `/Users/etanheyman/Desktop/Gits/ralphtools/skills/`
+
+**Symlinks in ~/.config/ralphtools/ (6 total):**
+- ralph.zsh, RALPH_AGENT.md, schemas, scripts, skills, tests
+- All point to `/Users/etanheyman/Desktop/Gits/ralphtools/`
+
+**Git Remote:**
+- Origin: `https://github.com/EtanHey/ralphtools.git`
+
+**Files with 'ralphtools' content:**
+- Core: ralph.zsh, tests/test-ralph.zsh, schemas/config.schema.json
+- Docs: README.md, notifications.md, design docs
+- Skills: skills.md, ralph-install SKILL.md and scripts
+- Homebrew: README.md, Formula/ralphtools.rb, CI workflow
+
+**~/.zshrc reference:**
+- `[[ -f ~/.config/ralphtools/ralph.zsh ]] && source ~/.config/ralphtools/ralph.zsh`
+
+**CLAUDE.md references:**
+- ~/.claude/CLAUDE.md: references "docs/claude-md-layering.md in ralphtools"
+
+### Migration Plan Created
+Created `docs.local/rename-plan.md` with:
+- Full inventory of changes needed
+- Recommended migration order (10 steps)
+- Rollback plan
+- Naming decisions (keep `ralph` as tool name, rename repo/config dirs)
+- Symlink recreation commands
+- Files NOT requiring changes (archived/historical)
+
+### Files Modified
+- `prd-json/stories/US-062.json` - All 8 criteria checked, passes=true
+- `prd-json/index.json` - Updated stats (39 completed, 7 pending)
+- `docs.local/rename-plan.md` - NEW (gitignored)
+
+### Learnings
+- docs.local/ is gitignored - migration plan stays local
+- Two separate config dirs: ~/.config/ralph/ (user config) and ~/.config/ralphtools/ (tool install)
+- Recommend keeping "ralph" as tool name, only rename repo and install directories
+- ntfy topics don't need to match repo name
