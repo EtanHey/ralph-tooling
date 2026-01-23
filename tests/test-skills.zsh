@@ -606,6 +606,49 @@ test_worktrees_skill_compliant() {
   test_pass
 }
 
+# Test: critique-waves skill is compliant
+test_critique_waves_skill_compliant() {
+  test_start "critique-waves skill is compliant"
+
+  local skill_path=$(_get_skill_path "critique-waves")
+
+  # Must have SKILL.md
+  assert_file_exists "$skill_path/SKILL.md" "critique-waves missing SKILL.md" || return
+
+  # Must have workflows directory
+  assert_dir_exists "$skill_path/workflows" "critique-waves missing workflows/" || return
+
+  # Must have scripts directory
+  assert_dir_exists "$skill_path/scripts" "critique-waves missing scripts/" || return
+
+  # Must have at least one workflow
+  local workflow_count=$(ls -1 "$skill_path/workflows"/*.md 2>/dev/null | wc -l | tr -d ' ')
+  [[ $workflow_count -ge 1 ]] || { test_fail "critique-waves has no workflows"; return; }
+
+  # Must have at least one script
+  local script_count=$(ls -1 "$skill_path/scripts"/*.sh 2>/dev/null | wc -l | tr -d ' ')
+  [[ $script_count -ge 1 ]] || { test_fail "critique-waves has no scripts"; return; }
+
+  test_pass
+}
+
+# Test: brave skill is compliant (no scripts required - external CLI)
+test_brave_skill_compliant() {
+  test_start "brave skill is compliant"
+
+  local skill_path=$(_get_skill_path "brave")
+
+  # Must have SKILL.md
+  assert_file_exists "$skill_path/SKILL.md" "brave missing SKILL.md" || return
+
+  # Must have workflows directory
+  assert_dir_exists "$skill_path/workflows" "brave missing workflows/" || return
+
+  # Note: brave skill doesn't require scripts/ - it wraps external brave-manager CLI
+
+  test_pass
+}
+
 # ═══════════════════════════════════════════════════════════════════
 # TEST RUNNER
 # ═══════════════════════════════════════════════════════════════════

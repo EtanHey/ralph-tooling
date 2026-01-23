@@ -1133,3 +1133,58 @@ All 14 skill tests pass including brave skill validation.
 - Decision tree in SKILL.md helps route to appropriate workflow
 - Quick reference tables provide at-a-glance command summary
 
+
+## Iteration 33 - US-060: Expand critique-waves.md to Progressive Disclosure Structure
+**Status**: COMPLETED
+
+Converted the single-file critique-waves.md skill into a directory-based skill with SKILL.md router, workflows, and scripts, following the github skill pattern.
+
+### Files Created
+
+**skills/critique-waves/SKILL.md:**
+- YAML frontmatter with name and description
+- Quick Actions table linking to 3 workflows
+- Core Concept section with ASCII flow diagram
+- Decision tree for routing to appropriate workflow
+- Critical rules section (3 agent limit, reset on failure, etc.)
+- Example session showing complete verification flow
+
+**skills/critique-waves/workflows/setup.md:**
+- Verification folder creation with mkdir
+- instructions.md template with FORBIDDEN/REQUIRED patterns
+- tracker.md template with goal, status, and wave log
+- Checklist before running first wave
+
+**skills/critique-waves/workflows/run-wave.md:**
+- Launch 3 agents in parallel using Task tool
+- Agent prompt template with verdict format
+- Result collection and tallying
+- Tracker update process
+
+**skills/critique-waves/workflows/iteration.md:**
+- Handling failures (reset pass count, fix issues)
+- Handling passes (increment count, check goal)
+- Maximum rounds safeguard (escalate at 10)
+- ASCII flow diagram of iteration loop
+- Common failure patterns table
+
+**skills/critique-waves/scripts/init-tracker.sh:**
+- Creates docs.local/<branch-name>/ folder
+- Generates instructions.md and tracker.md templates
+- Supports --help flag
+- Optional goal parameter (default: 20)
+- Color-coded output with SUCCESS/ERROR
+
+### Changes Made
+- Removed old `skills/critique-waves.md` single file
+- Replaced `~/.claude/commands/critique-waves.md` with symlink to new directory
+- Added test for critique-waves skill compliance
+- Added test for brave skill compliance (added in US-059)
+- All 16 skill tests pass
+
+### Learnings
+- Progressive disclosure: SKILL.md router + workflows/ + scripts/
+- init-tracker.sh uses heredocs for template generation
+- Flow diagrams in SKILL.md help visualize multi-step processes
+- Maximum rounds safeguard prevents infinite loops
+
