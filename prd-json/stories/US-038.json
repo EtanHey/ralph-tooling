@@ -1,0 +1,18 @@
+{
+  "id": "US-038",
+  "title": "Session tree architecture (Ralph isolation)",
+  "description": "Ralph instances pollute Claude session history making /resume cluttered. Design a session tree where Ralph runs in isolated branches that merge results back to main Claude session. When Ralph completes, a summary merges into the parent session without all the iteration noise.",
+  "acceptanceCriteria": [
+    { "text": "Research Claude Code session/resume architecture", "checked": false },
+    { "text": "Design session tree structure: main Claude → Ralph branches", "checked": false },
+    { "text": "Ralph iterations write to separate session namespace", "checked": false },
+    { "text": "On completion, Ralph writes summary to parent session", "checked": false },
+    { "text": "Summary includes: stories completed, time, cost, key changes", "checked": false },
+    { "text": "/resume shows clean main session, not Ralph iterations", "checked": false },
+    { "text": "Option to view full Ralph history if needed", "checked": false },
+    { "text": "Document session tree pattern in docs/", "checked": false },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}

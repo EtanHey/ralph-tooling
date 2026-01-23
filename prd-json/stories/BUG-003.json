@@ -1,0 +1,16 @@
+{
+  "id": "BUG-003",
+  "title": "fswatch background job outputs TTY noise",
+  "description": "When fswatch starts, it outputs job control messages like '[4] 73252' and '[4] + suspended (tty output)' which clutter the Ralph display. These should be silenced.",
+  "acceptanceCriteria": [
+    { "text": "fswatch background job doesn't output job control messages", "checked": false },
+    { "text": "No '[N] PID' messages visible in terminal", "checked": false },
+    { "text": "No 'suspended (tty output)' messages visible", "checked": false },
+    { "text": "Background job properly detached from TTY", "checked": false },
+    { "text": "Watcher still functions correctly (file changes detected)", "checked": false },
+    { "text": "Clean shutdown on ralph exit (no orphan processes)", "checked": false },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}

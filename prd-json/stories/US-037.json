@@ -1,0 +1,17 @@
+{
+  "id": "US-037",
+  "title": "Separate notification channels (Ralph vs Claude)",
+  "description": "Currently Ralph and Claude share the same ntfy topic, so when running multiple instances with -QN flag, the later one takes over notifications. Create separate channels: ralph-notifications for Ralph iterations, claude-notifications for Claude Code. Each should have its own topic and not interfere with each other.",
+  "acceptanceCriteria": [
+    { "text": "RALPH_NTFY_TOPIC defaults to 'ralph-notifications'", "checked": false },
+    { "text": "CLAUDE_NTFY_TOPIC defaults to 'claude-notifications'", "checked": false },
+    { "text": "Ralph uses RALPH_NTFY_TOPIC for all iteration notifications", "checked": false },
+    { "text": "Document how to configure separate topics in ralph-config", "checked": false },
+    { "text": "Multiple Ralph instances can use different topics via -t flag", "checked": false },
+    { "text": "Notification includes source identifier (Ralph vs Claude)", "checked": false },
+    { "text": "Test: two Ralph instances with different topics don't interfere", "checked": false },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}

@@ -1,0 +1,17 @@
+{
+  "id": "US-039",
+  "title": "UI guards (prevent 104%, fix cost alignment)",
+  "description": "Fix UI display bugs: 1) Prevent percentages over 100% (49/47 showing as 104%), 2) Fix cost display box alignment on the right side. Add guards to ensure stats never show impossible values.",
+  "acceptanceCriteria": [
+    { "text": "Progress percentage capped at 100% max", "checked": false },
+    { "text": "If completed > total, display as 100% not 104%", "checked": false },
+    { "text": "Stats sanity check: completed <= total always", "checked": false },
+    { "text": "Fix cost box right-side line alignment", "checked": false },
+    { "text": "Cost box uses _ralph_display_width() for proper padding", "checked": false },
+    { "text": "Test with edge cases: 0/0, 50/47, 100/100", "checked": false },
+    { "text": "Add warning log if stats are inconsistent (completed > total)", "checked": false },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}

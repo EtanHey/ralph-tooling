@@ -1,0 +1,24 @@
+{
+  "id": "US-041",
+  "title": "Enhanced archive skill with cleanup option",
+  "description": "Upgrade the archive skill from simple knowledge to a proper skill with bash functions. Archives to docs.local/prd-archive/ (preserves full history). After archiving, ask if user wants to reset the working PRD for a fresh start. If yes: delete completed story files from prd-json/stories/, reset index.json stats. History always preserved in docs.local.",
+  "acceptanceCriteria": [
+    { "text": "Convert archive.md to progressive disclosure structure (SKILL.md + workflows/)", "checked": false },
+    { "text": "Create workflows/archive-snapshot.md for creating timestamped archive", "checked": false },
+    { "text": "Create workflows/cleanup-completed.md for removing completed stories", "checked": false },
+    { "text": "Archive prompts: 'Reset PRD for fresh start? (y/n)'", "checked": false },
+    { "text": "If yes: delete all story files where passes=true", "checked": false },
+    { "text": "If yes: reset index.json stats (completed=0, recalculate total)", "checked": false },
+    { "text": "If yes: rebuild pending array from remaining stories", "checked": false },
+    { "text": "Archive progress.txt to docs.local/prd-archive/<timestamp>/", "checked": false },
+    { "text": "Archive all prd-json/stories/*.json to docs.local/prd-archive/<timestamp>/", "checked": false },
+    { "text": "Archive prd-json/index.json to docs.local/prd-archive/<timestamp>/", "checked": false },
+    { "text": "Create new empty progress.txt after cleanup", "checked": false },
+    { "text": "Add --keep flag to skip cleanup prompt", "checked": false },
+    { "text": "Add --clean flag to auto-cleanup without prompt", "checked": false },
+    { "text": "Update tests in test-ralph.zsh for archive functions", "checked": false },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}
