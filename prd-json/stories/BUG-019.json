@@ -1,5 +1,5 @@
 {
-  "id": "ERROR-HANDLING-001",
+  "id": "BUG-019",
   "title": "Configurable error handling and reliable retry logic",
   "description": "Make error handling configurable via config.json and fix the bug where Node.js unhandled promise rejections bypass shell pipe capture. Currently retries are hardcoded and 'No messages returned' errors sometimes print to terminal but aren't caught by the retry logic.",
   "type": "bug",

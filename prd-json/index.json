@@ -7,9 +7,9 @@
     "pending": 16,
     "blocked": 6
   },
-  "nextStory": "ERROR-HANDLING-001",
+  "nextStory": "BUG-019",
   "storyOrder": [
-    "ERROR-HANDLING-001",
+    "BUG-019",
     "AUDIT-001",
     "BUG-013",
     "BUG-014",
@@ -43,7 +43,7 @@
     "V-012"
   ],
   "pending": [
-    "ERROR-HANDLING-001",
+    "BUG-019",
     "AUDIT-001",
     "US-075",
     "US-076",
