@@ -272,7 +272,7 @@ _ralph_log_cost() {
   local story_id="$1"
   local model="$2"
   local duration_seconds="$3"
-  local status="$4"  # success, blocked, error
+  local run_status="$4"  # success, blocked, error
   local session_id="$5"  # Optional: Claude session UUID for real token tracking
 
   _ralph_init_costs
@@ -329,7 +329,7 @@ _ralph_log_cost() {
      --arg model "$model" \
      --arg prefix "$prefix" \
      --arg ts "$timestamp" \
-     --arg status "$status" \
+     --arg status "$run_status" \
      --arg src "$token_source" \
      --arg sid "${session_id:-}" \
      --argjson duration "$duration_seconds" \
