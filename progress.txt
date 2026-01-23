@@ -117,3 +117,16 @@
 - Added skip_setup local variable and --skip-setup/-y flag parsing in ralph()
 - Typecheck passes (zsh -n ralph.zsh)
 ---
+
+## Iteration 9 - V-001 Verify interactive setup flow
+- Model: haiku
+- Verified all 6 acceptance criteria:
+  1. ✓ Source ralph.zsh successfully - no errors
+  2. ✓ Run ralph-config with fallback prompts - verified fallback mode works (gum not installed)
+  3. ✓ config.json created with correct structure - all expected keys present (modelStrategy, defaultModel, models routing, notifications, defaults)
+  4. ✓ First-run detection works - deleted config.json, ran ralph 1, verified welcome banner and setup prompt appeared
+  5. ✓ ralph 1 -y creates default config without prompting - tested -y flag, config created silently with smart routing + sonnet default
+  6. ✓ Typecheck passes - zsh -n ralph.zsh shows no syntax errors
+- All criteria checked, story marked passes=true
+- Completed and committed
+---
