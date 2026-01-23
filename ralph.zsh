@@ -650,17 +650,27 @@ _ralph_aggregate_parallel_results() {
 }
 
 # Get model for a story based on smart routing
-# Usage: _ralph_get_model_for_story "US-001"
+# Usage: _ralph_get_model_for_story "US-001" [cli_primary] [cli_verify] [prd_json_dir]
 # Returns: model name (haiku, sonnet, opus, gemini, kiro)
 _ralph_get_model_for_story() {
   local story_id="$1"
   local cli_primary="$2"   # CLI override for primary model
   local cli_verify="$3"    # CLI override for verify model
+  local prd_json_dir="$4"  # Optional: prd-json dir for story-level override
 
   # Extract prefix (everything before the dash and number)
   local prefix="${story_id%%-*}"
 
-  # CLI flags always win if specified
+  # Story JSON "model" field wins first (for sensitive stories like 1Password)
+  if [[ -n "$prd_json_dir" && -f "$prd_json_dir/stories/${story_id}.json" ]]; then
+    local story_model=$(jq -r '.model // empty' "$prd_json_dir/stories/${story_id}.json" 2>/dev/null)
+    if [[ -n "$story_model" ]]; then
+      echo "$story_model"
+      return
+    fi
+  fi
+
+  # CLI flags win if specified
   if [[ -n "$cli_primary" || -n "$cli_verify" ]]; then
     case "$prefix" in
       V)
@@ -1544,19 +1554,20 @@ function ralph() {
     fi
 
     # Determine effective model using smart routing
-    local routed_model=$(_ralph_get_model_for_story "$current_story" "$primary_model" "$verify_model")
+    local routed_model=$(_ralph_get_model_for_story "$current_story" "$primary_model" "$verify_model" "$PRD_JSON_DIR")
     effective_model="$routed_model"
 
     # Track iteration start time for cost logging
     local iteration_start_time=$(date +%s)
 
     echo ""
-    echo "═══════════════════════════════════════════════════════════════"
-    echo "  🔄 ITERATION $i of $MAX"
-    echo "  ⏱️  $(date '+%H:%M:%S')"
-    [[ -n "$current_story" ]] && echo "  📖 Story: $current_story"
-    echo "  🧠 Model: $effective_model"
-    echo "═══════════════════════════════════════════════════════════════"
+    echo "╔═══════════════════════════════════════════════════════════════╗"
+    echo "║  🔄 ITERATION $i of $MAX                                       ║"
+    echo "╠───────────────────────────────────────────────────────────────╣"
+    echo "║  ⏱️  $(date '+%H:%M:%S')                                        ║"
+    [[ -n "$current_story" ]] && echo "║  📖 Story: $current_story$(printf '%*s' $((47 - ${#current_story})) '')║"
+    echo "║  🧠 Model: $effective_model$(printf '%*s' $((47 - ${#effective_model})) '')║"
+    echo "╚═══════════════════════════════════════════════════════════════╝"
     echo ""
 
     # Retry logic for transient API errors like "No messages returned"
@@ -1928,7 +1939,7 @@ After completing task, check PRD state:
           echo "Retry count (this error): $no_messages_retry_count / $no_messages_max_retries"
           echo "Exit code: $exit_code"
           echo ""
-          echo "--- Last 30 lines of output ---"
+          echo "─── Last 30 lines of output ───────────────────────────────────"
           tail -30 "$RALPH_TMP" 2>/dev/null
           echo ""
           echo "═══════════════════════════════════════════════════════════════"
