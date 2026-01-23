@@ -1,8 +1,0 @@
-{
-  "addToStoryOrder": ["US-037", "US-038", "US-039", "US-040", "US-041", "US-042", "BUG-003"],
-  "addToPending": ["US-037", "US-038", "US-039", "US-040", "US-041", "US-042", "BUG-003"],
-  "statsAdjust": {
-    "total": "+7",
-    "pending": "+7"
-  }
-}

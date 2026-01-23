@@ -6,7 +6,7 @@
     { "text": "Convert archive.md to progressive disclosure structure (SKILL.md + workflows/)", "checked": false },
     { "text": "Create workflows/archive-snapshot.md for creating timestamped archive", "checked": false },
     { "text": "Create workflows/cleanup-completed.md for removing completed stories", "checked": false },
-    { "text": "Archive prompts: 'Reset PRD for fresh start? (y/n)'", "checked": false },
+    { "text": "Interactive: gum confirm 'Reset PRD for fresh start?'", "checked": false },
     { "text": "If yes: delete all story files where passes=true", "checked": false },
     { "text": "If yes: reset index.json stats (completed=0, recalculate total)", "checked": false },
     { "text": "If yes: rebuild pending array from remaining stories", "checked": false },
