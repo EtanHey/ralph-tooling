@@ -2166,6 +2166,12 @@ _ralph_log_cost() {
   local run_status="$4"  # success, blocked, error
   local session_id="$5"  # Optional: Claude session UUID for real token tracking
 
+  # Skip cost logging for Kiro - it uses credits, not trackable tokens
+  if [[ "$model" == "kiro" ]]; then
+    echo "  💰 Cost: (Kiro uses credits - see kiro.dev dashboard)"
+    return
+  fi
+
   _ralph_init_costs
 
   local prefix="${story_id%%-*}"
