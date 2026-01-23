@@ -800,3 +800,49 @@ _ralph_start_polling_loop "$story" "$dir" "$RALPH_CRITERIA_ROW" "$RALPH_STORIES_
 - Parent's subsequent variable updates are NOT visible to forked subshell
 - Solution: Pass values as function parameters, which become locals captured at call time
 - Debug logging controlled by env var (`RALPH_DEBUG_LIVE=true`) is a feature, not temporary code
+
+## Iteration 25 - US-054: Add Tests for All Skills
+**Status**: COMPLETED
+
+Created a comprehensive test suite that validates all skills follow the correct structure and their scripts/workflows are functional.
+
+### Test File Created
+- `/Users/etanheyman/Desktop/Gits/ralphtools/tests/test-skills.zsh` - 14 tests total
+
+### Tests Implemented
+
+**Structure Validation Tests:**
+- `test_directory_skills_have_skill_md` - Verifies all directory skills have SKILL.md
+- `test_skill_md_has_required_sections` - Checks for YAML frontmatter and Quick Actions section
+- `test_workflow_files_have_proper_structure` - Validates workflow files have title and content
+- `test_scripts_directory_exists_when_referenced` - Ensures scripts/ exists when SKILL.md references it
+- `test_scripts_are_executable` - Verifies all .sh scripts are executable
+- `test_scripts_have_shebang` - Checks scripts start with shebang
+- `test_scripts_pass_syntax_check` - Validates scripts pass `bash -n`
+
+**Specific Skill Compliance Tests:**
+- `test_github_skill_compliant` - Validates github skill structure
+- `test_convex_skill_compliant` - Validates convex skill structure
+- `test_1password_skill_compliant` - Validates 1password skill structure
+- `test_linear_skill_compliant` - Validates linear skill structure
+- `test_archive_skill_compliant` - Validates archive skill structure
+- `test_ralph_install_skill_compliant` - Validates ralph-install skill structure
+- `test_worktrees_skill_compliant` - Validates worktrees skill (no scripts required)
+
+### Issues Fixed During Testing
+- Made scripts executable in archive, linear, ralph-install skills
+- Fixed workflow file title detection to handle YAML frontmatter
+
+### Pre-commit Hook Updated
+- Added skills tests to run alongside ralph tests in step 7
+- Both test suites must pass for commit to succeed
+
+### Files Modified
+- `/Users/etanheyman/Desktop/Gits/ralphtools/tests/test-skills.zsh` (NEW)
+- `/Users/etanheyman/Desktop/Gits/ralphtools/.githooks/pre-commit` - Added skills test execution
+- Multiple scripts made executable (+x)
+
+### Learnings
+- YAML frontmatter in workflow files means title detection needs to look for `#` after `---` blocks
+- Testing skill structure at commit time ensures no regressions
+- Separate test files for different concerns keeps tests organized
