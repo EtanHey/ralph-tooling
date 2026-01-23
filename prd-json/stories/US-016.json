@@ -1,0 +1,15 @@
+{
+  "id": "US-016",
+  "title": "Compact output mode for Ralph",
+  "description": "Add --compact flag for denser output with less vertical whitespace.",
+  "acceptanceCriteria": [
+    { "text": "Add --compact or -c flag to ralph command", "checked": false },
+    { "text": "Compact mode: single-line iteration header", "checked": false },
+    { "text": "Compact mode: no DEBUG lines unless --debug also set", "checked": false },
+    { "text": "Compact mode: cost on same line as completion", "checked": false },
+    { "text": "Normal mode unchanged (backward compatible)", "checked": false },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}

@@ -1,0 +1,15 @@
+{
+  "id": "US-013",
+  "title": "Box drawing characters for Ralph output",
+  "description": "Replace ASCII dashes/equals with Unicode box drawing characters (╔═╗║╚╝) for a polished terminal look.",
+  "acceptanceCriteria": [
+    { "text": "Iteration headers use ╔═══╗ style boxes", "checked": false },
+    { "text": "Section dividers use ─── horizontal lines", "checked": false },
+    { "text": "Nested content uses │ for vertical borders", "checked": false },
+    { "text": "Corners use proper ╭╮╰╯ or ╔╗╚╝ characters", "checked": false },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false },
+    { "text": "Visual test: run ralph with --dry-run or limit 1", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}

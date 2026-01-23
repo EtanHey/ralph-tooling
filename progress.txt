@@ -37,3 +37,19 @@
 - All 16 tests pass (11 new config tests + 5 framework validation tests)
 - Typecheck passes (zsh -n)
 ---
+
+## Iteration 3 - TEST-003 Cost Tracking Tests
+- Model: opus
+- Added 7 comprehensive unit tests for cost tracking functions
+- test_init_costs_creates_valid_structure: Verifies costs.json has runs, totals, avgTokensObserved keys
+- test_log_cost_adds_entry: Tests entry creation with storyId, model, prefix, status fields
+- test_cost_calculation_with_duration: Verifies input/output tokens calculated from duration (60s = 60000↓, 30000↑)
+- test_haiku_pricing: Confirms haiku rates $1/M input, $5/M output → 100s = $0.35
+- test_sonnet_pricing: Confirms sonnet rates $3/M input, $15/M output → 100s = $1.05
+- test_opus_pricing: Confirms opus rates $15/M input, $75/M output → 100s = $5.25
+- test_get_session_tokens_missing_session: Verifies "0 0 0 0" returned for missing session
+- Fixed test file to use local repo ralph.zsh instead of only checking installed location
+- Renamed `status` to `run_status` to avoid zsh reserved variable conflict
+- All 23 tests pass (7 new cost tracking + 11 config + 5 framework)
+- Typecheck passes (zsh -n)
+---

@@ -516,6 +516,221 @@ test_model_routing_single_strategy() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# COST TRACKING FUNCTION TESTS
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: _ralph_init_costs creates valid costs.json structure
+test_init_costs_creates_valid_structure() {
+  test_start "init_costs creates valid costs.json"
+  _setup_test_fixtures
+
+  # Set up cost file path
+  RALPH_COSTS_FILE="$TEST_TMP_DIR/costs.json"
+  rm -f "$RALPH_COSTS_FILE"
+
+  # Initialize costs
+  _ralph_init_costs
+
+  # Verify file exists
+  assert_file_exists "$RALPH_COSTS_FILE" "costs.json should be created" || { _teardown_test_fixtures; return; }
+
+  # Verify structure has required keys
+  local has_runs=$(jq 'has("runs")' "$RALPH_COSTS_FILE")
+  local has_totals=$(jq 'has("totals")' "$RALPH_COSTS_FILE")
+  local has_avg_tokens=$(jq 'has("avgTokensObserved")' "$RALPH_COSTS_FILE")
+
+  assert_equals "true" "$has_runs" "costs.json should have 'runs' key" || { _teardown_test_fixtures; return; }
+  assert_equals "true" "$has_totals" "costs.json should have 'totals' key" || { _teardown_test_fixtures; return; }
+  assert_equals "true" "$has_avg_tokens" "costs.json should have 'avgTokensObserved' key" || { _teardown_test_fixtures; return; }
+
+  # Verify totals structure
+  local stories_count=$(jq '.totals.stories' "$RALPH_COSTS_FILE")
+  local estimated_cost=$(jq '.totals.estimatedCost' "$RALPH_COSTS_FILE")
+
+  assert_equals "0" "$stories_count" "totals.stories should be 0" || { _teardown_test_fixtures; return; }
+  assert_equals "0" "$estimated_cost" "totals.estimatedCost should be 0" || { _teardown_test_fixtures; return; }
+
+  # Verify avgTokensObserved has all prefixes
+  local has_us=$(jq '.avgTokensObserved | has("US")' "$RALPH_COSTS_FILE")
+  local has_v=$(jq '.avgTokensObserved | has("V")' "$RALPH_COSTS_FILE")
+  local has_test=$(jq '.avgTokensObserved | has("TEST")' "$RALPH_COSTS_FILE")
+  local has_bug=$(jq '.avgTokensObserved | has("BUG")' "$RALPH_COSTS_FILE")
+  local has_audit=$(jq '.avgTokensObserved | has("AUDIT")' "$RALPH_COSTS_FILE")
+
+  assert_equals "true" "$has_us" "avgTokensObserved should have US" || { _teardown_test_fixtures; return; }
+  assert_equals "true" "$has_v" "avgTokensObserved should have V" || { _teardown_test_fixtures; return; }
+  assert_equals "true" "$has_test" "avgTokensObserved should have TEST" || { _teardown_test_fixtures; return; }
+  assert_equals "true" "$has_bug" "avgTokensObserved should have BUG" || { _teardown_test_fixtures; return; }
+  assert_equals "true" "$has_audit" "avgTokensObserved should have AUDIT" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_log_cost adds entry to costs.json
+test_log_cost_adds_entry() {
+  test_start "log_cost adds entry to costs.json"
+  _setup_test_fixtures
+
+  # Set up cost file path
+  RALPH_COSTS_FILE="$TEST_TMP_DIR/costs.json"
+  rm -f "$RALPH_COSTS_FILE"
+
+  # Log a cost entry (no session_id so it will use duration-based estimates)
+  _ralph_log_cost "US-001" "sonnet" "60" "success"
+
+  # Verify entry was added
+  local runs_count=$(jq '.runs | length' "$RALPH_COSTS_FILE")
+  assert_equals "1" "$runs_count" "runs should have 1 entry" || { _teardown_test_fixtures; return; }
+
+  # Verify entry structure
+  local story_id=$(jq -r '.runs[0].storyId' "$RALPH_COSTS_FILE")
+  local model=$(jq -r '.runs[0].model' "$RALPH_COSTS_FILE")
+  local prefix=$(jq -r '.runs[0].prefix' "$RALPH_COSTS_FILE")
+  local run_status=$(jq -r '.runs[0].status' "$RALPH_COSTS_FILE")
+
+  assert_equals "US-001" "$story_id" "storyId should be US-001" || { _teardown_test_fixtures; return; }
+  assert_equals "sonnet" "$model" "model should be sonnet" || { _teardown_test_fixtures; return; }
+  assert_equals "US" "$prefix" "prefix should be US" || { _teardown_test_fixtures; return; }
+  assert_equals "success" "$run_status" "status should be success" || { _teardown_test_fixtures; return; }
+
+  # Verify totals were updated
+  local total_stories=$(jq '.totals.stories' "$RALPH_COSTS_FILE")
+  assert_equals "1" "$total_stories" "totals.stories should be 1" || { _teardown_test_fixtures; return; }
+
+  # Verify model count was updated
+  local model_count=$(jq '.totals.byModel.sonnet' "$RALPH_COSTS_FILE")
+  assert_equals "1" "$model_count" "byModel.sonnet should be 1" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: cost calculation with known token counts (duration-based estimates)
+test_cost_calculation_with_duration() {
+  test_start "cost calculation with known duration"
+  _setup_test_fixtures
+
+  # Set up cost file path
+  RALPH_COSTS_FILE="$TEST_TMP_DIR/costs.json"
+  rm -f "$RALPH_COSTS_FILE"
+
+  # Log a cost with 60 seconds duration and sonnet
+  # Expected: input_tokens = 60 * 1000 = 60000, output_tokens = 60 * 500 = 30000
+  # Sonnet pricing: input=$3/M, output=$15/M
+  # Cost = (60000 * 3 / 1000000) + (30000 * 15 / 1000000) = 0.18 + 0.45 = 0.63
+  _ralph_log_cost "US-001" "sonnet" "60" "success"
+
+  # Verify tokens were calculated from duration
+  local input_tokens=$(jq '.runs[0].tokens.input' "$RALPH_COSTS_FILE")
+  local output_tokens=$(jq '.runs[0].tokens.output' "$RALPH_COSTS_FILE")
+  local token_source=$(jq -r '.runs[0].tokenSource' "$RALPH_COSTS_FILE")
+
+  assert_equals "60000" "$input_tokens" "input_tokens should be 60000 (60 * 1000)" || { _teardown_test_fixtures; return; }
+  assert_equals "30000" "$output_tokens" "output_tokens should be 30000 (60 * 500)" || { _teardown_test_fixtures; return; }
+  assert_equals "estimated" "$token_source" "tokenSource should be estimated" || { _teardown_test_fixtures; return; }
+
+  # Verify cost calculation (may have small rounding differences)
+  local cost=$(jq '.runs[0].cost' "$RALPH_COSTS_FILE")
+  # Cost should be approximately 0.63 (0.18 + 0.45)
+  # Allow for bc precision differences
+  local cost_valid="false"
+  if [[ "$cost" == "0.6300" ]] || [[ "$cost" == ".6300" ]] || [[ "$cost" == "0.63" ]]; then
+    cost_valid="true"
+  fi
+  assert_equals "true" "$cost_valid" "cost should be ~0.63 (got $cost)" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: haiku pricing (input=$1/M, output=$5/M)
+test_haiku_pricing() {
+  test_start "haiku pricing is correct"
+  _setup_test_fixtures
+
+  RALPH_COSTS_FILE="$TEST_TMP_DIR/costs.json"
+  rm -f "$RALPH_COSTS_FILE"
+
+  # Log with 100 seconds duration using haiku
+  # input_tokens = 100000, output_tokens = 50000
+  # Cost = (100000 * 1 / 1000000) + (50000 * 5 / 1000000) = 0.1 + 0.25 = 0.35
+  _ralph_log_cost "V-001" "haiku" "100" "success"
+
+  local cost=$(jq '.runs[0].cost' "$RALPH_COSTS_FILE")
+  local cost_valid="false"
+  if [[ "$cost" == "0.3500" ]] || [[ "$cost" == ".3500" ]] || [[ "$cost" == "0.35" ]]; then
+    cost_valid="true"
+  fi
+  assert_equals "true" "$cost_valid" "haiku cost should be ~0.35 (got $cost)" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: sonnet pricing (input=$3/M, output=$15/M)
+test_sonnet_pricing() {
+  test_start "sonnet pricing is correct"
+  _setup_test_fixtures
+
+  RALPH_COSTS_FILE="$TEST_TMP_DIR/costs.json"
+  rm -f "$RALPH_COSTS_FILE"
+
+  # Log with 100 seconds duration using sonnet
+  # input_tokens = 100000, output_tokens = 50000
+  # Cost = (100000 * 3 / 1000000) + (50000 * 15 / 1000000) = 0.3 + 0.75 = 1.05
+  _ralph_log_cost "US-002" "sonnet" "100" "success"
+
+  local cost=$(jq '.runs[0].cost' "$RALPH_COSTS_FILE")
+  local cost_valid="false"
+  if [[ "$cost" == "1.0500" ]] || [[ "$cost" == "1.05" ]]; then
+    cost_valid="true"
+  fi
+  assert_equals "true" "$cost_valid" "sonnet cost should be ~1.05 (got $cost)" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: opus pricing (input=$15/M, output=$75/M)
+test_opus_pricing() {
+  test_start "opus pricing is correct"
+  _setup_test_fixtures
+
+  RALPH_COSTS_FILE="$TEST_TMP_DIR/costs.json"
+  rm -f "$RALPH_COSTS_FILE"
+
+  # Log with 100 seconds duration using opus
+  # input_tokens = 100000, output_tokens = 50000
+  # Cost = (100000 * 15 / 1000000) + (50000 * 75 / 1000000) = 1.5 + 3.75 = 5.25
+  _ralph_log_cost "AUDIT-001" "opus" "100" "success"
+
+  local cost=$(jq '.runs[0].cost' "$RALPH_COSTS_FILE")
+  local cost_valid="false"
+  if [[ "$cost" == "5.2500" ]] || [[ "$cost" == "5.25" ]]; then
+    cost_valid="true"
+  fi
+  assert_equals "true" "$cost_valid" "opus cost should be ~5.25 (got $cost)" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_get_session_tokens returns "0 0 0 0" for missing session
+test_get_session_tokens_missing_session() {
+  test_start "get_session_tokens returns 0 0 0 0 for missing"
+  _setup_test_fixtures
+
+  # Call with a non-existent session ID and a temp path that won't have JSONL files
+  local result=$(_ralph_get_session_tokens "nonexistent-session-uuid" "$TEST_TMP_DIR")
+
+  assert_equals "0 0 0 0" "$result" "Should return '0 0 0 0' for missing session" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # FRAMEWORK VALIDATION TESTS
 # ═══════════════════════════════════════════════════════════════════
 
@@ -554,9 +769,17 @@ test_framework_assert_file_exists() {
 # ═══════════════════════════════════════════════════════════════════
 
 # Source ralph.zsh if it exists (to test ralph functions)
-RALPH_ZSH="${RALPH_ZSH:-$HOME/.config/ralph/ralph.zsh}"
-if [[ -f "$RALPH_ZSH" ]]; then
+# Check local repo first, then installed location
+SCRIPT_DIR="${0:a:h}"
+REPO_RALPH_ZSH="${SCRIPT_DIR}/../ralph.zsh"
+INSTALLED_RALPH_ZSH="$HOME/.config/ralph/ralph.zsh"
+
+if [[ -n "$RALPH_ZSH" && -f "$RALPH_ZSH" ]]; then
   source "$RALPH_ZSH" 2>/dev/null || true
+elif [[ -f "$REPO_RALPH_ZSH" ]]; then
+  source "$REPO_RALPH_ZSH" 2>/dev/null || true
+elif [[ -f "$INSTALLED_RALPH_ZSH" ]]; then
+  source "$INSTALLED_RALPH_ZSH" 2>/dev/null || true
 fi
 
 # Run all tests
