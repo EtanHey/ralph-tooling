@@ -1,7 +1,8 @@
 {
   "id": "US-030",
   "title": "Create 1Password skill with progressive disclosure",
-  "description": "Build a 1Password skill following progressive disclosure architecture (see docs/skill-creation-guide.md). SKILL.md routes to workflows for listing, adding, migrating secrets. Includes migration workflows for .env files AND MCP configs. Scripts handle deterministic operations. Replaces need for custom ralph-secrets commands.",
+  "description": "⚠️ REQUIRES OPUS - architectural skill design. Build a 1Password skill following progressive disclosure architecture (see docs/skill-creation-guide.md). SKILL.md routes to workflows for listing, adding, migrating secrets. Includes migration workflows for .env files AND MCP configs. Scripts handle deterministic operations.",
+  "model": "opus",
   "acceptanceCriteria": [
     { "text": "Create ~/.claude/commands/1password/ directory structure", "checked": false },
     { "text": "SKILL.md is <100 lines, routes to workflows based on user intent", "checked": false },

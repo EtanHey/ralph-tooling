@@ -1,7 +1,8 @@
 {
   "id": "US-029",
   "title": "Rebuild GitHub skill with progressive disclosure architecture",
-  "description": "Restructure the GitHub skill from a monolithic reference doc into a progressive disclosure architecture. SKILL.md becomes a ~50 line router, workflow files contain imperative instructions, and scripts handle deterministic operations. Follow docs/skill-creation-guide.md patterns.",
+  "description": "⚠️ REQUIRES OPUS - architectural skill design. Restructure the GitHub skill from a monolithic reference doc into a progressive disclosure architecture. SKILL.md becomes a ~50 line router, workflow files contain imperative instructions, and scripts handle deterministic operations. Follow docs/skill-creation-guide.md patterns.",
+  "model": "opus",
   "acceptanceCriteria": [
     { "text": "Create ~/.claude/commands/github/ directory structure", "checked": false },
     { "text": "SKILL.md is <100 lines, contains only routing logic and prerequisites check", "checked": false },
