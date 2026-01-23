@@ -861,7 +861,18 @@ _ralph_log_cost() {
      }] |
      .totals.stories += 1 |
      .totals.cost += ($cost | tonumber) |
-     .totals.byModel[$model] = ((.totals.byModel[$model] // 0) + 1)' \
+     .totals.byModel[$model] = ((.totals.byModel[$model] // 0) + 1) |
+     # Update rolling averages only for actual token data
+     if $src == "actual" then
+       .avgTokensObserved[$prefix] = (
+         (.avgTokensObserved[$prefix] // {"input": 0, "output": 0, "samples": 0}) |
+         {
+           "input": (((.input * .samples) + $input) / (.samples + 1)),
+           "output": (((.output * .samples) + $output) / (.samples + 1)),
+           "samples": (.samples + 1)
+         }
+       )
+     else . end' \
      "$RALPH_COSTS_FILE" > "$tmp_file" 2>/dev/null && mv "$tmp_file" "$RALPH_COSTS_FILE"
 
   # Print iteration cost summary
@@ -1209,6 +1220,9 @@ _ralph_json_remaining_stats() {
 # ═══════════════════════════════════════════════════════════════════
 
 function ralph() {
+  # Disable xtrace in case user's shell has it enabled (prevents debug output leakage)
+  setopt localoptions noxtrace
+
   local MAX=$RALPH_MAX_ITERATIONS
   local SLEEP=$RALPH_SLEEP_SECONDS
   local notify_enabled=false
