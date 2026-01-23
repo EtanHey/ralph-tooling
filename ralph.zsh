@@ -7963,6 +7963,28 @@ function brave-manager() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# CONTEXT MIGRATION TOOL
+# ═══════════════════════════════════════════════════════════════════
+
+# ralph-migrate-contexts - Analyze CLAUDE.md and suggest shared contexts
+# Usage:
+#   ralph-migrate-contexts                 # Analyze current project
+#   ralph-migrate-contexts /path/to/proj   # Analyze specific project
+#   ralph-migrate-contexts --diff          # Show detailed content analysis
+#   ralph-migrate-contexts --apply         # Apply migration
+function ralph-migrate-contexts() {
+  local script_path="$RALPH_CONFIG_DIR/scripts/context-migrate.zsh"
+
+  if [[ ! -f "$script_path" ]]; then
+    echo "Error: Migration script not found at $script_path"
+    echo "Please ensure ralphtools is properly installed."
+    return 1
+  fi
+
+  "$script_path" "$@"
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # INITIALIZATION (runs when sourced)
 # ═══════════════════════════════════════════════════════════════════
 _ralph_show_whatsnew

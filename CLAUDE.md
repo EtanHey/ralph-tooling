@@ -2,6 +2,11 @@
 
 Central tooling repo: Ralph, skills, CLAUDE.md management.
 
+## Contexts
+
+@context: base
+@context: workflow/ralph
+
 ---
 
 ## 🤖 EXECUTION MODE DETECTION
@@ -36,17 +41,7 @@ When running as Ralph (PRD execution mode):
 
 When running as interactive Claude (conversation with user):
 
-### CLAUDE_COUNTER SYSTEM
-
-Every response MUST end with `CLAUDE_COUNTER: N`
-
-- Start at 10, decrement by 1 each response
-- When 0: re-read this CLAUDE.md, reset to 10
-- Prevents drift in long conversations
-
-### Commit Protocol
-
-**ASK before any commit** - User's global rule. Check with them first.
+**Commit Protocol:** ASK before any commit - User's global rule.
 
 ---
 
@@ -62,34 +57,9 @@ Every response MUST end with `CLAUDE_COUNTER: N`
 
 ---
 
-## Scratchpad for Complex Tasks
+## Project-Specific
 
-Use `claude.scratchpad.md` (gitignored) for:
-- Tracking multi-step operations
-- Storing intermediate results
-- Notes that persist across messages
-- **Check after `/compact`** for ongoing work context
-
----
-
-## Thinking Before Doing
-
-**Anti-patterns to AVOID:**
-- Jumping straight to code without understanding
-- Suggesting first solution that comes to mind
-- Adding dependencies without checking existing
-- Assuming full context from brief description
-- Researching patterns then NOT implementing them (like I just did)
-
-**DO:**
-- Read existing code before suggesting changes
-- Check for existing utilities/patterns
-- Ask clarifying questions
-- Apply learnings immediately, not just discuss them
-
----
-
-## Files
+### Files
 
 | File | Purpose |
 |------|---------|
@@ -98,8 +68,9 @@ Use `claude.scratchpad.md` (gitignored) for:
 | `CLAUDE.md` | This file - instructions for Claude |
 | `skills/` | Skill definitions |
 | `tests/` | Test suite |
+| `scripts/` | Migration and helper scripts |
 
-## Versioning
+### Versioning
 
 - **Patch** (v1.0.X): Bug fixes, minor tweaks
 - **Minor** (v1.X.0): New features, new commands
@@ -126,7 +97,7 @@ Use `claude.scratchpad.md` (gitignored) for:
 
 ---
 
-## Testing Changes
+### Testing Changes
 
 After editing `ralph.zsh`:
 ```bash
@@ -140,7 +111,7 @@ Run tests manually:
 
 ### Pre-commit Test Hook
 
-Tests run automatically on every commit via the pre-commit hook. If any test fails, the commit is blocked.
+Tests run automatically on every commit. If any test fails, commit is blocked.
 
 **What the hook checks:**
 1. ZSH syntax (`zsh -n`)
@@ -157,7 +128,7 @@ To enable hooks: `./scripts/setup-hooks.sh`
 
 ---
 
-## Learnings
+### Learnings
 
 Project-specific learnings in `docs.local/learnings/` (gitignored):
 
@@ -167,7 +138,7 @@ Project-specific learnings in `docs.local/learnings/` (gitignored):
 
 ---
 
-## Active Tasks
+### Active Tasks
 
 **Check after context reset:**
 - `docs.local/current-task.md` - if exists, resume from there
