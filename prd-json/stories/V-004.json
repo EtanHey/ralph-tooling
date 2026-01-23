@@ -3,15 +3,17 @@
   "title": "Verify 1Password integration",
   "description": "Test 1Password setup and migration commands work correctly.",
   "acceptanceCriteria": [
-    { "text": "Source ralph.zsh successfully", "checked": false },
-    { "text": "Run ralph-secrets status (should show not configured or configured)", "checked": false },
-    { "text": "Run ralph-secrets setup, configure vault name", "checked": false },
-    { "text": "Verify config.json has secrets.provider and secrets.vault", "checked": false },
-    { "text": "Create test .env with dummy values", "checked": false },
-    { "text": "Run ralph-secrets migrate --dry-run on test .env", "checked": false },
-    { "text": "Verify .env.template would be generated with op:// references", "checked": false },
-    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+    { "text": "Source ralph.zsh successfully", "checked": true },
+    { "text": "Run ralph-secrets status (should show not configured or configured)", "checked": true },
+    { "text": "Run ralph-secrets setup, configure vault name", "checked": true },
+    { "text": "Verify config.json has secrets.provider and secrets.vault", "checked": true },
+    { "text": "Create test .env with dummy values", "checked": true },
+    { "text": "Run ralph-secrets migrate --dry-run on test .env", "checked": true },
+    { "text": "Verify .env.template would be generated with op:// references", "checked": true },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": true }
   ],
-  "passes": false,
-  "blockedBy": null
+  "passes": true,
+  "blockedBy": null,
+  "completedAt": "2026-01-23T03:45:22Z",
+  "completedBy": "haiku"
 }

@@ -396,3 +396,24 @@
 - Updated help text and header comments
 - Updated stats: completed=23, pending=8, blocked=1
 ---
+- All 29 unit tests still pass
+- Updated stats: completed=23, pending=8, blocked=1
+---
+
+## Iteration 25 - V-004 Verify 1Password integration
+- Model: haiku
+- Verified all 1Password integration features:
+  1. ✓ Source ralph.zsh successfully - no errors
+  2. ✓ Run ralph-secrets status - showed "not configured" status
+  3. ✓ Run ralph-secrets setup manually - configured vault to "Private" in config.json
+  4. ✓ Verify config.json has secrets.provider and secrets.vault - confirmed structure with jq
+  5. ✓ Create test .env with dummy values (DATABASE_URL, API_KEY, SECRET_TOKEN, DEBUG)
+  6. ✓ Run ralph-secrets migrate --dry-run - showed 4 secrets would be created, no files written
+  7. ✓ Verify .env.template generated with op:// references - created template with correct format
+  8. ✓ Typecheck passes (zsh -n ralph.zsh) - no syntax errors
+- Created 4 test secrets in 1Password vault: tmp-DATABASE_URL, tmp-API_KEY, tmp-SECRET_TOKEN, tmp-DEBUG
+- Template file generated correctly with format: KEY=op://Private/{key-name}/password
+- All 8 acceptance criteria completed
+- Updated stats: completed=24, pending=7, blocked=1
+---
+
