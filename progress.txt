@@ -445,3 +445,42 @@ Added "When to Use Scripts vs Workflows" section to `docs/skills.md`:
 - Script-backed skills are more reliable than inline code blocks
 - Workflows become routing docs that point to scripts
 - Pattern: SKILL.md has "Available Scripts" table at top
+
+## Iteration 15 - US-049: Hot-reload update.json each iteration
+**Status**: COMPLETED
+
+Implemented hot-reload of update.json at the START of each Ralph iteration, allowing new stories to be injected mid-run without waiting for the current batch to complete.
+
+### Changes Made
+
+**Enhanced `_ralph_apply_update_queue()` function:**
+- Now processes `newStories` array: creates story files in `stories/`, adds to `pending` and `storyOrder`
+- Now processes `updateStories` array: merges changes into existing story files
+- Recalculates all stats after processing: `total`, `completed`, `pending`, `blocked`
+- Sets `nextStory` based on updated `pending` array
+- Sets `RALPH_UPDATES_APPLIED` global for caller to display count
+- Clears `newStories` from index.json after processing
+- Deletes `update.json` after successful processing
+
+**Moved update check to START of iteration loop:**
+- Check happens BEFORE `_ralph_json_next_story()` is called
+- Ensures newly injected stories are immediately available
+- Also calls `_ralph_auto_unblock()` to handle blocker resolution
+
+**Updated message output:**
+- Shows "📥 Applied N new story/stories from update.json" when stories are added
+- Message appears at both iteration start and after final loop
+
+### Files Modified
+- `/Users/etanheyman/Desktop/Gits/ralphtools/ralph.zsh`
+  - `_ralph_apply_update_queue()`: Complete rewrite with newStories/updateStories support
+  - Main loop: Added update check at START of each iteration (line ~2698)
+  - Between iterations: Removed redundant update check (was line ~3351)
+  - After loop: Updated to show message when stories applied (line ~3413)
+
+### Learnings
+- While loops in ZSH run in subshells, so counters inside don't persist - use jq to re-count
+- ZSH glob `(N)` qualifier handles empty directories gracefully
+- `jq -c '.array[] | .'` iterates array items as compact JSON, one per line
+- Stats recalculation must read all story files to count `passes: true`
+- `nextStory` should be set to first item in `pending` array or `null` if empty

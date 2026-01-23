@@ -2,12 +2,12 @@
   "$schema": "https://ralph.dev/schemas/prd-index.schema.json",
   "generatedAt": "2026-01-23T15:00:00Z",
   "stats": {
-    "total": 15,
-    "completed": 15,
-    "pending": 0,
+    "total": 17,
+    "completed": 16,
+    "pending": 1,
     "blocked": 0
   },
-  "nextStory": null,
+  "nextStory": "BUG-004",
   "storyOrder": [
     "US-032",
     "US-033",
@@ -23,88 +23,11 @@
     "BUG-003",
     "V-008",
     "US-047",
-    "US-048"
+    "US-048",
+    "US-049",
+    "BUG-004"
   ],
-  "pending": [],
+  "pending": ["BUG-004"],
   "blocked": [],
-  "newStories": [
-    {
-      "id": "US-049",
-      "title": "Hot-reload update.json each iteration (not just at 0 pending)",
-      "description": "Currently Ralph only applies update.json when pending stories hits 0. This means urgent stories can't be injected mid-run. Change to: check update.json EVERY iteration, merge newStories into pending immediately, recalculate all stats after merge. This lets user add stories while Ralph is running without waiting for batch completion.",
-      "acceptanceCriteria": [
-        {
-          "text": "Move update.json check from 'pending=0' block to main iteration loop",
-          "checked": false
-        },
-        {
-          "text": "Check for update.json at START of each iteration (before picking nextStory)",
-          "checked": false
-        },
-        {
-          "text": "If newStories found: merge into stories/, add to pending array, update storyOrder",
-          "checked": false
-        },
-        {
-          "text": "If updateStories found: apply changes to existing story files",
-          "checked": false
-        },
-        {
-          "text": "After ANY merge: recalculate stats.total, stats.pending, stats.completed",
-          "checked": false
-        },
-        {
-          "text": "After ANY merge: recalculate nextStory based on new pending array",
-          "checked": false
-        },
-        {
-          "text": "Show '📥 Applied N new stories from update.json' in iteration output",
-          "checked": false
-        },
-        {
-          "text": "Delete update.json after successful processing (current behavior)",
-          "checked": false
-        },
-        {
-          "text": "Test: Add story mid-run, verify it appears in next iteration",
-          "checked": false
-        },
-        {
-          "text": "Typecheck passes (zsh -n ralph.zsh)",
-          "checked": false
-        }
-      ],
-      "passes": false,
-      "blockedBy": null
-    },
-    {
-      "id": "BUG-004",
-      "title": "Display stats don't refresh after update.json merge",
-      "description": "After applying update.json, remaining_stats shows correct values (e.g., '1 8') but the visual progress bar shows old cached totals (13/13 instead of 13/15). Stats displayed in boxes should recalculate immediately after merge.",
-      "acceptanceCriteria": [
-        {
-          "text": "After _ralph_apply_updates(), re-read index.json stats",
-          "checked": false
-        },
-        {
-          "text": "Update local variables: total_stories, completed_stories, pending_count",
-          "checked": false
-        },
-        {
-          "text": "Progress bar denominator uses fresh total, not cached",
-          "checked": false
-        },
-        {
-          "text": "Test: Add 2 stories mid-run, verify display shows X/(X+2) immediately",
-          "checked": false
-        },
-        {
-          "text": "Typecheck passes (zsh -n ralph.zsh)",
-          "checked": false
-        }
-      ],
-      "passes": false,
-      "blockedBy": null
-    }
-  ]
+  "newStories": []
 }

@@ -2062,22 +2062,109 @@ _ralph_json_complete_story() {
 }
 
 # Apply queued updates from update.json (allows external processes to queue changes)
+# Returns 0 if updates were applied, 1 if no updates
+# Sets RALPH_UPDATES_APPLIED to the count of new stories added
 _ralph_apply_update_queue() {
   local json_dir="$1"
   local update_file="$json_dir/update.json"
   local index_file="$json_dir/index.json"
+  local stories_dir="$json_dir/stories"
 
-  if [[ -f "$update_file" ]] && [[ -f "$index_file" ]]; then
-    # Merge update.json into index.json using jq
-    local tmp_file=$(mktemp)
-    if jq -s '.[0] * .[1]' "$index_file" "$update_file" > "$tmp_file" 2>/dev/null; then
-      mv "$tmp_file" "$index_file"
-      rm -f "$update_file"
-      echo "  📥 Applied queued updates from update.json"
-    else
-      rm -f "$tmp_file"
-    fi
+  RALPH_UPDATES_APPLIED=0
+
+  # Exit early if no update.json
+  [[ -f "$update_file" ]] || return 1
+  [[ -f "$index_file" ]] || return 1
+
+  local tmp_file=$(mktemp)
+  local new_stories_count=0
+  local update_stories_count=0
+
+  # 1. Process newStories - create story files and add to pending
+  local new_stories=$(jq -c '.newStories // [] | .[]' "$update_file" 2>/dev/null)
+  if [[ -n "$new_stories" ]]; then
+    echo "$new_stories" | while IFS= read -r story; do
+      local story_id=$(echo "$story" | jq -r '.id')
+      local story_file="$stories_dir/${story_id}.json"
+
+      # Create the story file
+      echo "$story" | jq '.' > "$story_file"
+
+      # Add to pending array and storyOrder in index.json
+      jq --arg id "$story_id" '
+        .pending = (.pending + [$id] | unique) |
+        .storyOrder = (.storyOrder + [$id] | unique)
+      ' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
+
+      new_stories_count=$((new_stories_count + 1))
+    done
+    # Re-count after the while loop (subshell isolation)
+    new_stories_count=$(jq '.newStories | length' "$update_file" 2>/dev/null || echo 0)
   fi
+
+  # 2. Process updateStories - apply changes to existing story files
+  local update_stories=$(jq -c '.updateStories // [] | .[]' "$update_file" 2>/dev/null)
+  if [[ -n "$update_stories" ]]; then
+    echo "$update_stories" | while IFS= read -r update; do
+      local story_id=$(echo "$update" | jq -r '.id')
+      local story_file="$stories_dir/${story_id}.json"
+
+      [[ -f "$story_file" ]] || continue
+
+      # Merge the update into the existing story file
+      jq -s '.[0] * .[1]' "$story_file" <(echo "$update") > "$tmp_file" && mv "$tmp_file" "$story_file"
+      update_stories_count=$((update_stories_count + 1))
+    done
+    # Re-count after the while loop (subshell isolation)
+    update_stories_count=$(jq '.updateStories | length' "$update_file" 2>/dev/null || echo 0)
+  fi
+
+  # 3. Recalculate stats after any changes
+  if [[ $new_stories_count -gt 0 ]] || [[ $update_stories_count -gt 0 ]]; then
+    # Count pending stories
+    local pending_count=$(jq '.pending | length' "$index_file")
+
+    # Count completed stories (those with passes=true in their files)
+    local completed_count=0
+    local total_count=0
+    for story_file in "$stories_dir"/*.json(N); do
+      [[ -f "$story_file" ]] || continue
+      total_count=$((total_count + 1))
+      if [[ "$(jq -r '.passes // false' "$story_file")" == "true" ]]; then
+        completed_count=$((completed_count + 1))
+      fi
+    done
+
+    # Count blocked stories
+    local blocked_count=$(jq '.blocked | length' "$index_file" 2>/dev/null || echo 0)
+
+    # Update stats and nextStory in index.json
+    jq --argjson total "$total_count" \
+       --argjson completed "$completed_count" \
+       --argjson pending "$pending_count" \
+       --argjson blocked "$blocked_count" '
+      .stats.total = $total |
+      .stats.completed = $completed |
+      .stats.pending = $pending |
+      .stats.blocked = $blocked |
+      .nextStory = (.pending[0] // null)
+    ' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
+
+    # Clear newStories from index.json (they've been processed)
+    jq '.newStories = []' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
+  fi
+
+  # 4. Delete update.json after successful processing
+  rm -f "$update_file"
+
+  # Set global for caller to use
+  RALPH_UPDATES_APPLIED=$new_stories_count
+
+  # Return success if we applied anything
+  if [[ $new_stories_count -gt 0 ]] || [[ $update_stories_count -gt 0 ]]; then
+    return 0
+  fi
+  return 1
 }
 
 # Auto-unblock stories whose blockers are now complete
@@ -2606,6 +2693,18 @@ function ralph() {
   fi
 
   for ((i=1; i<=$MAX; i++)); do
+    # Check for update.json at START of each iteration (hot-reload)
+    if [[ "$use_json_mode" == "true" ]]; then
+      if _ralph_apply_update_queue "$PRD_JSON_DIR"; then
+        if [[ $RALPH_UPDATES_APPLIED -gt 0 ]]; then
+          local story_word="stories"
+          [[ $RALPH_UPDATES_APPLIED -eq 1 ]] && story_word="story"
+          echo "  📥 Applied $RALPH_UPDATES_APPLIED new $story_word from update.json"
+        fi
+      fi
+      _ralph_auto_unblock "$PRD_JSON_DIR"
+    fi
+
     # Determine current story and model to use
     local current_story=""
     local effective_model=""
@@ -3247,11 +3346,7 @@ After completing task, check PRD state:
       return 2  # Different exit code for blocked vs complete
     fi
 
-    # Apply any queued updates and auto-unblock before showing remaining
-    if [[ "$use_json_mode" == "true" ]]; then
-      _ralph_apply_update_queue "$PRD_JSON_DIR"
-      _ralph_auto_unblock "$PRD_JSON_DIR"
-    fi
+    # Note: update.json is checked at START of next iteration (hot-reload)
 
     # Show enhanced between-iterations status (with progress bar, elapsed time, cost)
     local remaining_stats
@@ -3315,7 +3410,13 @@ After completing task, check PRD state:
 
   # Apply queued updates, auto-unblock, and count remaining for final message
   if [[ "$use_json_mode" == "true" ]]; then
-    _ralph_apply_update_queue "$PRD_JSON_DIR"
+    if _ralph_apply_update_queue "$PRD_JSON_DIR"; then
+      if [[ $RALPH_UPDATES_APPLIED -gt 0 ]]; then
+        local story_word="stories"
+        [[ $RALPH_UPDATES_APPLIED -eq 1 ]] && story_word="story"
+        echo "  📥 Applied $RALPH_UPDATES_APPLIED new $story_word from update.json"
+      fi
+    fi
     _ralph_auto_unblock "$PRD_JSON_DIR"
   fi
   local final_remaining

@@ -1,0 +1,49 @@
+{
+  "id": "US-049",
+  "title": "Hot-reload update.json each iteration (not just at 0 pending)",
+  "description": "Currently Ralph only applies update.json when pending stories hits 0. This means urgent stories can't be injected mid-run. Change to: check update.json EVERY iteration, merge newStories into pending immediately, recalculate all stats after merge. This lets user add stories while Ralph is running without waiting for batch completion.",
+  "acceptanceCriteria": [
+    {
+      "text": "Move update.json check from 'pending=0' block to main iteration loop",
+      "checked": true
+    },
+    {
+      "text": "Check for update.json at START of each iteration (before picking nextStory)",
+      "checked": true
+    },
+    {
+      "text": "If newStories found: merge into stories/, add to pending array, update storyOrder",
+      "checked": true
+    },
+    {
+      "text": "If updateStories found: apply changes to existing story files",
+      "checked": true
+    },
+    {
+      "text": "After ANY merge: recalculate stats.total, stats.pending, stats.completed",
+      "checked": true
+    },
+    {
+      "text": "After ANY merge: recalculate nextStory based on new pending array",
+      "checked": true
+    },
+    {
+      "text": "Show '📥 Applied N new stories from update.json' in iteration output",
+      "checked": true
+    },
+    {
+      "text": "Delete update.json after successful processing (current behavior)",
+      "checked": true
+    },
+    {
+      "text": "Test: Add story mid-run, verify it appears in next iteration",
+      "checked": true
+    },
+    {
+      "text": "Typecheck passes (zsh -n ralph.zsh)",
+      "checked": true
+    }
+  ],
+  "passes": true,
+  "blockedBy": null
+}
