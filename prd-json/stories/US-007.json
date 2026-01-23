@@ -3,15 +3,17 @@
   "title": "Result aggregation from parallel agents",
   "description": "Wait for all parallel verification agents and aggregate pass/fail results.",
   "acceptanceCriteria": [
-    { "text": "Add _ralph_aggregate_parallel_results() function", "checked": false },
-    { "text": "Wait for all background processes to complete", "checked": false },
-    { "text": "Read results from each agent's temp file", "checked": false },
-    { "text": "Story passes only if ALL agents pass", "checked": false },
-    { "text": "If any agent fails, collect failure reasons", "checked": false },
-    { "text": "Log which agents passed/failed to progress.txt", "checked": false },
-    { "text": "Clean up temp files after aggregation", "checked": false },
-    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+    { "text": "Add _ralph_aggregate_parallel_results() function", "checked": true },
+    { "text": "Wait for all background processes to complete", "checked": true },
+    { "text": "Read results from each agent's temp file", "checked": true },
+    { "text": "Story passes only if ALL agents pass", "checked": true },
+    { "text": "If any agent fails, collect failure reasons", "checked": true },
+    { "text": "Log which agents passed/failed to progress.txt", "checked": true },
+    { "text": "Clean up temp files after aggregation", "checked": true },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": true }
   ],
-  "passes": false,
+  "passes": true,
+  "completedAt": "2026-01-23T03:45:00Z",
+  "completedBy": "opus",
   "blockedBy": null
 }

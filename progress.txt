@@ -210,3 +210,22 @@
 - Results collected and cleanup of temp directory after completion
 - All 8 acceptance criteria complete
 ---
+
+## Iteration 15 - US-007 Result aggregation from parallel agents
+- Model: opus
+- Refactored parallel verification to separate aggregation logic:
+  1. ✓ Added _ralph_aggregate_parallel_results() function (dedicated to result collection)
+  2. ✓ Wait for all background processes via wait command in spawning function
+  3. ✓ Read results from each agent's temp file in temp_dir
+  4. ✓ Story passes only if ALL agents pass (all_pass flag)
+  5. ✓ If any agent fails, collect failure reasons (BLOCKED, Error, or "No completion promise")
+  6. ✓ Log which agents passed/failed to progress.txt with timestamp
+  7. ✓ Clean up temp files after aggregation (rm -rf temp_dir)
+  8. ✓ Typecheck passes (zsh -n ralph.zsh)
+- Aggregation function logs detailed results including:
+  - Per-agent pass/fail status
+  - Failure reasons extracted from agent output
+  - Timestamp of verification run
+- Failure reasons displayed both to console and logged to progress.txt
+- All 8 acceptance criteria complete
+---

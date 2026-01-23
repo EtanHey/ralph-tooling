@@ -551,39 +551,100 @@ _ralph_run_parallel_verification() {
 
   # Wait for all agents to complete
   echo "  ⏳ Waiting for all agents to complete..."
-  local failed=0
+  local failed_pids=0
   for pid in "${pids[@]}"; do
     if ! wait "$pid"; then
-      ((failed++))
+      ((failed_pids++))
     fi
   done
 
-  # Collect results
-  echo "  📊 Collecting results..."
-  local all_pass=true
-  for ((agent=1; agent<=num_agents && agent<=3; agent++)); do
-    local agent_output="$temp_dir/agent_${agent}.txt"
-    if [[ -f "$agent_output" ]]; then
-      if grep -q "<promise>COMPLETE</promise>" "$agent_output" 2>/dev/null; then
-        echo "    ✅ Agent $agent: PASSED"
-      else
-        echo "    ❌ Agent $agent: INCOMPLETE"
-        all_pass=false
-      fi
-    else
-      echo "    ⚠️ Agent $agent: No output file"
-      all_pass=false
-    fi
-  done
+  # Aggregate results using dedicated function
+  _ralph_aggregate_parallel_results "$temp_dir" "$num_agents" "$story_id" "$prd_json_dir"
+  local result=$?
 
   # Cleanup temp directory
   rm -rf "$temp_dir"
+
+  return $result
+}
+
+# Aggregate results from parallel verification agents
+# Reads temp files, collects pass/fail status and failure reasons, logs to progress.txt
+# Usage: _ralph_aggregate_parallel_results "/tmp/dir" num_agents "V-001" "/path/to/prd-json"
+_ralph_aggregate_parallel_results() {
+  local temp_dir="$1"
+  local num_agents="$2"
+  local story_id="$3"
+  local prd_json_dir="$4"
+  local progress_file="$prd_json_dir/../progress.txt"
+
+  echo "  📊 Aggregating parallel agent results..."
+
+  local all_pass=true
+  local agent_results=()
+  local failure_reasons=()
+
+  # Read results from each agent's temp file
+  for ((agent=1; agent<=num_agents && agent<=3; agent++)); do
+    local agent_output="$temp_dir/agent_${agent}.txt"
+
+    if [[ -f "$agent_output" ]]; then
+      if grep -q "<promise>COMPLETE</promise>" "$agent_output" 2>/dev/null; then
+        echo "    ✅ Agent $agent: PASSED"
+        agent_results+=("Agent $agent: PASSED")
+      else
+        echo "    ❌ Agent $agent: FAILED"
+        agent_results+=("Agent $agent: FAILED")
+        all_pass=false
+
+        # Extract failure reason (look for BLOCKED or error messages)
+        local reason=""
+        if grep -q "BLOCKED" "$agent_output" 2>/dev/null; then
+          reason=$(grep -o "BLOCKED:.*" "$agent_output" | head -1)
+        elif grep -q "Error:" "$agent_output" 2>/dev/null; then
+          reason=$(grep -o "Error:.*" "$agent_output" | head -1)
+        else
+          reason="No completion promise found"
+        fi
+        failure_reasons+=("Agent $agent: $reason")
+      fi
+    else
+      echo "    ⚠️ Agent $agent: No output file"
+      agent_results+=("Agent $agent: NO OUTPUT")
+      all_pass=false
+      failure_reasons+=("Agent $agent: Output file missing")
+    fi
+  done
+
+  # Log which agents passed/failed to progress.txt
+  if [[ -f "$progress_file" ]]; then
+    echo "" >> "$progress_file"
+    echo "### Parallel Verification Results for $story_id" >> "$progress_file"
+    echo "- Timestamp: $(date '+%Y-%m-%d %H:%M:%S')" >> "$progress_file"
+    echo "- Agents: $num_agents" >> "$progress_file"
+    for result in "${agent_results[@]}"; do
+      echo "  - $result" >> "$progress_file"
+    done
+    if [[ ${#failure_reasons[@]} -gt 0 ]]; then
+      echo "- Failure Reasons:" >> "$progress_file"
+      for reason in "${failure_reasons[@]}"; do
+        echo "  - $reason" >> "$progress_file"
+      done
+    fi
+  fi
 
   if $all_pass; then
     echo "  ✅ All parallel verification agents passed"
     return 0
   else
     echo "  ❌ Some parallel verification agents failed"
+    # Display collected failure reasons
+    if [[ ${#failure_reasons[@]} -gt 0 ]]; then
+      echo "  Failure reasons:"
+      for reason in "${failure_reasons[@]}"; do
+        echo "    - $reason"
+      done
+    fi
     return 1
   fi
 }
