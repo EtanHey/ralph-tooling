@@ -912,3 +912,50 @@ Updated the /1password skill to document 1Password Environments (beta) as the PR
 - Named pipes provide real-time secret access without disk storage
 - Beta limitations mean CLI and UI environments are currently separate
 - Documentation should show preferred approach first, with fallback options
+
+## Iteration 28 - US-055: Create registry schema and migration
+**Status**: COMPLETED
+
+Enhanced the `_ralph_migrate_to_registry()` function to support importing from repo-claude-v2.zsh alongside the existing projects.json and shared-project-mcps.json sources.
+
+### Changes Made
+
+**Enhanced `_ralph_migrate_to_registry()` function:**
+- Now supports `--force` flag to regenerate registry from source configs
+- Sources configs from three locations:
+  1. `repo-claude-v2.zsh` (REPO_CONFIGS_V2, SUPABASE_TOKENS, LINEAR_TOKENS, MCP_UNIVERSAL)
+  2. `projects.json` (legacy format)
+  3. `shared-project-mcps.json` (global MCPs)
+
+**repo-claude-v2.zsh migration:**
+- Parses REPO_CONFIGS_V2 (pipe-delimited: key|name|path|mcps_light|mcps_full) into projects
+- Converts MCP_UNIVERSAL associative array to mcpDefinitions
+- Maps SUPABASE_TOKENS to project secrets as `SUPABASE_ACCESS_TOKEN`
+- Maps LINEAR_TOKENS to project secrets as `LINEAR_API_TOKEN`
+- Expands `$HOME` in project paths
+
+**Registry output format:**
+- version: "1.0.0"
+- global.mcps: from shared-project-mcps.json
+- projects: merged from repo-claude-v2.zsh + projects.json
+- mcpDefinitions: from MCP_UNIVERSAL
+
+### Files Modified
+- `/Users/etanheyman/Desktop/Gits/ralphtools/ralph.zsh`
+  - `_ralph_migrate_to_registry()`: Complete rewrite with multi-source support
+
+### Test Results
+- 7 MCP definitions imported from MCP_UNIVERSAL
+- 6 projects imported from REPO_CONFIGS_V2
+- 4 Supabase tokens added to project secrets
+- 2 Linear tokens added to project secrets
+- Global MCPs imported from shared-project-mcps.json
+- projects.json data merged
+
+### Learnings
+- ZSH case patterns with `===` need to be quoted: `"===PATTERN==="` not `===PATTERN===`
+- ZSH debug output can leak from `local var=$(...)` when xtrace is enabled globally
+- Use subshell to source external configs without polluting current environment
+- Tab characters (`\t`) are reliable delimiters when parsing shell output
+- `jq -n` with `--argjson` allows building complex JSON from shell variables
+

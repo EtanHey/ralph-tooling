@@ -5,36 +5,38 @@
   "type": "feature",
   "priority": "high",
   "storyPoints": 3,
-  "status": "pending",
+  "status": "completed",
   "acceptanceCriteria": [
     {
       "text": "Create schemas/registry.schema.json with validation rules",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create _ralph_migrate_to_registry() function",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Migration imports configs from repo-claude-v2.zsh (REPO_CONFIGS_V2, SUPABASE_TOKENS, LINEAR_TOKENS)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Migration preserves all existing project data from projects.json",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Migration imports global MCPs from shared-project-mcps.json",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Registry includes version field for future migrations",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Typecheck passes (zsh -n ralph.zsh)",
-      "checked": false
+      "checked": true
     }
   ],
-  "dependencies": []
+  "dependencies": [],
+  "passes": true,
+  "completedAt": "2026-01-23T17:49:00Z"
 }

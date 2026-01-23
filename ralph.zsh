@@ -1375,78 +1375,264 @@ _ralph_load_config() {
 
 RALPH_REGISTRY_FILE="${RALPH_CONFIG_DIR}/registry.json"
 
-# Migrate existing projects.json and shared-project-mcps.json to registry.json
-# Usage: _ralph_migrate_to_registry
+# Migrate existing configs to registry.json
+# Sources: projects.json, shared-project-mcps.json, repo-claude-v2.zsh
+# Usage: _ralph_migrate_to_registry [--force]
 _ralph_migrate_to_registry() {
+  setopt localoptions noxtrace  # Suppress debug output
+
+  local force=false
+  [[ "$1" == "--force" ]] && force=true
+
   local old_projects="$HOME/.config/ralphtools/projects.json"
   local shared_mcps="$HOME/.claude/shared-project-mcps.json"
+  local repo_claude_v2="$HOME/.config/ralph/repo-claude-v2.zsh"
   local registry="$RALPH_REGISTRY_FILE"
 
   # Check if registry already exists
-  if [[ -f "$registry" ]]; then
+  if [[ -f "$registry" ]] && ! $force; then
     echo "Registry already exists at $registry"
+    echo "Use --force to recreate from source configs"
     return 0
   fi
 
-  # Check if we have source files to migrate from
-  if [[ ! -f "$old_projects" && ! -f "$shared_mcps" ]]; then
-    echo "No existing projects.json or shared-project-mcps.json found. Creating minimal registry."
-    mkdir -p "$RALPH_CONFIG_DIR"
-    cat > "$registry" << 'EOF'
-{
-  "version": "1.0.0",
-  "global": {
-    "mcps": {}
-  },
-  "projects": {},
-  "mcpDefinitions": {}
-}
-EOF
-    return 0
-  fi
+  # Initialize result variables
+  local projects_json="{}"
+  local global_mcps="{}"
+  local mcp_definitions="{}"
+  local has_sources=false
 
-  # Start building registry JSON
   echo "Migrating to registry.json..."
 
-  # Read projects if available
-  local projects_json="{}"
+  # ═══════════════════════════════════════════════════════════════
+  # SOURCE 1: repo-claude-v2.zsh (REPO_CONFIGS_V2, SUPABASE_TOKENS, LINEAR_TOKENS)
+  # ═══════════════════════════════════════════════════════════════
+  if [[ -f "$repo_claude_v2" ]]; then
+    has_sources=true
+    echo "  📦 Found repo-claude-v2.zsh"
+
+    # Source the file to get associative arrays
+    # Create a subshell to avoid polluting current environment
+    local v2_data
+    v2_data=$(zsh -c "
+      source '$repo_claude_v2' 2>/dev/null
+
+      # Output MCP_UNIVERSAL as JSON
+      echo '===MCP_UNIVERSAL==='
+      for key val in \"\${(@kv)MCP_UNIVERSAL}\"; do
+        # val can be JSON or command string
+        if [[ \"\$val\" == '{'* ]]; then
+          printf '%s\t%s\n' \"\$key\" \"\$val\"
+        else
+          # Convert command string to JSON (e.g., '--transport http figma ...')
+          printf '%s\t{\"transport\": \"command\", \"value\": \"%s\"}\n' \"\$key\" \"\$val\"
+        fi
+      done
+
+      # Output REPO_CONFIGS_V2 as JSON
+      echo '===REPO_CONFIGS_V2==='
+      for key val in \"\${(@kv)REPO_CONFIGS_V2}\"; do
+        printf '%s\t%s\n' \"\$key\" \"\$val\"
+      done
+
+      # Output SUPABASE_TOKENS
+      echo '===SUPABASE_TOKENS==='
+      for key val in \"\${(@kv)SUPABASE_TOKENS}\"; do
+        printf '%s\t%s\n' \"\$key\" \"\$val\"
+      done
+
+      # Output LINEAR_TOKENS
+      echo '===LINEAR_TOKENS==='
+      for key val in \"\${(@kv)LINEAR_TOKENS}\"; do
+        printf '%s\t%s\n' \"\$key\" \"\$val\"
+      done
+    " 2>/dev/null)
+
+    # Parse MCP_UNIVERSAL into mcpDefinitions
+    local in_section=""
+    local mcp_u_count=0
+    local proj_count=0
+    local sb_tokens=""
+    local linear_tokens=""
+    local repo_configs=""
+
+    while IFS= read -r line; do
+      case "$line" in
+        "===MCP_UNIVERSAL===") in_section="mcp_universal" ;;
+        "===REPO_CONFIGS_V2===") in_section="repo_configs" ;;
+        "===SUPABASE_TOKENS===") in_section="supabase" ;;
+        "===LINEAR_TOKENS===") in_section="linear" ;;
+        *)
+          [[ -z "$line" ]] && continue
+          case "$in_section" in
+            mcp_universal)
+              local key="${line%%	*}"
+              local val="${line#*	}"
+              if [[ "$val" == '{'* ]]; then
+                mcp_definitions=$(echo "$mcp_definitions" | jq --arg k "$key" --argjson v "$val" '.[$k] = $v')
+                ((mcp_u_count++))
+              fi
+              ;;
+            repo_configs)
+              repo_configs+="$line"$'\n'
+              ;;
+            supabase)
+              sb_tokens+="$line"$'\n'
+              ;;
+            linear)
+              linear_tokens+="$line"$'\n'
+              ;;
+          esac
+          ;;
+      esac
+    done <<< "$v2_data"
+
+    echo "    ✓ Imported $mcp_u_count MCP definitions from MCP_UNIVERSAL"
+
+    # Parse REPO_CONFIGS_V2 into projects
+    # Format: "key|name|path|mcps_light|mcps_full"
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      local key="${line%%	*}"
+      local config="${line#*	}"
+
+      # Parse pipe-delimited config
+      local proj_key=$(echo "$config" | cut -d'|' -f1)
+      local proj_name=$(echo "$config" | cut -d'|' -f2)
+      local proj_path=$(echo "$config" | cut -d'|' -f3)
+      local mcps_light=$(echo "$config" | cut -d'|' -f4)
+      local mcps_full=$(echo "$config" | cut -d'|' -f5)
+
+      # Expand $HOME in path
+      proj_path="${proj_path/\$HOME/$HOME}"
+
+      # Convert comma-separated MCPs to JSON array
+      local mcps_array="[]"
+      if [[ -n "$mcps_full" ]]; then
+        mcps_array=$(echo "$mcps_full" | tr ',' '\n' | jq -R . | jq -s .)
+      fi
+
+      # Build project entry
+      local proj_entry=$(jq -n \
+        --arg path "$proj_path" \
+        --arg name "$proj_name" \
+        --argjson mcps "$mcps_array" \
+        --arg light "$mcps_light" \
+        '{
+          path: $path,
+          displayName: $name,
+          mcps: $mcps,
+          mcpsLight: ($light | split(",") | map(select(. != ""))),
+          secrets: {},
+          created: (now | todate)
+        }' 2>/dev/null)
+
+      projects_json=$(echo "$projects_json" | jq --arg k "$proj_key" --argjson v "$proj_entry" '.[$k] = $v')
+      ((proj_count++))
+    done <<< "$repo_configs"
+
+    echo "    ✓ Imported $proj_count projects from REPO_CONFIGS_V2"
+
+    # Add SUPABASE_TOKENS to project secrets
+    local sb_count=0
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      local proj="${line%%	*}"
+      local token="${line#*	}"
+
+      # Add to project's secrets if project exists
+      if echo "$projects_json" | jq -e --arg p "$proj" '.[$p]' >/dev/null 2>&1; then
+        projects_json=$(echo "$projects_json" | jq --arg p "$proj" --arg t "$token" \
+          '.[$p].secrets.SUPABASE_ACCESS_TOKEN = $t')
+        ((sb_count++))
+      fi
+    done <<< "$sb_tokens"
+
+    [[ $sb_count -gt 0 ]] && echo "    ✓ Added $sb_count Supabase tokens to project secrets"
+
+    # Add LINEAR_TOKENS to project secrets
+    local linear_count=0
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      local proj="${line%%	*}"
+      local token="${line#*	}"
+
+      # Add to project's secrets if project exists
+      if echo "$projects_json" | jq -e --arg p "$proj" '.[$p]' >/dev/null 2>&1; then
+        projects_json=$(echo "$projects_json" | jq --arg p "$proj" --arg t "$token" \
+          '.[$p].secrets.LINEAR_API_TOKEN = $t')
+        ((linear_count++))
+      fi
+    done <<< "$linear_tokens"
+
+    [[ $linear_count -gt 0 ]] && echo "    ✓ Added $linear_count Linear tokens to project secrets"
+  fi
+
+  # ═══════════════════════════════════════════════════════════════
+  # SOURCE 2: projects.json (legacy format)
+  # ═══════════════════════════════════════════════════════════════
   if [[ -f "$old_projects" ]]; then
-    # Convert projects array to object format: {name: {path, mcps, etc}}
-    projects_json=$(jq -r '
-      .projects | map({(.name): {path: .path, mcps: (.mcps // []), secrets: {}, created: .created}}) | add // {}
+    has_sources=true
+    echo "  📦 Found projects.json"
+
+    # Convert projects array to object format, merge with existing
+    local legacy_projects
+    legacy_projects=$(jq -r '
+      .projects // [] | map({(.name): {path: .path, mcps: (.mcps // []), secrets: {}, created: .created}}) | add // {}
     ' "$old_projects" 2>/dev/null)
-    if [[ -z "$projects_json" || "$projects_json" == "null" ]]; then
-      projects_json="{}"
+
+    if [[ -n "$legacy_projects" && "$legacy_projects" != "null" ]]; then
+      # Merge with priority to existing (from repo-claude-v2.zsh)
+      projects_json=$(echo "$projects_json" "$legacy_projects" | jq -s '.[1] * .[0]')
+      echo "    ✓ Merged projects from projects.json"
     fi
-    echo "  ✓ Imported projects from projects.json"
   fi
 
-  # Read global MCPs if available
-  local global_mcps="{}"
+  # ═══════════════════════════════════════════════════════════════
+  # SOURCE 3: shared-project-mcps.json (global MCPs)
+  # ═══════════════════════════════════════════════════════════════
   if [[ -f "$shared_mcps" ]]; then
-    global_mcps=$(jq '.mcpServers // {}' "$shared_mcps" 2>/dev/null)
-    if [[ -z "$global_mcps" || "$global_mcps" == "null" ]]; then
-      global_mcps="{}"
+    has_sources=true
+    echo "  📦 Found shared-project-mcps.json"
+
+    local shared_mcp_servers
+    shared_mcp_servers=$(jq '.mcpServers // {}' "$shared_mcps" 2>/dev/null)
+
+    if [[ -n "$shared_mcp_servers" && "$shared_mcp_servers" != "null" ]]; then
+      global_mcps="$shared_mcp_servers"
+      local mcp_count=$(echo "$global_mcps" | jq 'keys | length')
+      echo "    ✓ Imported $mcp_count global MCPs"
     fi
-    echo "  ✓ Imported global MCPs from shared-project-mcps.json"
   fi
 
-  # Build the registry
+  # ═══════════════════════════════════════════════════════════════
+  # CREATE REGISTRY
+  # ═══════════════════════════════════════════════════════════════
+  if ! $has_sources; then
+    echo "  ⚠️  No source configs found. Creating minimal registry."
+  fi
+
   mkdir -p "$RALPH_CONFIG_DIR"
   jq -n \
     --arg version "1.0.0" \
     --argjson global_mcps "$global_mcps" \
     --argjson projects "$projects_json" \
+    --argjson mcp_defs "$mcp_definitions" \
     '{
       version: $version,
       global: {
         mcps: $global_mcps
       },
       projects: $projects,
-      mcpDefinitions: {}
+      mcpDefinitions: $mcp_defs
     }' > "$registry"
 
-  echo "  ✓ Registry created at $registry"
+  local total_projects=$(echo "$projects_json" | jq 'keys | length')
+  local total_mcps=$(echo "$mcp_definitions" | jq 'keys | length')
+
+  echo ""
+  echo "  ✅ Registry created at $registry"
+  echo "     Projects: $total_projects | MCP Definitions: $total_mcps"
   return 0
 }
 
