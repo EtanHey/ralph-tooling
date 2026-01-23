@@ -393,6 +393,32 @@ _ralph_get_total_criteria() {
   echo "$checked $total"
 }
 
+# Verify actual pending count before trusting Claude's COMPLETE signal (BUG-014)
+# Usage: _ralph_verify_pending_count "/path/to/prd-json" "/path/to/PRD.md" "true|false"
+# Args:
+#   $1 - JSON dir path (for json mode)
+#   $2 - PRD.md path (for markdown mode)
+#   $3 - use_json_mode (true/false)
+# Returns: pending count (0 = actually complete, >0 = still tasks pending)
+_ralph_verify_pending_count() {
+  local json_dir="$1"
+  local prd_path="$2"
+  local use_json="$3"
+  local actual_pending=0
+
+  if [[ "$use_json" == "true" ]]; then
+    # JSON mode: check pending array in index.json
+    actual_pending=$(jq -r '.pending | length' "$json_dir/index.json" 2>/dev/null)
+    [[ -z "$actual_pending" ]] && actual_pending=0
+  else
+    # PRD.md mode: count unchecked acceptance criteria (- [ ])
+    # grep -c returns 0 count with exit code 1 when no matches, so capture output only
+    actual_pending=$(grep -c '^\s*- \[ \]' "$prd_path" 2>/dev/null) || actual_pending=0
+  fi
+
+  echo "$actual_pending"
+}
+
 # ═══════════════════════════════════════════════════════════════════
 # LIVE FILE WATCHER (fswatch/inotifywait)
 # ═══════════════════════════════════════════════════════════════════
@@ -3815,17 +3841,20 @@ After completing task, check PRD state:
     fi
 
     # Check if all tasks complete (search anywhere in output, not just on own line)
-    # BUG FIX: Verify pending count before trusting Claude's COMPLETE signal
+    # BUG-014: Verify pending count before trusting Claude's COMPLETE signal
+    # Claude sometimes falsely signals COMPLETE after just one story. We verify by
+    # calling _ralph_verify_pending_count() which checks:
+    # - JSON mode: the pending array length in index.json
+    # - PRD.md mode: count of unchecked "- [ ]" boxes
+    # Only exit if we confirm zero pending tasks. Otherwise warn and continue.
     if grep -q "<promise>COMPLETE</promise>" "$RALPH_TMP" 2>/dev/null; then
-      local actual_pending=0
-      if [[ "$use_json_mode" == "true" ]]; then
-        actual_pending=$(jq -r '.pending | length' "$PRD_JSON_DIR/index.json" 2>/dev/null)
-      fi
+      local actual_pending
+      actual_pending=$(_ralph_verify_pending_count "$PRD_JSON_DIR" "$PRD_PATH" "$use_json_mode")
 
       if [[ "$actual_pending" -gt 0 ]]; then
         # Claude said COMPLETE but there are still pending stories - ignore and continue
         echo ""
-        echo -e "  ⚠️  $(_ralph_warning "Claude signaled COMPLETE but $actual_pending stories still pending - continuing...")"
+        echo -e "  ⚠️  $(_ralph_warning "Claude signaled COMPLETE but $actual_pending tasks still pending - ignoring false signal")"
       else
         # Actually complete
         local total_cost=$(jq -r '.totals.cost // 0' "$RALPH_COSTS_FILE" 2>/dev/null | xargs printf "%.2f")

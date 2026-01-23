@@ -1336,6 +1336,150 @@ EOF
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# BUG-014: COMPLETE SIGNAL VERIFICATION TESTS
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: _ralph_verify_pending_count returns pending count in JSON mode
+test_verify_pending_count_json_mode() {
+  test_start "verify_pending_count returns pending in JSON mode"
+  _setup_test_fixtures
+
+  # Create PRD structure with 3 pending stories
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 5, "completed": 2, "pending": 3, "blocked": 0 },
+  "storyOrder": ["US-001", "US-002", "US-003", "US-004", "US-005"],
+  "pending": ["US-003", "US-004", "US-005"],
+  "blocked": [],
+  "nextStory": "US-003"
+}
+EOF
+
+  # Call the verification function in JSON mode
+  local result=$(_ralph_verify_pending_count "$TEST_TMP_DIR/prd-json" "/nonexistent" "true")
+
+  assert_equals "3" "$result" "should return 3 pending stories" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_verify_pending_count returns 0 when no pending tasks (JSON mode)
+test_verify_pending_count_json_empty() {
+  test_start "verify_pending_count returns 0 when complete (JSON)"
+  _setup_test_fixtures
+
+  # Create PRD structure with no pending stories (all completed)
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 2, "completed": 2, "pending": 0, "blocked": 0 },
+  "storyOrder": ["US-001", "US-002"],
+  "pending": [],
+  "blocked": [],
+  "nextStory": null
+}
+EOF
+
+  # Call the verification function in JSON mode
+  local result=$(_ralph_verify_pending_count "$TEST_TMP_DIR/prd-json" "/nonexistent" "true")
+
+  assert_equals "0" "$result" "should return 0 when all complete" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_verify_pending_count returns pending count in PRD.md mode
+test_verify_pending_count_prd_md_mode() {
+  test_start "verify_pending_count returns pending in PRD.md mode"
+  _setup_test_fixtures
+
+  # Create PRD.md with unchecked criteria
+  cat > "$TEST_TMP_DIR/PRD.md" << 'EOF'
+# Product Requirements Document
+
+## US-001: First story
+- [x] Completed criterion
+- [ ] Pending criterion 1
+- [ ] Pending criterion 2
+
+## US-002: Second story
+- [ ] Pending criterion 3
+- [x] Completed criterion
+EOF
+
+  # Call the verification function in PRD.md mode
+  local result=$(_ralph_verify_pending_count "/nonexistent" "$TEST_TMP_DIR/PRD.md" "false")
+
+  assert_equals "3" "$result" "should return 3 unchecked criteria" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_verify_pending_count returns 0 when all checked (PRD.md mode)
+test_verify_pending_count_prd_md_complete() {
+  test_start "verify_pending_count returns 0 when complete (PRD.md)"
+  _setup_test_fixtures
+
+  # Create PRD.md with all criteria checked
+  cat > "$TEST_TMP_DIR/PRD.md" << 'EOF'
+# Product Requirements Document
+
+## US-001: First story
+- [x] Completed criterion 1
+- [x] Completed criterion 2
+
+## US-002: Second story
+- [x] Completed criterion 3
+EOF
+
+  # Call the verification function in PRD.md mode
+  local result=$(_ralph_verify_pending_count "/nonexistent" "$TEST_TMP_DIR/PRD.md" "false")
+
+  assert_equals "0" "$result" "should return 0 when all criteria checked" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: False COMPLETE signal is ignored when pending > 0 (integration test)
+test_false_complete_ignored_with_pending_tasks() {
+  test_start "false COMPLETE signal ignored with pending tasks"
+  _setup_test_fixtures
+
+  # Create PRD structure with pending stories
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 3, "completed": 1, "pending": 2, "blocked": 0 },
+  "storyOrder": ["US-001", "US-002", "US-003"],
+  "pending": ["US-002", "US-003"],
+  "blocked": [],
+  "nextStory": "US-002"
+}
+EOF
+
+  # Verify that with 2 pending stories, the function returns 2 (not 0)
+  # This ensures false COMPLETE signals would be ignored
+  local result=$(_ralph_verify_pending_count "$TEST_TMP_DIR/prd-json" "/nonexistent" "true")
+
+  assert_equals "2" "$result" "should return 2 pending (false COMPLETE would be ignored)" || { _teardown_test_fixtures; return; }
+
+  # Additionally verify that 0 is NOT returned (which would allow exit)
+  if [[ "$result" -eq 0 ]]; then
+    test_fail "should NOT return 0 when tasks are pending"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 

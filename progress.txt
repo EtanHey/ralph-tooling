@@ -27,3 +27,18 @@ Changes:
 - The xtrace output format `var='value value'` with single quotes indicates zsh trace output, not explicit echo
 - `setopt localoptions noxtrace` prevents xtrace leakage within function scope
 - Even if parent function sets noxtrace, it's good practice to guard all helper functions defensively
+
+## Iteration 3
+Story: BUG-014 - Ralph exits early when Claude falsely signals COMPLETE
+Status: COMPLETED (opus)
+Changes:
+- Created `_ralph_verify_pending_count()` helper function to check actual pending count
+- Supports both JSON mode (checks pending array length) and PRD.md mode (counts `- [ ]` checkboxes)
+- Updated main COMPLETE detection code to use the helper function
+- Added 5 unit tests for the verification function (all pass)
+- Fixed bug: grep -c returns exit code 1 with 0 matches, needs proper handling
+
+### Learnings
+- `grep -c` returns 0 (the count) but with exit code 1 when no matches - don't use `|| echo 0` which prints twice
+- Proper pattern: `actual_pending=$(grep -c 'pattern' file 2>/dev/null) || actual_pending=0`
+- Extract verification logic into testable functions for easier unit testing
