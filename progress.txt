@@ -141,3 +141,26 @@ Files created/modified:
 - Must copy prd-json/ and progress.txt to worktree for Ralph to work
 - ralph-cleanup syncs state back before removing worktree
 - git worktree prune cleans up stale references
+
+## Iteration 7 - US-039: UI guards (prevent 104%, fix cost alignment)
+**Status**: COMPLETED
+
+Fixed UI display bugs to prevent impossible values:
+- Progress percentage now capped at 100% max
+- Stats sanity check: completed capped at total (handles 49/47 → 47/47 case)
+- Warning log written to RALPH_LOG_FILE when stats are inconsistent
+- Fixed cost box right-side alignment using consistent BOX_INNER_WIDTH=61
+- Replaced complex padding formula with simpler `(BOX_INNER_WIDTH - display_width)`
+
+Files modified:
+- /Users/etanheyman/Desktop/Gits/ralphtools/ralph.zsh
+  - `_ralph_progress_bar()`: Added `(( percent > 100 )) && percent=100`
+  - `_ralph_draw_progress_line()`: Added sanity check for completed > total
+  - `_ralph_show_prd_json()`: Added sanity check for completed > total
+  - Multiple box drawing sections: Fixed padding formula to use consistent BOX_INNER_WIDTH
+
+### Learnings
+- Box drawing: 65-char wide box = 61-char inner content (between `│  ` and `│`)
+- Padding formula should be `(BOX_INNER_WIDTH - display_width)` not complex subtraction
+- Always cap percentages defensively even if input should be valid
+- Log warnings for data inconsistencies to help debug root causes

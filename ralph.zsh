@@ -305,8 +305,9 @@ _ralph_progress_bar() {
   (( current < 0 )) && current=0
   (( current > total )) && current=$total
 
-  # Calculate percentage and filled blocks
+  # Calculate percentage and filled blocks (cap at 100%)
   local percent=$((current * 100 / total))
+  (( percent > 100 )) && percent=100
   local filled=$((current * width / total))
   local empty=$((width - filled))
 
@@ -680,12 +681,19 @@ _ralph_show_iteration_status() {
   local elapsed=$((now - start_time))
   local elapsed_str=$(_ralph_format_elapsed $elapsed)
 
-  # Get stats
+  # Get stats with sanity check (completed should never exceed total)
   local completed=$(jq -r '.stats.completed // 0' "$json_dir/index.json" 2>/dev/null)
   local total=$(jq -r '.stats.total // 0' "$json_dir/index.json" 2>/dev/null)
   local pending=$(jq -r '.stats.pending // 0' "$json_dir/index.json" 2>/dev/null)
+  # Sanity check: cap completed at total (handles 49/47 → 100% case)
+  (( completed > total )) && {
+    echo "[WARN] Stats inconsistent: completed ($completed) > total ($total)" >> "${RALPH_LOG_FILE:-/tmp/ralph.log}"
+    completed=$total
+  }
   local percent=0
   [[ "$total" -gt 0 ]] && percent=$((completed * 100 / total))
+  # Cap percentage at 100% (defensive guard)
+  (( percent > 100 )) && percent=100
 
   # Get cumulative cost
   local cost=$(jq -r '.totals.cost // 0' "$RALPH_COSTS_FILE" 2>/dev/null | xargs printf "%.2f")
@@ -708,19 +716,21 @@ _ralph_show_iteration_status() {
     echo -e "── ${progress_bar} ${completed}/${total} (${percent}%) │ ⏱ ${elapsed_str} │ 💰 ${colored_cost} ──"
   else
     # Normal: 4-5 lines with full info
+    # Box is 65 chars wide, inner content area is 61 chars (between │  and │)
+    local BOX_INNER_WIDTH=61
     echo ""
     echo "┌───────────────────────────────────────────────────────────────┐"
     local progress_str="${progress_bar} ${completed}/${total} (${percent}%)"
     local progress_width=$(_ralph_display_width "$progress_str")
-    local progress_padding=$((35 - (progress_width - ${#progress_str})))
+    local progress_padding=$((BOX_INNER_WIDTH - progress_width))
     echo -e "│  ${progress_str}$(printf '%*s' $progress_padding '')│"
     local story_model_str="📖 ${colored_story} │ 🧠 ${colored_model} │ 🔄 ${iteration}/${max_iter}"
     local story_model_width=$(_ralph_display_width "$story_model_str")
-    local story_model_padding=$((30 - (story_model_width - ${#story_model_str})))
+    local story_model_padding=$((BOX_INNER_WIDTH - story_model_width))
     echo -e "│  ${story_model_str}$(printf '%*s' $story_model_padding '')│"
     local elapsed_cost_str="⏱ ${elapsed_str} │ 💰 ${colored_cost}"
     local elapsed_cost_width=$(_ralph_display_width "$elapsed_cost_str")
-    local elapsed_cost_padding=$((41 - (elapsed_cost_width - ${#elapsed_cost_str})))
+    local elapsed_cost_padding=$((BOX_INNER_WIDTH - elapsed_cost_width))
     echo -e "│  ${elapsed_cost_str}$(printf '%*s' $elapsed_cost_padding '')│"
 
     # Show keybind hints if gum available
@@ -731,7 +741,7 @@ _ralph_show_iteration_status() {
       [[ "$pause_enabled" == "true" ]] && hints+="✓ " || hints+="  "
       hints+="[s]kip [q]uit"
       local hints_width=$(_ralph_display_width "$hints")
-      local hints_padding=$((42 - (hints_width - ${#hints})))
+      local hints_padding=$((BOX_INNER_WIDTH - hints_width))
       echo -e "│  ${RALPH_COLOR_GRAY}${hints}${RALPH_COLOR_RESET}$(printf '%*s' $hints_padding '')│"
     fi
     echo "└───────────────────────────────────────────────────────────────┘"
@@ -3214,14 +3224,16 @@ After completing task, check PRD state:
       if [[ "$compact_mode" == "true" ]]; then
         echo "── 📋 ${remaining} remaining │ ⏳ ${SLEEP}s ──"
       else
+        # Box is 65 chars wide, inner content area is 61 chars
+        local BOX_INNER_WIDTH=61
         echo "┌───────────────────────────────────────────────────────────────┐"
         local remaining_str="📋 Remaining: $remaining"
         local remaining_width=$(_ralph_display_width "$remaining_str")
-        local remaining_padding=$((46 - (remaining_width - ${#remaining_str})))
+        local remaining_padding=$((BOX_INNER_WIDTH - remaining_width))
         echo "│  ${remaining_str}$(printf '%*s' $remaining_padding '')│"
         local pause_str="⏳ Pausing ${SLEEP}s before next iteration..."
         local pause_width=$(_ralph_display_width "$pause_str")
-        local pause_padding=$((35 - (pause_width - ${#pause_str})))
+        local pause_padding=$((BOX_INNER_WIDTH - pause_width))
         echo "│  ${pause_str}$(printf '%*s' $pause_padding '')│"
         echo "└───────────────────────────────────────────────────────────────┘"
       fi
@@ -3280,25 +3292,29 @@ After completing task, check PRD state:
     echo ""
     echo -e "⚠️  $(_ralph_warning "MAX ITERATIONS") ($MAX) │ ${final_remaining} remaining │ $(_ralph_color_cost "$total_cost")"
   else
-    # Normal mode: full box
+    # Normal mode: full box (65 chars wide, inner content area is 61 chars)
+    local BOX_INNER_WIDTH=61
     echo ""
     echo -e "${RALPH_COLOR_YELLOW}╔═══════════════════════════════════════════════════════════════╗${RALPH_COLOR_RESET}"
     local max_iter_str=$(_ralph_warning "REACHED MAX ITERATIONS")
-    local max_iter_width=$(_ralph_display_width "$max_iter_str")
-    local max_iter_padding=$((37 - (max_iter_width - ${#max_iter_str})))
-    echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  ⚠️  ${max_iter_str} ($(_ralph_bold "$MAX"))$(printf '%*s' $max_iter_padding '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
+    local max_iter_label="⚠️  ${max_iter_str} ($(_ralph_bold "$MAX"))"
+    local max_iter_width=$(_ralph_display_width "$max_iter_label")
+    local max_iter_padding=$((BOX_INNER_WIDTH - max_iter_width))
+    echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  ${max_iter_label}$(printf '%*s' $max_iter_padding '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
     local remaining_str="📋 Remaining: $final_remaining"
     local remaining_width=$(_ralph_display_width "$remaining_str")
-    local remaining_padding=$((47 - (remaining_width - ${#remaining_str})))
+    local remaining_padding=$((BOX_INNER_WIDTH - remaining_width))
     echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  ${remaining_str}$(printf '%*s' $remaining_padding '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
     # Show story progress bar (JSON mode only)
     if [[ "$use_json_mode" == "true" ]]; then
       local final_completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
       local final_total=$(jq -r '.stats.total // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
+      # Sanity check: cap completed at total
+      (( final_completed > final_total )) && final_completed=$final_total
       local final_story_bar=$(_ralph_story_progress "$final_completed" "$final_total")
       local story_str="📚 Stories:  ${final_story_bar}"
       local story_width=$(_ralph_display_width "$story_str")
-      local story_padding=$((34 - (story_width - ${#story_str})))
+      local story_padding=$((BOX_INNER_WIDTH - story_width))
       echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  ${story_str}$(printf '%*s' $story_padding '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
     fi
     echo -e "${RALPH_COLOR_YELLOW}╚═══════════════════════════════════════════════════════════════╝${RALPH_COLOR_RESET}"
@@ -4336,8 +4352,15 @@ _ralph_show_prd_json() {
   local blocked=$(jq -r '.stats.blocked // 0' "$index_file" 2>/dev/null)
   local next_story=$(jq -r '.nextStory // "none"' "$index_file" 2>/dev/null)
 
+  # Sanity check: cap completed at total (handles inconsistent stats)
+  (( done > total )) && {
+    echo "[WARN] Stats inconsistent: completed ($done) > total ($total)" >> "${RALPH_LOG_FILE:-/tmp/ralph.log}"
+    done=$total
+  }
   local percent=0
   [[ "$total" -gt 0 ]] && percent=$((done * 100 / total))
+  # Cap percentage at 100% (defensive guard)
+  (( percent > 100 )) && percent=100
 
   # Progress bar (30 chars)
   local bar_filled=$((percent * 30 / 100))

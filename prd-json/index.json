@@ -3,11 +3,11 @@
   "generatedAt": "2026-01-23T15:00:00Z",
   "stats": {
     "total": 13,
-    "completed": 6,
-    "pending": 5,
+    "completed": 7,
+    "pending": 4,
     "blocked": 2
   },
-  "nextStory": "US-039",
+  "nextStory": "US-040",
   "storyOrder": [
     "US-032",
     "US-033",
@@ -24,7 +24,6 @@
     "V-008"
   ],
   "pending": [
-    "US-039",
     "US-040",
     "US-041",
     "US-042",
@@ -36,64 +35,45 @@
   ],
   "newStories": [
     {
-      "id": "US-043",
-      "title": "Guided ntfy setup via Gum + Claude notify config",
-      "description": "Ralph should guide users through ntfy setup via Gum interactive prompts, then create /tmp/.claude_notify_config_<project>.json on startup so Claude's notify_stop.sh hook works. Full end-to-end: install ntfy app → subscribe to topic → test notification → enable for Ralph + Claude.",
+      "id": "AUDIT-002",
+      "title": "Design clarc architecture and stories",
+      "description": "Ralph Opus designs the full clarc monorepo architecture: packages structure, clarc setup/new wizards, 1Password backup/sync, skill standardization, CLAUDE.md layering. Output: comprehensive PRD with 10-15 stories covering the full vision.",
+      "model": "opus",
       "acceptanceCriteria": [
         {
-          "text": "ralph-setup shows 'Notifications' section with gum choose",
+          "text": "Define clarc monorepo package structure (ralph, launcher, skills, hooks, etc.)",
           "checked": false
         },
         {
-          "text": "If ntfy not configured: guide user through setup steps",
+          "text": "Design clarc setup wizard flow with all configuration options",
           "checked": false
         },
         {
-          "text": "Step 1: gum confirm 'Install ntfy app?' with link to app store",
+          "text": "Design clarc new wizard with project-type-specific questions",
           "checked": false
         },
         {
-          "text": "Step 2: gum input for topic name (default: etans-<project>)",
+          "text": "Design 1Password auto-sync: new keys/MCPs trigger backup",
           "checked": false
         },
         {
-          "text": "Step 3: Show 'Subscribe to topic X in ntfy app' instruction",
+          "text": "Design CLAUDE.md layering: global → tech-template → project",
           "checked": false
         },
         {
-          "text": "Step 4: gum confirm 'Send test notification?' then curl to ntfy",
+          "text": "Design skill standardization: structure, testing, templates",
           "checked": false
         },
         {
-          "text": "Step 5: gum confirm 'Did you receive the test?' - if no, troubleshoot",
+          "text": "Design local-first + iCloud archive + 1Password backup strategy",
           "checked": false
         },
         {
-          "text": "Store topic in config.json under notifications.ntfyTopic",
+          "text": "Output 10-15 stories to prd-json/update.json covering full implementation",
           "checked": false
         },
         {
-          "text": "On ralph() start, create /tmp/.claude_notify_config_<project>.json",
-          "checked": false
-        },
-        {
-          "text": "Config includes: name, topic, quiet, verbose, cwd",
-          "checked": false
-        },
-        {
-          "text": "On ralph() exit (trap), clean up the config file",
-          "checked": false
-        },
-        {
-          "text": "Add ralph-notify-test command to re-send test notification",
-          "checked": false
-        },
-        {
-          "text": "Document full ntfy flow in docs/notifications.md",
-          "checked": false
-        },
-        {
-          "text": "Typecheck passes (zsh -n ralph.zsh)",
+          "text": "Each story has clear acceptance criteria",
           "checked": false
         }
       ],
@@ -101,48 +81,81 @@
       "blockedBy": null
     },
     {
-      "id": "US-044",
-      "title": "Cache 1Password secrets for 24 hours",
-      "description": "Currently 'op run --env-file' is called every iteration, consuming 1Password API quota (1000 calls/day). Instead, cache resolved secrets locally for 24 hours. First Ralph run of the day fetches secrets, subsequent runs use cache. Cache stored securely in ~/.config/ralph/secrets-cache/ with 600 permissions.",
+      "id": "US-045",
+      "title": "Skill standardization and testing framework",
+      "description": "Skills need consistent structure and tests. Create a skill template, testing framework, and migrate existing skills to standard format. Remove duplicate slash commands - skills are the source of truth.",
       "acceptanceCriteria": [
         {
-          "text": "Create ~/.config/ralph/secrets-cache/<project>.env with 600 permissions",
+          "text": "Define standard skill structure: SKILL.md, workflows/, scripts/",
           "checked": false
         },
         {
-          "text": "Cache file includes timestamp for TTL checking",
+          "text": "Create skill template generator: clarc skill new <name>",
           "checked": false
         },
         {
-          "text": "If cache exists and < 24h old, use cached secrets (no API call)",
+          "text": "Create skill testing framework (validate structure, test workflows)",
           "checked": false
         },
         {
-          "text": "If cache missing or expired, fetch via 'op run' and update cache",
+          "text": "Audit existing skills for duplicates with ~/.claude/commands/",
           "checked": false
         },
         {
-          "text": "Add --refresh-secrets flag to force re-fetch",
+          "text": "Remove redundant slash commands (skills are source of truth)",
           "checked": false
         },
         {
-          "text": "Cache is per-project (different secrets per repo)",
+          "text": "Add skill tests to pre-commit hook",
           "checked": false
         },
         {
-          "text": "On 'op' auth failure, invalidate cache and re-prompt",
+          "text": "Document skill standards in docs/skills.md",
           "checked": false
         },
         {
-          "text": "Document cache location and TTL in docs/configuration.md",
+          "text": "Typecheck passes",
+          "checked": false
+        }
+      ],
+      "passes": false,
+      "blockedBy": null
+    },
+    {
+      "id": "US-046",
+      "title": "Auto-sync config changes to 1Password",
+      "description": "When a new MCP, key, or config is added locally, prompt to sync to 1Password backup. Add this behavior to global CLAUDE.md so all Claude instances know to do it.",
+      "acceptanceCriteria": [
+        {
+          "text": "Add 1Password sync rule to global ~/.claude/CLAUDE.md",
           "checked": false
         },
         {
-          "text": "Add ralph-clear-secrets command to manually invalidate cache",
+          "text": "Rule: After adding new MCP/key/config, offer to backup to 1Password",
           "checked": false
         },
         {
-          "text": "Typecheck passes (zsh -n ralph.zsh)",
+          "text": "Create op://clarc/config-backup vault item structure",
+          "checked": false
+        },
+        {
+          "text": "clarc backup command: push local configs to 1Password",
+          "checked": false
+        },
+        {
+          "text": "clarc restore command: pull configs from 1Password to local",
+          "checked": false
+        },
+        {
+          "text": "Detect config changes and prompt user to sync",
+          "checked": false
+        },
+        {
+          "text": "Document backup/restore flow in docs/",
+          "checked": false
+        },
+        {
+          "text": "Typecheck passes",
           "checked": false
         }
       ],
