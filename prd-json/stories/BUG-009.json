@@ -1,0 +1,37 @@
+{
+  "id": "BUG-009",
+  "title": "update.json should auto-convert string criteria to object format",
+  "description": "When processing update.json, if acceptanceCriteria contains strings instead of {text, checked} objects, auto-convert them. This prevents format mismatch that breaks ralph-status and live updates.",
+  "type": "bug",
+  "priority": "high",
+  "storyPoints": 2,
+  "status": "completed",
+  "passes": true,
+  "acceptanceCriteria": [
+    {
+      "text": "In _ralph_apply_update_queue(), detect if criteria are strings",
+      "checked": true
+    },
+    {
+      "text": "Auto-convert string criteria to {text: string, checked: false} format",
+      "checked": true
+    },
+    {
+      "text": "Preserve existing object criteria as-is",
+      "checked": true
+    },
+    {
+      "text": "ralph-status shows correct criteria count after conversion",
+      "checked": true
+    },
+    {
+      "text": "Live progress bar updates work with converted criteria",
+      "checked": true
+    },
+    {
+      "text": "Add test case in tests/test-ralph.zsh for criteria conversion",
+      "checked": true
+    }
+  ],
+  "dependencies": []
+}

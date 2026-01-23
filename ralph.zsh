@@ -2137,6 +2137,26 @@ _ralph_json_complete_story() {
   fi
 }
 
+# Convert acceptanceCriteria from string array to object array format
+# Input: JSON story via stdin
+# Output: JSON story with criteria converted to {text, checked} objects
+_ralph_normalize_criteria() {
+  jq '
+    if .acceptanceCriteria then
+      .acceptanceCriteria = [
+        .acceptanceCriteria[] |
+        if type == "string" then
+          { text: ., checked: false }
+        else
+          .
+        end
+      ]
+    else
+      .
+    end
+  '
+}
+
 # Apply queued updates from update.json (allows external processes to queue changes)
 # Returns 0 if updates were applied, 1 if no updates
 # Sets RALPH_UPDATES_APPLIED to the count of new stories added
@@ -2163,8 +2183,8 @@ _ralph_apply_update_queue() {
       local story_id=$(echo "$story" | jq -r '.id')
       local story_file="$stories_dir/${story_id}.json"
 
-      # Create the story file
-      echo "$story" | jq '.' > "$story_file"
+      # Create the story file (normalize string criteria to object format)
+      echo "$story" | _ralph_normalize_criteria > "$story_file"
 
       # Add to pending array and storyOrder in index.json
       jq --arg id "$story_id" '
@@ -2187,8 +2207,8 @@ _ralph_apply_update_queue() {
 
       [[ -f "$story_file" ]] || continue
 
-      # Merge the update into the existing story file
-      jq -s '.[0] * .[1]' "$story_file" <(echo "$update") > "$tmp_file" && mv "$tmp_file" "$story_file"
+      # Merge the update into the existing story file (normalize string criteria to object format)
+      jq -s '.[0] * .[1]' "$story_file" <(echo "$update") | _ralph_normalize_criteria > "$tmp_file" && mv "$tmp_file" "$story_file"
       update_stories_count=$((update_stories_count + 1))
     done
     # Re-count after the while loop (subshell isolation)

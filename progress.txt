@@ -720,3 +720,38 @@ Based on the skill audit report from US-052, created stories in update.json to f
 - Stories should specify exact files to create, not just general goals
 - Reference pattern (github skill) should be explicitly mentioned in acceptance criteria
 - Independence constraint prevents circular dependencies between fix stories
+
+## Iteration 23 - BUG-009: Auto-convert string criteria to object format
+**Status**: COMPLETED
+
+Fixed the bug where `update.json` stories with string acceptance criteria (e.g., `["criterion 1", "criterion 2"]`) broke `ralph-status` and live progress updates, which expect the object format (`[{text: "...", checked: false}]`).
+
+### Solution
+
+Added `_ralph_normalize_criteria()` helper function that:
+- Detects if `acceptanceCriteria` contains strings using `jq type == "string"`
+- Converts strings to `{text: string, checked: false}` objects
+- Preserves existing object criteria as-is (checked value maintained)
+
+Applied normalization in two places:
+1. When creating new story files from `newStories` array (line 2187)
+2. When merging updates from `updateStories` array (line 2211)
+
+### Files Modified
+- `/Users/etanheyman/Desktop/Gits/ralphtools/ralph.zsh`
+  - Added `_ralph_normalize_criteria()` function (lines 2140-2158)
+  - Updated story file creation to normalize (line 2187)
+  - Updated story merge to normalize (line 2211)
+- `/Users/etanheyman/Desktop/Gits/ralphtools/tests/test-ralph.zsh`
+  - Added `test_update_queue_converts_string_criteria()` test
+
+### Test Added
+New test verifies:
+- String criteria are converted to object format
+- Mixed criteria (strings + objects) work correctly
+- Existing object criteria preserve their `checked` state
+
+### Learnings
+- jq `type` function returns "string" or "object" for distinguishing formats
+- Normalization should happen at ingestion time, not display time
+- Using a helper function keeps the main logic clean and testable

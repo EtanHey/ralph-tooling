@@ -1266,6 +1266,75 @@ EOF
   test_pass
 }
 
+# Test: update.json string criteria auto-converted to object format
+test_update_queue_converts_string_criteria() {
+  test_start "update queue converts string criteria to object format"
+  _setup_test_fixtures
+
+  # Create PRD structure
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 0, "completed": 0, "pending": 0, "blocked": 0 },
+  "storyOrder": [],
+  "pending": [],
+  "blocked": [],
+  "nextStory": null
+}
+EOF
+
+  # Create update.json with string criteria (the problematic format)
+  cat > "$TEST_TMP_DIR/prd-json/update.json" << 'EOF'
+{
+  "newStories": [
+    {
+      "id": "US-TEST-001",
+      "title": "Test story with string criteria",
+      "acceptanceCriteria": [
+        "First criterion as string",
+        "Second criterion as string"
+      ]
+    },
+    {
+      "id": "US-TEST-002",
+      "title": "Test story with mixed criteria",
+      "acceptanceCriteria": [
+        "String criterion",
+        { "text": "Already object", "checked": true }
+      ]
+    }
+  ]
+}
+EOF
+
+  # Apply the update queue
+  _ralph_apply_update_queue "$TEST_TMP_DIR/prd-json"
+
+  # Verify US-TEST-001 criteria were converted to object format
+  local criteria_type=$(jq '.acceptanceCriteria[0] | type' "$TEST_TMP_DIR/prd-json/stories/US-TEST-001.json")
+  assert_equals '"object"' "$criteria_type" "first criterion should be object type" || { _teardown_test_fixtures; return; }
+
+  local first_text=$(jq -r '.acceptanceCriteria[0].text' "$TEST_TMP_DIR/prd-json/stories/US-TEST-001.json")
+  assert_equals "First criterion as string" "$first_text" "first criterion text should be preserved" || { _teardown_test_fixtures; return; }
+
+  local first_checked=$(jq '.acceptanceCriteria[0].checked' "$TEST_TMP_DIR/prd-json/stories/US-TEST-001.json")
+  assert_equals "false" "$first_checked" "first criterion checked should be false" || { _teardown_test_fixtures; return; }
+
+  # Verify US-TEST-002 mixed criteria - string was converted, object was preserved
+  local mixed_first_type=$(jq '.acceptanceCriteria[0] | type' "$TEST_TMP_DIR/prd-json/stories/US-TEST-002.json")
+  assert_equals '"object"' "$mixed_first_type" "mixed first criterion should be object type" || { _teardown_test_fixtures; return; }
+
+  local mixed_second_checked=$(jq '.acceptanceCriteria[1].checked' "$TEST_TMP_DIR/prd-json/stories/US-TEST-002.json")
+  assert_equals "true" "$mixed_second_checked" "existing object criterion should preserve checked=true" || { _teardown_test_fixtures; return; }
+
+  # Count criteria to verify all were processed
+  local criteria_count=$(jq '.acceptanceCriteria | length' "$TEST_TMP_DIR/prd-json/stories/US-TEST-001.json")
+  assert_equals "2" "$criteria_count" "should have 2 criteria" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
 # ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
