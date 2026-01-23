@@ -271,3 +271,20 @@
 - All 7 acceptance criteria completed
 - Updated stats: completed=17, pending=12, blocked=1
 ---
+
+## Iteration 19 - BUG-002 Handle 'No messages returned' Claude CLI error
+- Model: opus
+- Implemented specific handling for the 'No messages returned' Claude CLI error:
+  1. ✓ Added detection for 'No messages returned' in claude output using grep
+  2. ✓ Error logged to /tmp/ralph_no_messages_YYYYMMDD_HHMMSS.log with timestamp, iteration, story, model, session ID
+  3. ✓ 30 second cooldown before retry (vs 15s for general errors)
+  4. ✓ Fresh session ID generated on each retry (already in loop, continues to next iteration)
+  5. ✓ Max 3 retries specifically for this error type (separate counter: no_messages_retry_count)
+  6. ✓ If still failing after 3 retries, story is skipped and Ralph continues to next
+  7. ✓ ntfy notification sent on persistent failure with story info and cost
+  8. ✓ Typecheck passes (zsh -n ralph.zsh)
+- Added no_messages_retry_count and no_messages_max_retries variables
+- Specific handler runs before general error handler to prioritize this error type
+- All 8 acceptance criteria completed
+- Updated stats: completed=18, pending=13, blocked=1
+---

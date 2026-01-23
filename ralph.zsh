@@ -1551,6 +1551,8 @@ function ralph() {
     # Retry logic for transient API errors like "No messages returned"
     local max_retries=5
     local retry_count=0
+    local no_messages_retry_count=0
+    local no_messages_max_retries=3
     local claude_success=false
 
     while [[ "$retry_count" -lt "$max_retries" ]]; do
@@ -1870,6 +1872,71 @@ After completing task, check PRD state:
       # Also treat non-zero exit, empty exit code, or empty output as error
       if [[ -z "$exit_code" ]] || [[ "$exit_code" -ne 0 ]] || [[ ! -s "$RALPH_TMP" ]]; then
         has_error=true
+      fi
+
+      # SPECIFIC HANDLING: "No messages returned" Claude CLI error
+      # This error requires longer cooldown (30s) and has separate retry limit (3)
+      local is_no_messages_error=false
+      if [[ -f "$RALPH_TMP" ]]; then
+        if grep -qiE "No messages returned" "$RALPH_TMP" 2>/dev/null; then
+          is_no_messages_error=true
+        fi
+      fi
+
+      if $is_no_messages_error; then
+        no_messages_retry_count=$((no_messages_retry_count + 1))
+
+        # Log error with timestamp to dedicated error log
+        local no_msg_error_log="/tmp/ralph_no_messages_$(date +%Y%m%d_%H%M%S).log"
+        {
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "RALPH 'No messages returned' ERROR - $(date)"
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "Iteration: $i"
+          echo "Story: $current_story"
+          echo "Model: $active_model"
+          echo "Session ID: $iteration_session_id"
+          echo "Retry count (this error): $no_messages_retry_count / $no_messages_max_retries"
+          echo "Exit code: $exit_code"
+          echo ""
+          echo "--- Last 30 lines of output ---"
+          tail -30 "$RALPH_TMP" 2>/dev/null
+          echo ""
+          echo "═══════════════════════════════════════════════════════════════"
+        } > "$no_msg_error_log"
+
+        if [[ "$no_messages_retry_count" -lt "$no_messages_max_retries" ]]; then
+          echo ""
+          echo "  ⚠️  'No messages returned' error detected - Retry $no_messages_retry_count/$no_messages_max_retries"
+          echo "  📝 Error log: $no_msg_error_log"
+          echo "  🔄 Generating fresh session ID for retry..."
+          echo "  ⏳ Waiting 30 seconds (API cooldown)..."
+          sleep 30
+          # Fresh session ID will be generated at the start of the next loop iteration
+          continue
+        else
+          # Max retries exhausted for this specific error - skip this story
+          echo ""
+          echo "  ❌ 'No messages returned' persisted after $no_messages_max_retries retries."
+          echo "  📝 Full error log: $no_msg_error_log"
+          echo "  ⏭️  Skipping story '$current_story' and continuing to next..."
+
+          # Send ntfy notification for persistent failure
+          if $notify_enabled; then
+            local skip_stats
+            if [[ "$use_json_mode" == "true" ]]; then
+              skip_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR")
+            else
+              skip_stats="? ?"
+            fi
+            local skip_cost=$(jq -r '.totals.cost // 0' "$RALPH_COSTS_FILE" 2>/dev/null | xargs printf "%.2f")
+            _ralph_ntfy "$ntfy_topic" "error" "$current_story" "$routed_model" "$i" "$skip_stats" "$skip_cost"
+          fi
+
+          # Mark as failed but continue to next iteration (next story)
+          break
+        fi
       fi
 
       if $has_error; then
