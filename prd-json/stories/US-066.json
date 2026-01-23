@@ -5,12 +5,13 @@
   "type": "feature",
   "priority": "critical",
   "storyPoints": 1,
-  "status": "pending",
+  "status": "completed",
+  "passes": true,
   "acceptanceCriteria": [
-    {"text": "Add to global ~/.claude/CLAUDE.md: 'When adding PRD stories or working with Ralph, use /prd skill'", "checked": false},
-    {"text": "Add to ralphtools/CLAUDE.md: 'For PRD story format and management, invoke /prd skill'", "checked": false},
-    {"text": "Verify /prd skill contains story format documentation (criteria objects, file locations, etc.)", "checked": false},
-    {"text": "If /prd skill missing format docs, add them to the skill", "checked": false}
+    {"text": "Add to global ~/.claude/CLAUDE.md: 'When adding PRD stories or working with Ralph, use /prd skill'", "checked": true},
+    {"text": "Add to ralphtools/CLAUDE.md: 'For PRD story format and management, invoke /prd skill'", "checked": true},
+    {"text": "Verify /prd skill contains story format documentation (criteria objects, file locations, etc.)", "checked": true},
+    {"text": "If /prd skill missing format docs, add them to the skill", "checked": true}
   ],
   "dependencies": []
 }

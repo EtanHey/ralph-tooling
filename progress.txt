@@ -846,3 +846,32 @@ Created a comprehensive test suite that validates all skills follow the correct 
 - YAML frontmatter in workflow files means title detection needs to look for `#` after `---` blocks
 - Testing skill structure at commit time ensures no regressions
 - Separate test files for different concerns keeps tests organized
+
+## Iteration 26 - US-066: Add PRD Skill Reference to CLAUDE.md Files
+**Status**: COMPLETED
+
+Updated CLAUDE.md files to point Claude to the `/prd` skill for PRD and Ralph-related work.
+
+### Changes Made
+
+**~/.claude/CLAUDE.md (global):**
+- Added "When Working with PRDs or Ralph" section pointing to `/prd` skill
+- Lists key use cases: creating PRDs, adding stories, story format, update.json pattern
+
+**ralphtools/CLAUDE.md:**
+- Added `/prd` skill reference under Ralph-specific rules
+- Documents: story JSON structure, file locations, update.json pattern
+
+### Verification of /prd Skill
+The skill already contains comprehensive documentation:
+- Story JSON template with `acceptanceCriteria: [{text, checked}]` format
+- File locations: `prd-json/index.json`, `prd-json/stories/*.json`
+- update.json pattern for safe story additions
+- AGENTS.md template with story ID rules
+
+No changes needed to the skill itself - documentation was already complete.
+
+### Learnings
+- CLAUDE.md should point to skills rather than duplicate their documentation
+- Skills are the authoritative source; CLAUDE.md provides discovery/routing
+- The `/prd` skill is well-documented with templates for all PRD structures

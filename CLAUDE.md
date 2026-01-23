@@ -25,6 +25,11 @@ When running as Ralph (PRD execution mode):
 4. **Focus on story** - Current acceptance criteria is your only goal
 5. **Update progress** - Mark criteria checked, update index.json
 
+**For PRD story format and management, invoke `/prd` skill** - it has authoritative docs on:
+- Story JSON structure (criteria objects with `text`/`checked` fields)
+- File locations (`prd-json/index.json`, `prd-json/stories/*.json`)
+- The `update.json` pattern for adding stories safely
+
 ---
 
 ## 💬 INTERACTIVE CLAUDE RULES
