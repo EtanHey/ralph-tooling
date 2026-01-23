@@ -94,14 +94,54 @@ _ralph_show_changelog_version() {
     # Trim leading/trailing whitespace
     change="${change#"${change%%[![:space:]]*}"}"
     change="${change%"${change##*[![:space:]]}"}"
-    # Print with formatting
-    printf "│  • %-57s │\n" "$change"
+    # Print with formatting using display width
+    local display_width=$(_ralph_display_width "$change")
+    local padding=$((57 - (display_width - ${#change})))
+    printf "│  • %-${padding}s │\n" "$change"
     # Remove processed change from string
     [[ "$changes" == *"|"* ]] && changes="${changes#*\|}" || changes=""
   done
 
   echo "└─────────────────────────────────────────────────────────────┘"
   echo ""
+}
+
+# Helper function to calculate display width of a string
+# Counts emojis as width 2, regular ASCII as width 1
+# Usage: _ralph_display_width "string with emojis 🚀" → returns display width
+_ralph_display_width() {
+  local str="$1"
+  local width=${#str}  # Start with basic character count
+
+  # Count known emojis that are width 2 (display width extends)
+  # Each emoji found adds 1 to width (since it's counted as 1 in ${#str} but displayed as 2)
+  width=$((width + $(echo "$str" | grep -o "🚀" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "📋" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🆕" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "💰" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "⏱" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "✓" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🔄" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "📚" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "☐" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "💵" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🏁" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🎯" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "✨" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "⚠" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🆘" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🔴" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🟢" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🟡" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "⚡" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "❌" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "✅" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🛑" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🔥" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🔕" | wc -l)))
+  width=$((width + $(echo "$str" | grep -o "🔔" | wc -l)))
+
+  echo "$width"
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -330,6 +370,56 @@ _ralph_get_story_criteria_progress() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# COLOR SCHEMES
+# ═══════════════════════════════════════════════════════════════════
+
+# Define color schemes as JSON-like structure
+# Each scheme defines colors for: success, error, warning, info, story types (US/V/BUG/TEST/AUDIT), models, costs
+declare -A COLOR_SCHEMES=(
+  [default]='{"success":"32","error":"31","warning":"33","info":"36","US":"34","V":"35","BUG":"31","TEST":"33","AUDIT":"35","opus":"33","sonnet":"36","haiku":"32","cost_low":"32","cost_med":"33","cost_high":"31"}'
+  [dark]='{"success":"92","error":"91","warning":"93","info":"96","US":"94","V":"95","BUG":"91","TEST":"93","AUDIT":"95","opus":"33","sonnet":"96","haiku":"92","cost_low":"92","cost_med":"93","cost_high":"91"}'
+  [light]='{"success":"32","error":"31","warning":"33","info":"36","US":"34","V":"35","BUG":"31","TEST":"33","AUDIT":"35","opus":"33","sonnet":"36","haiku":"32","cost_low":"32","cost_med":"33","cost_high":"31"}'
+  [minimal]='{"success":"32","error":"31","warning":"0","info":"0","US":"0","V":"0","BUG":"0","TEST":"0","AUDIT":"0","opus":"0","sonnet":"0","haiku":"0","cost_low":"32","cost_med":"0","cost_high":"31"}'
+  [none]='{"success":"0","error":"0","warning":"0","info":"0","US":"0","V":"0","BUG":"0","TEST":"0","AUDIT":"0","opus":"0","sonnet":"0","haiku":"0","cost_low":"0","cost_med":"0","cost_high":"0"}'
+)
+
+# Initialize colors from a scheme
+# Usage: _ralph_init_colors "default"
+_ralph_init_colors() {
+  local scheme="${1:-default}"
+  local scheme_json="${COLOR_SCHEMES[$scheme]:-${COLOR_SCHEMES[default]}}"
+
+  # Check NO_COLOR environment variable
+  if [[ -n "$NO_COLOR" ]]; then
+    scheme_json="${COLOR_SCHEMES[none]}"
+  fi
+
+  # Parse JSON-like structure and set color variables
+  # For color code values, prepend \033[ and append m
+  RALPH_COLOR_SUCCESS=$(jq -r '.success' <<< "$scheme_json" 2>/dev/null || echo "32")
+  RALPH_COLOR_ERROR=$(jq -r '.error' <<< "$scheme_json" 2>/dev/null || echo "31")
+  RALPH_COLOR_WARNING=$(jq -r '.warning' <<< "$scheme_json" 2>/dev/null || echo "33")
+  RALPH_COLOR_INFO=$(jq -r '.info' <<< "$scheme_json" 2>/dev/null || echo "36")
+
+  # Update story type colors
+  RALPH_COLOR_BLUE=$(jq -r '.US' <<< "$scheme_json" 2>/dev/null || echo "34") # US
+  RALPH_COLOR_PURPLE=$(jq -r '.V' <<< "$scheme_json" 2>/dev/null || echo "35") # V
+  RALPH_COLOR_RED=$(jq -r '.BUG' <<< "$scheme_json" 2>/dev/null || echo "31") # BUG
+  RALPH_COLOR_YELLOW=$(jq -r '.TEST' <<< "$scheme_json" 2>/dev/null || echo "33") # TEST
+  RALPH_COLOR_MAGENTA=$(jq -r '.AUDIT' <<< "$scheme_json" 2>/dev/null || echo "35") # AUDIT
+
+  # Update model colors
+  RALPH_COLOR_GOLD=$(jq -r '.opus' <<< "$scheme_json" 2>/dev/null || echo "33") # opus
+  RALPH_COLOR_CYAN=$(jq -r '.sonnet' <<< "$scheme_json" 2>/dev/null || echo "36") # sonnet
+  RALPH_COLOR_GREEN=$(jq -r '.haiku' <<< "$scheme_json" 2>/dev/null || echo "32") # haiku
+
+  # Store cost thresholds for dynamic coloring
+  RALPH_COST_COLOR_LOW=$(jq -r '.cost_low' <<< "$scheme_json" 2>/dev/null || echo "32")
+  RALPH_COST_COLOR_MED=$(jq -r '.cost_med' <<< "$scheme_json" 2>/dev/null || echo "33")
+  RALPH_COST_COLOR_HIGH=$(jq -r '.cost_high' <<< "$scheme_json" 2>/dev/null || echo "31")
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # ELAPSED TIME & STATUS HELPERS
 # ═══════════════════════════════════════════════════════════════════
 
@@ -399,9 +489,18 @@ _ralph_show_iteration_status() {
     # Normal: 4-5 lines with full info
     echo ""
     echo "┌───────────────────────────────────────────────────────────────┐"
-    echo -e "│  ${progress_bar} ${completed}/${total} (${percent}%)$(printf '%*s' $((35 - ${#completed} - ${#total} - ${#percent})) '')│"
-    echo -e "│  📖 ${colored_story} │ 🧠 ${colored_model} │ 🔄 ${iteration}/${max_iter}$(printf '%*s' $((30 - ${#story} - ${#model} - ${#iteration} - ${#max_iter})) '')│"
-    echo -e "│  ⏱ ${elapsed_str} │ 💰 ${colored_cost}$(printf '%*s' $((41 - ${#elapsed_str} - ${#cost})) '')│"
+    local progress_str="${progress_bar} ${completed}/${total} (${percent}%)"
+    local progress_width=$(_ralph_display_width "$progress_str")
+    local progress_padding=$((35 - (progress_width - ${#progress_str})))
+    echo -e "│  ${progress_str}$(printf '%*s' $progress_padding '')│"
+    local story_model_str="📖 ${colored_story} │ 🧠 ${colored_model} │ 🔄 ${iteration}/${max_iter}"
+    local story_model_width=$(_ralph_display_width "$story_model_str")
+    local story_model_padding=$((30 - (story_model_width - ${#story_model_str})))
+    echo -e "│  ${story_model_str}$(printf '%*s' $story_model_padding '')│"
+    local elapsed_cost_str="⏱ ${elapsed_str} │ 💰 ${colored_cost}"
+    local elapsed_cost_width=$(_ralph_display_width "$elapsed_cost_str")
+    local elapsed_cost_padding=$((41 - (elapsed_cost_width - ${#elapsed_cost_str})))
+    echo -e "│  ${elapsed_cost_str}$(printf '%*s' $elapsed_cost_padding '')│"
 
     # Show keybind hints if gum available
     if [[ "$has_gum" -eq 0 ]]; then
@@ -410,7 +509,9 @@ _ralph_show_iteration_status() {
       hints+="[p]ause "
       [[ "$pause_enabled" == "true" ]] && hints+="✓ " || hints+="  "
       hints+="[s]kip [q]uit"
-      echo -e "│  ${RALPH_COLOR_GRAY}${hints}${RALPH_COLOR_RESET}$(printf '%*s' $((42 - ${#hints})) '')│"
+      local hints_width=$(_ralph_display_width "$hints")
+      local hints_padding=$((42 - (hints_width - ${#hints})))
+      echo -e "│  ${RALPH_COLOR_GRAY}${hints}${RALPH_COLOR_RESET}$(printf '%*s' $hints_padding '')│"
     fi
     echo "└───────────────────────────────────────────────────────────────┘"
   fi
@@ -838,6 +939,16 @@ _ralph_load_config() {
     RALPH_PARALLEL_VERIFICATION=$(jq -r '.parallelVerification // false' "$RALPH_CONFIG_FILE" 2>/dev/null)
     RALPH_PARALLEL_AGENTS=$(jq -r '.parallelAgents // 2' "$RALPH_CONFIG_FILE" 2>/dev/null)
 
+    # Load color scheme setting
+    RALPH_COLOR_SCHEME=$(jq -r '.colorScheme // "default"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+
+    # Check if custom scheme is provided
+    local custom_scheme=$(jq -r '.customColorScheme // empty' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    if [[ -n "$custom_scheme" && "$custom_scheme" != "null" ]]; then
+      COLOR_SCHEMES[custom]="$custom_scheme"
+      RALPH_COLOR_SCHEME="custom"
+    fi
+
     return 0
   fi
   return 1
@@ -1066,6 +1177,9 @@ _ralph_show_routing() {
 
 # Load config on source
 _ralph_load_config
+
+# Initialize color scheme
+_ralph_init_colors "${RALPH_COLOR_SCHEME:-default}"
 
 # ═══════════════════════════════════════════════════════════════════
 # COST TRACKING
@@ -1882,11 +1996,20 @@ function ralph() {
     echo "╔═══════════════════════════════════════════════════════════════╗"
     echo "║  🚀 RALPH v${RALPH_VERSION}                                         ║"
     echo "╠───────────────────────────────────────────────────────────────╣"
-    echo "║  📂 $(pwd | head -c 55)$(printf '%*s' $((55 - ${#$(pwd)})) '')║"
+    local pwd_str=$(pwd | head -c 55)
+    local pwd_width=$(_ralph_display_width "$pwd_str")
+    local pwd_padding=$((55 - (pwd_width - ${#pwd_str})))
+    echo "║  📂 ${pwd_str}$(printf '%*s' $pwd_padding '')║"
     if [[ -n "$app_mode" ]]; then
-      echo "║  📱 App: $app_mode (branch: $target_branch)$(printf '%*s' $((45 - ${#app_mode} - ${#target_branch})) '')║"
+      local app_str="App: $app_mode (branch: $target_branch)"
+      local app_width=$(_ralph_display_width "$app_str")
+      local app_padding=$((45 - (app_width - ${#app_str})))
+      echo "║  📱 ${app_str}$(printf '%*s' $app_padding '')║"
     fi
-    echo "║  🔄 Max iterations: $MAX$(printf '%*s' $((42 - ${#MAX})) '')║"
+    local max_str="Max iterations: $MAX"
+    local max_width=$(_ralph_display_width "$max_str")
+    local max_padding=$((42 - (max_width - ${#max_str})))
+    echo "║  🔄 ${max_str}$(printf '%*s' $max_padding '')║"
     echo "╚═══════════════════════════════════════════════════════════════╝"
     echo ""
 
@@ -1901,13 +2024,22 @@ function ralph() {
       local pending=$(jq -r '.stats.pending // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
       local completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
       local blocked=$(jq -r '.stats.blocked // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
-      echo "│  📋 Stories: $pending pending │ $completed completed │ $blocked blocked$(printf '%*s' $((27 - ${#pending} - ${#completed} - ${#blocked})) '')│"
+      local status_str="📋 Stories: $pending pending │ $completed completed │ $blocked blocked"
+      local status_width=$(_ralph_display_width "$status_str")
+      local status_padding=$((27 - (status_width - ${#status_str})))
+      echo "│  ${status_str}$(printf '%*s' $status_padding '')│"
     else
       local task_count=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo '?')
-      echo "│  📋 Tasks remaining: $task_count$(printf '%*s' $((38 - ${#task_count})) '')│"
+      local task_str="📋 Tasks remaining: $task_count"
+      local task_width=$(_ralph_display_width "$task_str")
+      local task_padding=$((38 - (task_width - ${#task_str})))
+      echo "│  ${task_str}$(printf '%*s' $task_padding '')│"
     fi
     if $notify_enabled; then
-      echo "│  🔔 Notifications: ON (topic: ${ntfy_topic})$(printf '%*s' $((28 - ${#ntfy_topic})) '')│"
+      local notify_str="🔔 Notifications: ON (topic: ${ntfy_topic})"
+      local notify_width=$(_ralph_display_width "$notify_str")
+      local notify_padding=$((28 - (notify_width - ${#notify_str})))
+      echo "│  ${notify_str}$(printf '%*s' $notify_padding '')│"
     else
       echo "│  🔕 Notifications: OFF                                      │"
     fi
@@ -2525,8 +2657,14 @@ After completing task, check PRD state:
         echo "── 📋 ${remaining} remaining │ ⏳ ${SLEEP}s ──"
       else
         echo "┌───────────────────────────────────────────────────────────────┐"
-        echo "│  📋 Remaining: $remaining$(printf '%*s' $((46 - ${#remaining})) '')│"
-        echo "│  ⏳ Pausing ${SLEEP}s before next iteration...$(printf '%*s' $((35 - ${#SLEEP})) '')│"
+        local remaining_str="📋 Remaining: $remaining"
+        local remaining_width=$(_ralph_display_width "$remaining_str")
+        local remaining_padding=$((46 - (remaining_width - ${#remaining_str})))
+        echo "│  ${remaining_str}$(printf '%*s' $remaining_padding '')│"
+        local pause_str="⏳ Pausing ${SLEEP}s before next iteration..."
+        local pause_width=$(_ralph_display_width "$pause_str")
+        local pause_padding=$((35 - (pause_width - ${#pause_str})))
+        echo "│  ${pause_str}$(printf '%*s' $pause_padding '')│"
         echo "└───────────────────────────────────────────────────────────────┘"
       fi
     fi
@@ -2587,14 +2725,23 @@ After completing task, check PRD state:
     # Normal mode: full box
     echo ""
     echo -e "${RALPH_COLOR_YELLOW}╔═══════════════════════════════════════════════════════════════╗${RALPH_COLOR_RESET}"
-    echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  ⚠️  $(_ralph_warning "REACHED MAX ITERATIONS") ($(_ralph_bold "$MAX"))$(printf '%*s' $((37 - ${#MAX})) '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
-    echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  📋 Remaining: $final_remaining$(printf '%*s' $((47 - ${#final_remaining})) '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
+    local max_iter_str=$(_ralph_warning "REACHED MAX ITERATIONS")
+    local max_iter_width=$(_ralph_display_width "$max_iter_str")
+    local max_iter_padding=$((37 - (max_iter_width - ${#max_iter_str})))
+    echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  ⚠️  ${max_iter_str} ($(_ralph_bold "$MAX"))$(printf '%*s' $max_iter_padding '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
+    local remaining_str="📋 Remaining: $final_remaining"
+    local remaining_width=$(_ralph_display_width "$remaining_str")
+    local remaining_padding=$((47 - (remaining_width - ${#remaining_str})))
+    echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  ${remaining_str}$(printf '%*s' $remaining_padding '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
     # Show story progress bar (JSON mode only)
     if [[ "$use_json_mode" == "true" ]]; then
       local final_completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
       local final_total=$(jq -r '.stats.total // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
       local final_story_bar=$(_ralph_story_progress "$final_completed" "$final_total")
-      echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  📚 Stories:  ${final_story_bar}$(printf '%*s' $((34 - ${#final_completed} - ${#final_total})) '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
+      local story_str="📚 Stories:  ${final_story_bar}"
+      local story_width=$(_ralph_display_width "$story_str")
+      local story_padding=$((34 - (story_width - ${#story_str})))
+      echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  ${story_str}$(printf '%*s' $story_padding '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
     fi
     echo -e "${RALPH_COLOR_YELLOW}╚═══════════════════════════════════════════════════════════════╝${RALPH_COLOR_RESET}"
   fi
@@ -2675,6 +2822,17 @@ function ralph-help() {
   echo "  ralph 50 -G -H        Gemini for main, Haiku for V-*"
   echo "  ralph 50 -K -G        Kiro for main, Gemini for V-*"
   echo "  ralph 50 -G -G        Gemini for all stories"
+  echo ""
+  echo "${GREEN}Color Schemes:${NC}"
+  echo "  Set in config.json via 'colorScheme' field:"
+  echo "  - default  Bright colors (recommended)"
+  echo "  - dark     High-contrast bright colors"
+  echo "  - light    Muted colors for terminals with light backgrounds"
+  echo "  - minimal  Only errors (red) and success (green)"
+  echo "  - none     Disable all colors (for CI/logs)"
+  echo "  - custom   Define custom colors in config.json"
+  echo ""
+  echo "  NO_COLOR env var automatically disables colors"
   echo ""
   echo "${GREEN}JSON Mode:${NC}"
   echo "  Ralph auto-detects prd-json/ folder for JSON mode."
