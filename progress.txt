@@ -265,3 +265,30 @@ Added test suite execution to the pre-commit hook. Tests now run automatically o
 - Tests ensure any config/schema changes don't break functionality
 - Execution time: ~1 second total (35 tests + all checks)
 - `--no-verify` is built-in git feature for bypassing hooks
+
+## Iteration 11 - BUG-003: fswatch background job outputs TTY noise
+**Status**: COMPLETED
+
+Fixed the fswatch background job to stop outputting job control messages like `[4] 73252` and `suspended (tty output)`.
+
+### Root Cause
+When ZSH starts a background job with `(...)&`, it outputs job control messages. Additionally, background processes trying to write to stdout can trigger "suspended (tty output)" messages.
+
+### Solution
+1. Added `setopt LOCAL_OPTIONS NO_MONITOR NO_NOTIFY` before starting the background job
+2. Changed from `(...)&` to `{...} </dev/null >/dev/null 2>&1 &` to detach from TTY
+3. Used ZSH coproc to start fswatch/inotifywait and capture its PID
+4. Stored fswatch PID in `/tmp/ralph_watcher_$$_pid` for precise cleanup
+5. Updated `_ralph_stop_watcher()` to kill both the wrapper shell and the actual fswatch process
+
+### Files Modified
+- `/Users/etanheyman/Desktop/Gits/ralphtools/ralph.zsh`
+  - `_ralph_start_watcher()`: Added TTY detachment, coproc usage, PID file creation
+  - `_ralph_stop_watcher()`: Added PID file-based cleanup for precise process termination
+
+### Learnings
+- `setopt NO_MONITOR NO_NOTIFY` suppresses ZSH job control output
+- `&!` disowns immediately but doesn't capture PID in `$!`; use `& ; disown` instead
+- Pipelines in backgrounded braces need special handling - `coproc` provides cleaner PID capture
+- FIFO writes inside subshells with redirected outer stdout still work because they use explicit file paths
+- When using `disown`, `wait` won't work on the process, so kill and brief sleep is sufficient

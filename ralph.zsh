@@ -414,34 +414,53 @@ _ralph_start_watcher() {
     return 1
   }
 
-  # Create FIFO for communication
+  # Create FIFO for communication and PID file for cleanup
   RALPH_WATCHER_FIFO="/tmp/ralph_watcher_$$_fifo"
+  RALPH_WATCHER_PIDFILE="/tmp/ralph_watcher_$$_pid"
   mkfifo "$RALPH_WATCHER_FIFO" 2>/dev/null || {
     RALPH_LIVE_ENABLED=false
     return 1
   }
 
   # Start watcher in background based on platform
+  # Disable job control to suppress [N] PID and "suspended (tty output)" messages
+  setopt LOCAL_OPTIONS NO_MONITOR NO_NOTIFY
+
+  # Store paths/files for use in subshell
+  local fifo="$RALPH_WATCHER_FIFO"
+  local pidfile="$RALPH_WATCHER_PIDFILE"
+
   if [[ "$watcher_tool" == "fswatch" ]]; then
     # macOS: fswatch with batch mode, watch stories dir and index.json
-    (
-      fswatch -0 --batch-marker=EOF "$stories_dir" "$index_file" 2>/dev/null | while IFS= read -r -d '' file; do
+    # Detach stdin from TTY to prevent "suspended (tty output)" messages
+    # Use process substitution to capture fswatch PID
+    {
+      # Start fswatch and save its PID to file
+      coproc fswatch -0 --batch-marker=EOF "$stories_dir" "$index_file" 2>/dev/null
+      echo $! > "$pidfile"
+      # Read from fswatch's output
+      while IFS= read -r -d '' file <&p; do
         if [[ "$file" == "EOF" ]]; then
           continue
         fi
         # Write changed filename to FIFO (non-blocking)
-        echo "$file" > "$RALPH_WATCHER_FIFO" 2>/dev/null &
+        echo "$file" > "$fifo" 2>/dev/null &
       done
-    ) &
+    } </dev/null >/dev/null 2>&1 &
     RALPH_WATCHER_PID=$!
+    disown $RALPH_WATCHER_PID 2>/dev/null
   else
     # Linux: inotifywait
-    (
-      inotifywait -m -e modify,create "$stories_dir" "$index_file" --format '%w%f' 2>/dev/null | while read -r file; do
-        echo "$file" > "$RALPH_WATCHER_FIFO" 2>/dev/null &
+    # Detach stdin from TTY to prevent "suspended (tty output)" messages
+    {
+      coproc inotifywait -m -e modify,create "$stories_dir" "$index_file" --format '%w%f' 2>/dev/null
+      echo $! > "$pidfile"
+      while read -r file <&p; do
+        echo "$file" > "$fifo" 2>/dev/null &
       done
-    ) &
+    } </dev/null >/dev/null 2>&1 &
     RALPH_WATCHER_PID=$!
+    disown $RALPH_WATCHER_PID 2>/dev/null
   fi
 
   return 0
@@ -449,9 +468,25 @@ _ralph_start_watcher() {
 
 # Stop file watcher and cleanup
 _ralph_stop_watcher() {
+  # Suppress job control messages during cleanup
+  setopt LOCAL_OPTIONS NO_MONITOR NO_NOTIFY
+
+  # Kill the actual fswatch/inotifywait process using saved PID
+  if [[ -n "$RALPH_WATCHER_PIDFILE" && -f "$RALPH_WATCHER_PIDFILE" ]]; then
+    local watcher_pid
+    watcher_pid=$(<"$RALPH_WATCHER_PIDFILE")
+    if [[ -n "$watcher_pid" ]]; then
+      kill "$watcher_pid" 2>/dev/null
+    fi
+    rm -f "$RALPH_WATCHER_PIDFILE"
+    RALPH_WATCHER_PIDFILE=""
+  fi
+
+  # Kill the wrapper shell
   if [[ -n "$RALPH_WATCHER_PID" ]]; then
     kill "$RALPH_WATCHER_PID" 2>/dev/null
-    wait "$RALPH_WATCHER_PID" 2>/dev/null
+    # Brief wait for cleanup
+    sleep 0.1
     RALPH_WATCHER_PID=""
   fi
 
