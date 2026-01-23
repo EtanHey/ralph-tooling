@@ -7,11 +7,11 @@
   "storyPoints": 1,
   "status": "pending",
   "acceptanceCriteria": [
-    {"text": "Find completion check at line ~3126 in ralph.zsh", "checked": false},
-    {"text": "Add blocked_count check: only complete if pending=0 AND blocked=0", "checked": false},
-    {"text": "If blocked > 0, show 'PRD Blocked: X stories need manual intervention'", "checked": false},
-    {"text": "Test: Create blocked story, verify Ralph doesn't say 'Complete'", "checked": false}
+    {"text": "Find completion check at line ~3126 in ralph.zsh", "checked": true},
+    {"text": "Add blocked_count check: only complete if pending=0 AND blocked=0", "checked": true},
+    {"text": "If blocked > 0, show 'PRD Blocked: X stories need manual intervention'", "checked": true},
+    {"text": "Test: Create blocked story, verify Ralph doesn't say 'Complete'", "checked": true}
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true
 }

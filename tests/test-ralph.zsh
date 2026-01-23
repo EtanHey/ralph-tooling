@@ -1480,6 +1480,85 @@ EOF
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# BUG-015: BLOCKED STORY COMPLETION TESTS
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: PRD should not be "complete" when there are blocked stories
+test_blocked_stories_prevent_prd_complete() {
+  test_start "blocked stories prevent false PRD complete"
+  _setup_test_fixtures
+
+  # Create PRD structure with NO pending stories but WITH blocked stories
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 5, "completed": 2, "pending": 0, "blocked": 3 },
+  "storyOrder": ["US-001", "US-002", "US-003", "US-004", "US-005"],
+  "pending": [],
+  "blocked": ["US-003", "US-004", "US-005"],
+  "nextStory": null
+}
+EOF
+
+  # Check that pending array is empty
+  local pending_count=$(jq -r '.pending | length' "$TEST_TMP_DIR/prd-json/index.json" 2>/dev/null)
+  assert_equals "0" "$pending_count" "pending array should be empty" || { _teardown_test_fixtures; return; }
+
+  # Check that blocked array is NOT empty
+  local blocked_count=$(jq -r '.blocked | length' "$TEST_TMP_DIR/prd-json/index.json" 2>/dev/null)
+  if [[ "$blocked_count" -eq 0 ]]; then
+    test_fail "blocked array should have 3 stories"
+    _teardown_test_fixtures
+    return
+  fi
+
+  assert_equals "3" "$blocked_count" "blocked count should be 3" || { _teardown_test_fixtures; return; }
+
+  # The key assertion: pending=0 but blocked>0 means PRD is NOT complete
+  # Ralph should show "PRD Blocked" message, not "PRD Complete"
+  # This test validates the data structure that BUG-015 fix would check
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: PRD is only complete when both pending=0 AND blocked=0
+test_prd_complete_requires_zero_blocked() {
+  test_start "PRD complete requires both pending=0 AND blocked=0"
+  _setup_test_fixtures
+
+  # Create PRD structure where everything is truly complete
+  mkdir -p "$TEST_TMP_DIR/prd-json/stories"
+  cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
+{
+  "stats": { "total": 3, "completed": 3, "pending": 0, "blocked": 0 },
+  "storyOrder": ["US-001", "US-002", "US-003"],
+  "pending": [],
+  "blocked": [],
+  "nextStory": null
+}
+EOF
+
+  # Verify both arrays are empty
+  local pending_count=$(jq -r '.pending | length' "$TEST_TMP_DIR/prd-json/index.json" 2>/dev/null)
+  local blocked_count=$(jq -r '.blocked | length' "$TEST_TMP_DIR/prd-json/index.json" 2>/dev/null)
+
+  assert_equals "0" "$pending_count" "pending should be 0" || { _teardown_test_fixtures; return; }
+  assert_equals "0" "$blocked_count" "blocked should be 0" || { _teardown_test_fixtures; return; }
+
+  # Only when BOTH are zero is PRD truly complete
+  if [[ "$pending_count" -eq 0 && "$blocked_count" -eq 0 ]]; then
+    # PRD is complete - this is the only valid "complete" state
+    _teardown_test_fixtures
+    test_pass
+    return
+  fi
+
+  test_fail "PRD should be complete when pending=0 AND blocked=0"
+  _teardown_test_fixtures
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 

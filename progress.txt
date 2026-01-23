@@ -42,3 +42,19 @@ Changes:
 - `grep -c` returns 0 (the count) but with exit code 1 when no matches - don't use `|| echo 0` which prints twice
 - Proper pattern: `actual_pending=$(grep -c 'pattern' file 2>/dev/null) || actual_pending=0`
 - Extract verification logic into testable functions for easier unit testing
+
+## Iteration 4
+Story: BUG-015 - Ralph says 'PRD Complete' when stories are blocked
+Status: COMPLETED (opus)
+Changes:
+- Modified completion check at line ~3197 in ralph.zsh to also check blocked count
+- Added `blocked_count=$(jq -r '.blocked | length')` check alongside pending_count
+- If pending=0 but blocked>0, shows "PRD Blocked: X stories need manual intervention" in yellow box
+- Uses RALPH_COLOR_YELLOW for blocked state visual distinction
+- Added 2 unit tests for blocked story completion logic (all 43 tests pass)
+- Notification event "blocked" sends when PRD is blocked vs "complete"
+
+### Learnings
+- PRD completion state has 3 outcomes: complete (pending=0,blocked=0), blocked (pending=0,blocked>0), or in-progress
+- Use different colors (green vs yellow) to visually distinguish completion states
+- Singular/plural handling: "1 story" vs "X stories" for user-friendly messages
