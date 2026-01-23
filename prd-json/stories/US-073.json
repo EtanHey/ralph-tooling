@@ -1,0 +1,18 @@
+{
+  "id": "US-073",
+  "title": "Deprecate -G -H -K model flags in favor of smart routing",
+  "description": "The -G (Gemini), -H (Haiku), -K (Kiro) CLI flags are redundant now that smart routing and the Gum setup wizard handle model selection. Deprecate these flags: remove from README examples, add deprecation notice in help text, but keep code working for backwards compatibility.",
+  "type": "chore",
+  "priority": "low",
+  "storyPoints": 1,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Remove -G -H -K examples from README.md", "checked": false},
+    {"text": "Add deprecation notice in ralph --help output for these flags", "checked": false},
+    {"text": "Keep flag parsing code working (backwards compat)", "checked": false},
+    {"text": "Update any docs that reference manual model flags", "checked": false},
+    {"text": "Typecheck passes", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}
