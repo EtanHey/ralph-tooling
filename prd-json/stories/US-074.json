@@ -1,0 +1,22 @@
+{
+  "id": "US-074",
+  "title": "Integrate CodeRabbit pre-check into Ralph V-* verification",
+  "description": "Add CodeRabbit CLI as a fast pre-verification step for V-* stories. Before spawning Claude for full verification, run 'cr review --prompt-only' to catch obvious issues. This reduces Claude API costs and speeds up the feedback loop. Only applies to claude-golem and songscript repos.",
+  "type": "feature",
+  "priority": "medium",
+  "storyPoints": 2,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Add _ralph_coderabbit_precheck() function to ralph.zsh", "checked": false},
+    {"text": "Function runs 'cr review --prompt-only --type committed'", "checked": false},
+    {"text": "Function parses output for CRITICAL/HIGH severity issues", "checked": false},
+    {"text": "If issues found: log them and optionally skip Claude verification", "checked": false},
+    {"text": "Add --skip-coderabbit flag to bypass pre-check", "checked": false},
+    {"text": "Only runs for allowed repos (claude-golem, ralphtools, songscript)", "checked": false},
+    {"text": "Gracefully handle missing cr CLI (warn and continue)", "checked": false},
+    {"text": "Add coderabbit_enabled config option in ralph-config.local.json", "checked": false},
+    {"text": "Typecheck passes", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}
