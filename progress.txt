@@ -702,3 +702,31 @@
 - Typecheck passes (zsh -n ralph.zsh), bash -n on scripts
 - Updated stats: completed=41, pending=4, blocked=4
 ---
+
+## Iteration 38 - US-031 Live criteria sync with file watching
+- Model: opus
+- Implemented live progress bar updates using file watching:
+  1. Created LIVE FILE WATCHER section with 10 helper functions:
+     - _ralph_check_fswatch(): Detects fswatch (macOS) or inotifywait (Linux)
+     - _ralph_start_watcher(): Spawns background process watching prd-json/stories/
+     - _ralph_stop_watcher(): Kills watcher and cleans up FIFO
+     - _ralph_poll_updates(): Non-blocking read from FIFO
+     - _ralph_get_cursor_row(): Gets current terminal row via ANSI escape
+     - _ralph_update_progress_inplace(): Updates specific row using \e[{row};{col}H
+     - _ralph_update_criteria_display(): Updates criteria bar for current story
+     - _ralph_update_stories_display(): Updates stories bar from index.json
+     - _ralph_handle_file_change(): Routes file changes to appropriate update function
+     - _ralph_store_progress_rows(): Stores row positions for updates
+  2. Global state variables: RALPH_WATCHER_PID, RALPH_WATCHER_FIFO, RALPH_LIVE_ENABLED
+  3. Debounce at 500ms using RALPH_LAST_UPDATE_TIME and RALPH_DEBOUNCE_MS
+  4. Row tracking: RALPH_CRITERIA_ROW and RALPH_STORIES_ROW store positions
+  5. Added --no-live flag to disable file watching
+  6. Updated cleanup_ralph() to call _ralph_stop_watcher()
+  7. Watcher starts before main loop if JSON mode and live enabled
+  8. Row positions calculated after iteration header is drawn
+  9. Updated ralph-live deprecation message to mention new live updates
+  10. Bumped version to 1.4.0 with changelog entry
+- All 17 acceptance criteria completed
+- Typecheck passes (zsh -n ralph.zsh)
+- Updated stats: completed=42, pending=3, blocked=4
+---

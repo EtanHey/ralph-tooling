@@ -15,6 +15,7 @@
 #   -QN  : Enable quiet notifications via ntfy app
 #   -c, --compact : Compact output mode (less vertical whitespace)
 #   -d, --debug   : Debug output mode (more verbose)
+#   --no-live    : Disable live progress bar updates (fswatch)
 #   (no flag) : No notifications, Opus model (default)
 #
 # Model Flags (can specify two: first=primary, second=verification):
@@ -45,12 +46,13 @@
 # Output streams in REAL-TIME so you can watch Claude work.
 # ═══════════════════════════════════════════════════════════════════
 
-RALPH_VERSION="1.3.0"
+RALPH_VERSION="1.4.0"
 
 # ═══════════════════════════════════════════════════════════════════
 # CHANGELOG (associative array with version -> changes mapping)
 # ═══════════════════════════════════════════════════════════════════
 declare -A RALPH_CHANGELOG
+RALPH_CHANGELOG[1.4.0]="Live criteria sync with file watching (fswatch/inotifywait)|No-flash progress updates using ANSI cursor positioning|--no-live flag to disable live updates|Debounced updates (500ms) for smooth display"
 RALPH_CHANGELOG[1.3.0]="Per-iteration cost tracking (actual tokens from JSONL)|Enhanced ntfy notifications with titles & priorities|Session IDs passed to Claude for precise tracking|ralph-costs shows ✓ actual vs ~ estimated data"
 RALPH_CHANGELOG[1.2.0]="Smart model routing (US→Sonnet, V→Haiku, etc.)|Config-based model assignment via config.json|Cost tracking infrastructure"
 RALPH_CHANGELOG[1.1.0]="JSON mode with automatic unblocking|Brave browser manager integration|Smart file access with shell fallbacks"
@@ -355,6 +357,215 @@ _ralph_get_story_criteria_progress() {
   local checked=$(jq '[.acceptanceCriteria[] | select(.checked == true)] | length' "$story_file" 2>/dev/null || echo 0)
 
   echo "$checked $total"
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# LIVE FILE WATCHER (fswatch/inotifywait)
+# ═══════════════════════════════════════════════════════════════════
+# Provides real-time progress updates without terminal flashing.
+# Uses ANSI cursor positioning to update only changed characters.
+
+# Global watcher state
+RALPH_WATCHER_PID=""
+RALPH_WATCHER_FIFO=""
+RALPH_LIVE_ENABLED=true
+RALPH_LAST_UPDATE_TIME=0
+RALPH_DEBOUNCE_MS=500
+RALPH_CRITERIA_ROW=0      # Row where criteria progress bar was drawn
+RALPH_STORIES_ROW=0       # Row where stories progress bar was drawn
+
+# Check for file watcher availability
+# Returns: 0 if fswatch (macOS) or inotifywait (Linux) available, 1 if not
+_ralph_check_fswatch() {
+  if command -v fswatch >/dev/null 2>&1; then
+    echo "fswatch"
+    return 0
+  elif command -v inotifywait >/dev/null 2>&1; then
+    echo "inotifywait"
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Start file watcher in background
+# Usage: _ralph_start_watcher "/path/to/prd-json"
+# Sets RALPH_WATCHER_PID and RALPH_WATCHER_FIFO
+_ralph_start_watcher() {
+  local json_dir="$1"
+  local stories_dir="$json_dir/stories"
+  local index_file="$json_dir/index.json"
+
+  # Don't start if live updates disabled
+  [[ "$RALPH_LIVE_ENABLED" != "true" ]] && return 1
+
+  # Check for watcher tool
+  local watcher_tool
+  watcher_tool=$(_ralph_check_fswatch) || {
+    # Log once and continue without live updates
+    echo -e "${RALPH_COLOR_GRAY}ℹ️  Live updates disabled (install fswatch: brew install fswatch)${RALPH_COLOR_RESET}"
+    RALPH_LIVE_ENABLED=false
+    return 1
+  }
+
+  # Create FIFO for communication
+  RALPH_WATCHER_FIFO="/tmp/ralph_watcher_$$_fifo"
+  mkfifo "$RALPH_WATCHER_FIFO" 2>/dev/null || {
+    RALPH_LIVE_ENABLED=false
+    return 1
+  }
+
+  # Start watcher in background based on platform
+  if [[ "$watcher_tool" == "fswatch" ]]; then
+    # macOS: fswatch with batch mode, watch stories dir and index.json
+    (
+      fswatch -0 --batch-marker=EOF "$stories_dir" "$index_file" 2>/dev/null | while IFS= read -r -d '' file; do
+        if [[ "$file" == "EOF" ]]; then
+          continue
+        fi
+        # Write changed filename to FIFO (non-blocking)
+        echo "$file" > "$RALPH_WATCHER_FIFO" 2>/dev/null &
+      done
+    ) &
+    RALPH_WATCHER_PID=$!
+  else
+    # Linux: inotifywait
+    (
+      inotifywait -m -e modify,create "$stories_dir" "$index_file" --format '%w%f' 2>/dev/null | while read -r file; do
+        echo "$file" > "$RALPH_WATCHER_FIFO" 2>/dev/null &
+      done
+    ) &
+    RALPH_WATCHER_PID=$!
+  fi
+
+  return 0
+}
+
+# Stop file watcher and cleanup
+_ralph_stop_watcher() {
+  if [[ -n "$RALPH_WATCHER_PID" ]]; then
+    kill "$RALPH_WATCHER_PID" 2>/dev/null
+    wait "$RALPH_WATCHER_PID" 2>/dev/null
+    RALPH_WATCHER_PID=""
+  fi
+
+  if [[ -n "$RALPH_WATCHER_FIFO" && -p "$RALPH_WATCHER_FIFO" ]]; then
+    rm -f "$RALPH_WATCHER_FIFO"
+    RALPH_WATCHER_FIFO=""
+  fi
+}
+
+# Poll for file changes (non-blocking)
+# Usage: changed_file=$(_ralph_poll_updates)
+# Returns: filename if changed, empty if no updates
+_ralph_poll_updates() {
+  [[ -z "$RALPH_WATCHER_FIFO" || ! -p "$RALPH_WATCHER_FIFO" ]] && return 1
+
+  # Non-blocking read from FIFO with timeout
+  local changed_file=""
+  if read -t 0.1 changed_file < "$RALPH_WATCHER_FIFO" 2>/dev/null; then
+    echo "$changed_file"
+    return 0
+  fi
+  return 1
+}
+
+# Get current terminal row (for cursor positioning)
+# Usage: row=$(_ralph_get_cursor_row)
+_ralph_get_cursor_row() {
+  local row col
+  # Save cursor, request position, read response, restore
+  IFS=';' read -sdR -p $'\E[6n' row col 2>/dev/null
+  echo "${row#*[}"
+}
+
+# Update progress bar in-place without flashing
+# Usage: _ralph_update_progress_inplace row "new_bar_content"
+# Uses ANSI escape codes to position cursor and overwrite
+_ralph_update_progress_inplace() {
+  local row="$1"
+  local content="$2"
+  local col="${3:-4}"  # Default column offset (after "║  ")
+
+  [[ "$row" -le 0 ]] && return 1
+
+  # Save cursor, move to position, write content, restore cursor
+  # \e[s = save cursor, \e[{row};{col}H = move, \e[u = restore
+  printf '\e[s\e[%d;%dH%s\e[u' "$row" "$col" "$content"
+}
+
+# Update criteria progress bar for current story
+# Usage: _ralph_update_criteria_display "US-031" "/path/to/prd-json"
+_ralph_update_criteria_display() {
+  local story_id="$1"
+  local json_dir="$2"
+
+  [[ "$RALPH_CRITERIA_ROW" -le 0 ]] && return 1
+
+  # Debounce: check if enough time has passed
+  local current_time=$(($(date +%s%N 2>/dev/null || echo "$(date +%s)000000000") / 1000000))
+  local elapsed=$((current_time - RALPH_LAST_UPDATE_TIME))
+  [[ "$elapsed" -lt "$RALPH_DEBOUNCE_MS" ]] && return 0
+  RALPH_LAST_UPDATE_TIME=$current_time
+
+  # Get updated criteria progress
+  local criteria_stats=$(_ralph_get_story_criteria_progress "$story_id" "$json_dir")
+  local criteria_checked=$(echo "$criteria_stats" | awk '{print $1}')
+  local criteria_total=$(echo "$criteria_stats" | awk '{print $2}')
+
+  [[ "$criteria_total" -le 0 ]] && return 0
+
+  # Build new progress bar (no leading text, just bar + numbers)
+  local criteria_bar=$(_ralph_criteria_progress "$criteria_checked" "$criteria_total")
+
+  # Update in-place (col 16 is where the bar starts after "║  ☐ Criteria:  ")
+  _ralph_update_progress_inplace "$RALPH_CRITERIA_ROW" "$criteria_bar" 16
+}
+
+# Update stories progress bar when index.json changes
+# Usage: _ralph_update_stories_display "/path/to/prd-json"
+_ralph_update_stories_display() {
+  local json_dir="$1"
+
+  [[ "$RALPH_STORIES_ROW" -le 0 ]] && return 1
+
+  # Get updated story counts
+  local story_completed=$(jq -r '.stats.completed // 0' "$json_dir/index.json" 2>/dev/null)
+  local story_total=$(jq -r '.stats.total // 0' "$json_dir/index.json" 2>/dev/null)
+
+  [[ "$story_total" -le 0 ]] && return 0
+
+  # Build new progress bar
+  local story_bar=$(_ralph_story_progress "$story_completed" "$story_total")
+
+  # Update in-place (col 16 is where the bar starts after "║  📚 Stories:  ")
+  _ralph_update_progress_inplace "$RALPH_STORIES_ROW" "$story_bar" 16
+}
+
+# Handle file change event (called from poll loop)
+# Usage: _ralph_handle_file_change "/path/to/file" "US-031" "/path/to/prd-json"
+_ralph_handle_file_change() {
+  local changed_file="$1"
+  local current_story="$2"
+  local json_dir="$3"
+
+  local filename=$(basename "$changed_file")
+
+  if [[ "$filename" == "${current_story}.json" ]]; then
+    # Current story file changed - update criteria bar
+    _ralph_update_criteria_display "$current_story" "$json_dir"
+  elif [[ "$filename" == "index.json" ]]; then
+    # Index changed - update stories bar
+    _ralph_update_stories_display "$json_dir"
+  fi
+}
+
+# Store row positions when drawing the iteration header
+# This must be called AFTER drawing the box, while cursor is still in position
+# Usage: _ralph_store_progress_rows $criteria_row $stories_row
+_ralph_store_progress_rows() {
+  RALPH_CRITERIA_ROW="${1:-0}"
+  RALPH_STORIES_ROW="${2:-0}"
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1892,6 +2103,7 @@ function ralph() {
   local skip_setup=false     # Skip interactive setup, use defaults
   local compact_mode=false   # Compact output mode (less verbose)
   local debug_mode=false     # Debug output mode (more verbose)
+  local live_updates=true    # Live progress bar updates via file watching
 
   # Interactive control variables (gum-enabled features)
   local ralph_start_time=$(date +%s)  # Track when ralph started
@@ -1929,6 +2141,10 @@ function ralph() {
         ;;
       --debug|-d)
         debug_mode=true
+        shift
+        ;;
+      --no-live)
+        live_updates=false
         shift
         ;;
       -O|--opus)
@@ -2165,6 +2381,9 @@ function ralph() {
 
   # Cleanup on exit (and switch back to original branch in app mode)
   cleanup_ralph() {
+    # Stop file watcher if running
+    _ralph_stop_watcher
+
     rm -f "$RALPH_TMP"
     if [[ -n "$app_mode" && -n "$original_branch" ]]; then
       echo ""
@@ -2173,6 +2392,13 @@ function ralph() {
     fi
   }
   trap cleanup_ralph EXIT
+
+  # Initialize live updates if enabled and JSON mode
+  if [[ "$live_updates" == "true" ]]; then
+    RALPH_LIVE_ENABLED=true
+  else
+    RALPH_LIVE_ENABLED=false
+  fi
 
   if [[ "$compact_mode" == "true" ]]; then
     # Compact mode: single-line startup
@@ -2244,6 +2470,11 @@ function ralph() {
     echo ""
   fi
 
+  # Start file watcher for live updates (JSON mode only)
+  if [[ "$use_json_mode" == "true" && "$RALPH_LIVE_ENABLED" == "true" ]]; then
+    _ralph_start_watcher "$PRD_JSON_DIR"
+  fi
+
   for ((i=1; i<=$MAX; i++)); do
     # Determine current story and model to use
     local current_story=""
@@ -2285,6 +2516,10 @@ function ralph() {
       local iter_width=$(_ralph_display_width "$iter_str")
       local iter_padding=$((61 - iter_width))
       echo -e "║  ${iter_str}$(printf '%*s' $iter_padding '')║"
+      # Track line offsets for live updates (lines from bottom of header box)
+      local criteria_line_offset=0
+      local stories_line_offset=0
+
       if [[ -n "$current_story" ]]; then
         local colored_story=$(_ralph_color_story_id "$current_story")
         local story_str="📖 Story: ${current_story}"
@@ -2302,6 +2537,8 @@ function ralph() {
             local criteria_width=$(_ralph_display_width "$criteria_str")
             local criteria_padding=$((61 - criteria_width))
             echo -e "║  ${criteria_str}$(printf '%*s' $criteria_padding '')║"
+            # Criteria line is 4 lines from bottom (model + stories + closing + blank)
+            criteria_line_offset=4
           fi
         fi
       fi
@@ -2319,9 +2556,22 @@ function ralph() {
         local stories_width=$(_ralph_display_width "$stories_str")
         local stories_padding=$((61 - stories_width))
         echo -e "║  ${stories_str}$(printf '%*s' $stories_padding '')║"
+        # Stories line is 2 lines from bottom (closing + blank)
+        stories_line_offset=2
       fi
       echo "╚═══════════════════════════════════════════════════════════════╝"
       echo ""
+
+      # Store row positions for live updates (relative to current cursor)
+      # We use negative offsets since we're counting backwards from current position
+      if [[ "$RALPH_LIVE_ENABLED" == "true" && "$use_json_mode" == "true" ]]; then
+        # Get current cursor row using ANSI escape sequence
+        local current_row
+        if current_row=$(_ralph_get_cursor_row 2>/dev/null); then
+          [[ "$criteria_line_offset" -gt 0 ]] && RALPH_CRITERIA_ROW=$((current_row - criteria_line_offset))
+          [[ "$stories_line_offset" -gt 0 ]] && RALPH_STORIES_ROW=$((current_row - stories_line_offset))
+        fi
+      fi
     fi
 
     # Retry logic for transient API errors like "No messages returned"
@@ -3681,12 +3931,14 @@ EOF
   rm -f "$prompt_file"
 }
 
-# ralph-live - DEPRECATED: Now an alias to ralph-status
-# Interactive status is now built into the main ralph command
+# ralph-live - DEPRECATED: Live updates now built into ralph command
+# The main ralph command now uses file watching for live progress updates
+# Use --no-live flag to disable if needed
 function ralph-live() {
   echo ""
-  echo -e "${RALPH_COLOR_YELLOW}⚠️  ralph-live is deprecated. Interactive status is now built into 'ralph'.${RALPH_COLOR_RESET}"
-  echo -e "${RALPH_COLOR_GRAY}   Use 'ralph-status' for current PRD status, or run 'ralph' for the full loop.${RALPH_COLOR_RESET}"
+  echo -e "${RALPH_COLOR_YELLOW}⚠️  ralph-live is deprecated. Live progress updates are now built into 'ralph'.${RALPH_COLOR_RESET}"
+  echo -e "${RALPH_COLOR_GRAY}   The main ralph loop uses file watching (fswatch) to update progress bars in-place.${RALPH_COLOR_RESET}"
+  echo -e "${RALPH_COLOR_GRAY}   Use 'ralph-status' for a one-time status snapshot, or 'ralph --no-live' to disable updates.${RALPH_COLOR_RESET}"
   echo ""
   ralph-status "$@"
 }
