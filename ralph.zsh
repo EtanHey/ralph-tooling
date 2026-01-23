@@ -510,9 +510,13 @@ _ralph_coderabbit_review() {
   fi
 
   # Check for issues in output
-  # Look for severity markers: CRITICAL, HIGH, MEDIUM
+  # Look for: Type: potential_issue OR severity markers (CRITICAL, HIGH, MEDIUM)
   local issue_count=0
-  if echo "$cr_output" | grep -qiE '\b(CRITICAL|HIGH|MEDIUM)\b.*:'; then
+  # First try the --prompt-only format (Type: potential_issue)
+  if echo "$cr_output" | grep -qE '^Type: potential_issue'; then
+    issue_count=$(echo "$cr_output" | grep -cE '^Type: potential_issue')
+  # Fallback to severity markers if present
+  elif echo "$cr_output" | grep -qiE '\b(CRITICAL|HIGH|MEDIUM)\b.*:'; then
     issue_count=$(echo "$cr_output" | grep -ciE '\b(CRITICAL|HIGH|MEDIUM)\b.*:')
   fi
 

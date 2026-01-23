@@ -169,3 +169,18 @@ Changes:
 - Deprecation = update docs + add warnings, but keep code working
 - Historical design docs (docs/plans/) should not be modified for deprecation
 - Always check for dependent stories to unblock after completing a story
+
+## Iteration 11
+Story: US-074 - Integrate CodeRabbit pre-commit check into ALL Ralph stories
+Status: COMPLETED (opus)
+Changes:
+- Tested CodeRabbit by creating test_bug.js with 4 intentional security vulnerabilities
+- Bugs planted: SQL injection, null check, hardcoded credentials, eval() RCE
+- CodeRabbit detected and reported all 4 issues with actionable fix prompts
+- Fixed _ralph_coderabbit_review() to detect `Type: potential_issue` format (not just CRITICAL/HIGH/MEDIUM)
+- The --prompt-only output uses Type markers, not severity markers
+
+### Learnings
+- CodeRabbit `cr review --prompt-only` uses `Type: potential_issue` not CRITICAL/HIGH/MEDIUM
+- Need to grep for both output formats to handle different CR versions
+- CR has rate limits (~7 min cooldown after several reviews)

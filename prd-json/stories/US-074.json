@@ -24,8 +24,8 @@
     {"text": "  - Prompt: 'Enable CodeRabbit pre-commit checks? (free for open source)'", "checked": true},
     {"text": "  - Prompt: 'Which repos? (comma-separated or * for all)'", "checked": true},
     {"text": "  - Save to config.json: coderabbit.enabled, coderabbit.repos[]", "checked": true},
-    {"text": "Test: Make intentional bug, verify CodeRabbit catches it", "checked": false}
+    {"text": "Test: Make intentional bug, verify CodeRabbit catches it", "checked": true}
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true
 }
