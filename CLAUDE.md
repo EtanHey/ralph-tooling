@@ -33,3 +33,11 @@ After editing `ralph.zsh`, reload in current shell:
 ```bash
 source ~/.config/ralph/ralph.zsh
 ```
+
+## Learnings
+
+Project-specific learnings are in `docs.local/learnings/` (gitignored, persists locally):
+
+| File | Topics |
+|------|--------|
+| `terminal-box-alignment.md` | ANSI escapes, emoji width, box padding |
