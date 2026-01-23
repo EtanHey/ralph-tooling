@@ -1225,3 +1225,79 @@ Created the /update skill with comprehensive Ralph detection and routing for sto
 - The update skill provides consistent interface for both Ralph and interactive Claude
 - Test with --force-direct to simulate Ralph-not-running scenarios during Ralph sessions
 
+
+## Iteration 35 - V-009: Verify Ralph v1.5 Integration
+**Status**: COMPLETED
+
+Completed comprehensive end-to-end verification of all Ralph v1.5 features:
+
+### Verification Results
+
+**1. Live Criteria Bar Updates**
+- ✓ Infrastructure in place: _ralph_start_watcher() creates fswatch/inotifywait monitor
+- ✓ _ralph_start_polling_loop() background process with 200ms debounce
+- ✓ _ralph_update_criteria_display_at_row() uses ANSI cursor positioning for in-place updates
+- ✓ Integration confirmed: polling starts BEFORE Claude execution, stops AFTER
+
+**2. ralph-status Command Verification**
+- ✓ Command exists and fully functional
+- ✓ Displays criteria with ✓ (checked) and ○ (unchecked) markers
+- ✓ Shows: progress bar (78%), completed/pending/blocked counts, current story title
+- ✓ Color-coded output with proper formatting
+
+**3. Per-Project ntfy Topics**
+- ✓ RALPH_NTFY_TOPIC empty enables per-project fallback (configuration correct)
+- ✓ Topic generation: ${RALPH_NTFY_PREFIX}-${project_name}-notify (line 2668)
+- ✓ Results in: etanheys-ralph-ralphtools-notify (per project unique)
+
+**4. /update Skill - Ralph Running Path**
+- ✓ Ralph detection works: pgrep for tee process, /tmp/ralph_watcher_*_pid files
+- ✓ Story correctly routed to update.json
+- ✓ newStories array populated with correct schema
+- ✓ Ralph merges on next iteration start
+
+**5. /update Skill - Ralph Not Running Path**
+- ✓ --force-direct flag works (simulates Ralph not running)
+- ✓ Story created directly in prd-json/stories/
+- ✓ index.json updated: storyOrder, pending array, stats
+- ✓ Both pending and total counts incremented
+
+**6. MCP Registry Loading**
+- ✓ Registry exists at ~/.config/ralphtools/registry.json
+- ✓ _ralph_build_mcp_config() loads MCPs correctly
+- ✓ Returns Context7 and tempmail for ralphtools project
+- ✓ Project-specific MCP configuration working
+
+**7. Test Suite**
+- ✓ All 36 Ralph tests pass (test-ralph.zsh)
+- ✓ All 16 skill tests pass (test-skills.zsh)
+- ✓ Pre-commit hook runs both test suites
+
+**8. Skill Structure Compliance**
+- ✓ 10 directory-based skills with SKILL.md + workflows/
+- ✓ 6 skills have scripts/ with deterministic patterns
+- ✓ All scripts pass bash -n syntax check
+- ✓ All scripts have #!/bin/bash shebang and -h flag
+
+**9. Debug Output Isolation**
+- ✓ No remaining_stats leaks with xtrace enabled
+- ✓ _ralph_json_remaining_stats() has setopt localoptions noxtrace (line 2242)
+- ✓ All call sites have 2>/dev/null redirection
+- ✓ Belt-and-suspenders protection active
+
+### Test Data Used
+- Created test stories: US-070-TEST, US-071-TEST to verify /update skill
+- Tested both update.json (Ralph running) and direct edit (Ralph not running) paths
+- Cleaned up test stories after verification
+
+### Files Modified
+- prd-json/stories/V-009.json - All 9 criteria marked checked, status=completed, passes=true
+- prd-json/index.json - V-009 removed from pending, stats updated (38 completed, 9 pending)
+
+### Learnings
+- Ralph v1.5 infrastructure is production-ready: all features verified
+- /update skill properly detects Ralph via multiple signals (tee, watcher PID, legacy PID)
+- Live updates use ANSI cursor positioning for smooth display (no terminal clear/redraw)
+- Per-project topics improve notification organization for multi-project workflows
+- Skill structure audit revealed all skills follow correct pattern
+
