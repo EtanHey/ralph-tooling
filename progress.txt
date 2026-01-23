@@ -306,3 +306,22 @@
 - All 9 acceptance criteria completed
 - Updated stats: completed=19, pending=12, blocked=1
 ---
+
+## Iteration 21 - US-010 Per-project MCP configuration
+- Model: opus
+- Implemented per-project MCP configuration feature:
+  1. ✓ Added --mcps flag to ralph-projects add: `ralph-projects add union ~/union --mcps figma,linear`
+  2. ✓ MCPs stored as JSON array in projects.json entry (comma-separated input → JSON array)
+  3. ✓ Created _ralph_setup_mcps() helper function in new MCP SETUP section
+  4. ✓ Supports 5 common MCPs: figma, linear, supabase, browser-tools, context7
+  5. ✓ MCP setup checks 1Password first (via op CLI), falls back to environment variables
+  6. ✓ {name}Claude launcher now calls _ralph_setup_mcps with project's MCPs before running claude
+  7. ✓ Updated ralph-projects list to display MCPs for each project
+  8. ✓ Typecheck passes (zsh -n ralph.zsh)
+- 1Password item names: "Figma Personal Access Token", "Linear API Key", "Supabase Access Token"
+- Environment variable fallbacks: FIGMA_PERSONAL_ACCESS_TOKEN, LINEAR_API_KEY, SUPABASE_ACCESS_TOKEN
+- browser-tools and context7 MCPs don't require credentials
+- All 29 unit tests still pass
+- All 7 acceptance criteria completed
+- Updated stats: completed=20, pending=11, blocked=1
+---

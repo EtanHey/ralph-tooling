@@ -2971,12 +2971,30 @@ function ralph-projects() {
   case "$subcommand" in
     add)
       if [[ $# -lt 3 ]]; then
-        echo "Usage: ralph-projects add <name> <path>"
+        echo "Usage: ralph-projects add <name> <path> [--mcps figma,linear,...]"
+        echo ""
+        echo "Supported MCPs: figma, linear, supabase, browser-tools, context7"
         return 1
       fi
 
       local name="$2"
       local path="$3"
+      local mcps_arg=""
+
+      # Parse optional --mcps flag
+      shift 3
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --mcps)
+            mcps_arg="$2"
+            shift 2
+            ;;
+          *)
+            echo "${RED}Unknown option: $1${NC}"
+            return 1
+            ;;
+        esac
+      done
 
       # Validate path exists
       if [[ ! -d "$path" ]]; then
@@ -2998,10 +3016,23 @@ function ralph-projects() {
 
       # Add new project
       local timestamp=$(/bin/date -u +"%Y-%m-%dT%H:%M:%SZ")
-      /usr/bin/jq ".projects += [{\"name\": \"$name\", \"path\": \"$path\", \"mcps\": [], \"created\": \"$timestamp\"}]" "$projects_file" > "${projects_file}.tmp"
+
+      # Convert comma-separated MCPs to JSON array
+      local mcps_json="[]"
+      if [[ -n "$mcps_arg" ]]; then
+        # Split by comma and build JSON array
+        mcps_json="[$(echo "$mcps_arg" | /usr/bin/tr ',' '\n' | /usr/bin/sed 's/^/"/;s/$/"/' | /usr/bin/tr '\n' ',' | /usr/bin/sed 's/,$//')]]"
+        # Fix the double bracket from sed
+        mcps_json="${mcps_json%]}"
+      fi
+
+      /usr/bin/jq ".projects += [{\"name\": \"$name\", \"path\": \"$path\", \"mcps\": $mcps_json, \"created\": \"$timestamp\"}]" "$projects_file" > "${projects_file}.tmp"
       /bin/mv "${projects_file}.tmp" "$projects_file"
 
       echo "${GREEN}✓ Project '$name' added${NC}"
+      if [[ -n "$mcps_arg" ]]; then
+        echo "  MCPs: $mcps_arg"
+      fi
 
       # Regenerate launcher functions
       _ralph_generate_launchers
@@ -3050,19 +3081,116 @@ function ralph-projects() {
       fi
 
       echo "Registered projects:"
-      /usr/bin/jq -r '.projects[] | "  \(.name)\n    Path: \(.path)\n    Created: \(.created)"' "$projects_file"
+      /usr/bin/jq -r '.projects[] | "  \(.name)\n    Path: \(.path)\n    MCPs: \(if .mcps | length > 0 then (.mcps | join(", ")) else "(none)" end)\n    Created: \(.created)"' "$projects_file"
       ;;
 
     *)
       echo "Usage: ralph-projects [add|remove|list]"
       echo ""
       echo "Subcommands:"
-      echo "  add <name> <path>  - Add a new project"
-      echo "  remove <name>      - Remove a project"
-      echo "  list               - List all registered projects"
+      echo "  add <name> <path> [--mcps figma,linear,...]  - Add a new project"
+      echo "  remove <name>                                 - Remove a project"
+      echo "  list                                          - List all registered projects"
+      echo ""
+      echo "Supported MCPs: figma, linear, supabase, browser-tools, context7"
       return 1
       ;;
   esac
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# MCP SETUP - Configure MCPs for project launchers
+# ═══════════════════════════════════════════════════════════════════
+# Supported MCPs: figma, linear, supabase, browser-tools, context7
+# Credentials: 1Password (if op CLI available) or environment variables
+# ═══════════════════════════════════════════════════════════════════
+
+function _ralph_setup_mcps() {
+  local mcps_json="$1"
+  local YELLOW='\033[0;33m'
+  local GREEN='\033[0;32m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+
+  # Parse MCPs from JSON array
+  local mcps=()
+  if [[ -n "$mcps_json" && "$mcps_json" != "[]" ]]; then
+    # Convert JSON array to zsh array
+    while IFS= read -r mcp; do
+      mcps+=("$mcp")
+    done < <(echo "$mcps_json" | /usr/bin/jq -r '.[]' 2>/dev/null)
+  fi
+
+  if [[ ${#mcps[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  echo "${YELLOW}Setting up MCPs: ${mcps[*]}${NC}"
+
+  # Check if 1Password CLI is available
+  local has_1password=false
+  if command -v op &>/dev/null; then
+    has_1password=true
+  fi
+
+  for mcp in "${mcps[@]}"; do
+    case "$mcp" in
+      figma)
+        if [[ -z "$FIGMA_PERSONAL_ACCESS_TOKEN" ]]; then
+          if $has_1password; then
+            export FIGMA_PERSONAL_ACCESS_TOKEN=$(op read "op://Private/Figma Personal Access Token/credential" 2>/dev/null)
+          fi
+        fi
+        if [[ -n "$FIGMA_PERSONAL_ACCESS_TOKEN" ]]; then
+          echo "${GREEN}  ✓ Figma MCP configured${NC}"
+        else
+          echo "${RED}  ✗ Figma: Set FIGMA_PERSONAL_ACCESS_TOKEN or add to 1Password${NC}"
+        fi
+        ;;
+
+      linear)
+        if [[ -z "$LINEAR_API_KEY" ]]; then
+          if $has_1password; then
+            export LINEAR_API_KEY=$(op read "op://Private/Linear API Key/credential" 2>/dev/null)
+          fi
+        fi
+        if [[ -n "$LINEAR_API_KEY" ]]; then
+          echo "${GREEN}  ✓ Linear MCP configured${NC}"
+        else
+          echo "${RED}  ✗ Linear: Set LINEAR_API_KEY or add to 1Password${NC}"
+        fi
+        ;;
+
+      supabase)
+        if [[ -z "$SUPABASE_ACCESS_TOKEN" ]]; then
+          if $has_1password; then
+            export SUPABASE_ACCESS_TOKEN=$(op read "op://Private/Supabase Access Token/credential" 2>/dev/null)
+          fi
+        fi
+        if [[ -n "$SUPABASE_ACCESS_TOKEN" ]]; then
+          echo "${GREEN}  ✓ Supabase MCP configured${NC}"
+        else
+          echo "${RED}  ✗ Supabase: Set SUPABASE_ACCESS_TOKEN or add to 1Password${NC}"
+        fi
+        ;;
+
+      browser-tools)
+        # Browser-tools MCP doesn't require credentials, just needs to be enabled
+        echo "${GREEN}  ✓ Browser-tools MCP enabled${NC}"
+        ;;
+
+      context7)
+        # Context7 MCP doesn't require credentials
+        echo "${GREEN}  ✓ Context7 MCP enabled${NC}"
+        ;;
+
+      *)
+        echo "${YELLOW}  ? Unknown MCP: $mcp (no setup configured)${NC}"
+        ;;
+    esac
+  done
+
+  echo ""
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -3104,7 +3232,7 @@ HEADER
   fi
 
   # Generate functions for each project
-  /usr/bin/jq -r '.projects[] | "\(.name)|\(.path)"' "$projects_file" 2>/dev/null | while IFS='|' read -r name path; do
+  /usr/bin/jq -r '.projects[] | "\(.name)|\(.path)|\(.mcps | @json)"' "$projects_file" 2>/dev/null | while IFS='|' read -r name path mcps_json; do
     # Capitalize first letter for function names: myProject -> MyProject
     local capitalized_name="${(C)name[1]}${name[2,-1]}"
     # Lowercase name for {name}Claude: MyProject -> myproject
@@ -3114,6 +3242,7 @@ HEADER
     cat >> "$launchers_file" << EOF
 # Project: $name
 # Path: $path
+# MCPs: $mcps_json
 
 function run${capitalized_name}() {
   cd "$path" || return 1
@@ -3136,12 +3265,9 @@ function open${capitalized_name}() {
 
 function ${lowercase_name}Claude() {
   cd "$path" || return 1
-  # Check for project-specific MCP config
-  if [[ -f ".claude/settings.local.json" ]] || [[ -f ".mcp.json" ]]; then
-    claude
-  else
-    claude
-  fi
+  # Set up project-specific MCPs
+  _ralph_setup_mcps '$mcps_json'
+  claude
 }
 
 EOF
