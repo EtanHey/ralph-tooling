@@ -280,3 +280,27 @@ Changes:
 - Two patterns: bash for simple wrappers, TypeScript/Bun for complex logic
 - Template generator reduces boilerplate and ensures consistent structure
 - TypeScript skills need scripts/run.sh wrapper to call bun
+
+## Iteration 16
+Story: US-076 - golem-powers:context7 - Replace Context7 MCP with executable skill
+Status: COMPLETED (opus)
+Changes:
+- Researched Context7 API: REST at https://context7.com/api with /v2/libs/search and /v2/context endpoints
+- Created skills/golem-powers/context7/ directory structure with scripts/ and workflows/
+- Created SKILL.md with frontmatter (name: context7, description: Library documentation lookup, execute: scripts/default.sh)
+- Created scripts/resolve-library.sh: searches for library by name, outputs Markdown table of results
+- Created scripts/query-docs.sh: queries documentation for a library ID, outputs Markdown snippets
+- Created scripts/default.sh: shows usage help when skill is loaded
+- Created workflows/lookup.md: step-by-step guide for library documentation lookup
+- Documented how to disable Context7 MCP after skill works
+- All scripts pass shellcheck (removed unused SCRIPT_DIR variables)
+- API authentication via CONTEXT7_API_KEY environment variable
+- Skill inherits from golem-powers symlink (~/.claude/commands/golem-powers → ralphtools/skills/golem-powers)
+- Verified expected output format using existing Context7 MCP tools
+- All 46 tests pass
+
+### Learnings
+- Context7 has REST API at https://context7.com/api, requires API key with ctx7sk prefix
+- MCP servers may have API keys managed server-side (not visible in user config)
+- golem-powers skills can inherit from parent symlink, no separate symlink needed
+- URL encoding in bash can use python3 -c "import urllib.parse; print(urllib.parse.quote(...))"
