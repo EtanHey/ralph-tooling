@@ -208,3 +208,25 @@ Changes:
 - Existing `2>&1` redirection already captures stderr (the third OR option)
 - Config defaults should use jq's `// value` syntax for backwards compatibility
 - Shell variable expansion in echo uses ${var} for inline text (e.g., "Waiting ${cooldown} seconds...")
+
+## Iteration 13
+Story: MP-001 - Consolidate CLAUDE.md files into modular context system
+Status: COMPLETED (opus)
+Changes:
+- Analyzed 26 CLAUDE.md files totaling ~8,400 lines
+- Created ~/.claude/contexts/ directory structure with tech/ and workflow/ subdirs
+- Created base.md (~150 lines) with universal rules: CLAUDE_COUNTER, git safety, scratchpad, AIDEV-NOTE, docs fetching, thinking before doing
+- Created tech contexts: nextjs.md (~300 lines), supabase.md (~150 lines), convex.md (~100 lines), react-native.md (~150 lines)
+- Created workflow contexts: rtl.md (~100 lines), testing.md (~100 lines), design-system.md (~100 lines), ralph.md (~100 lines)
+- Created scripts/context-migrate.zsh to analyze CLAUDE.md and suggest applicable contexts
+- Added ralph-migrate-contexts command to ralph.zsh
+- Migrated ralphtools CLAUDE.md to use context references (175 → 146 lines)
+- Tested on domica (912 lines → ~62 lines projected, 94% reduction)
+- Total system reduction: ~8,400 lines → ~4,400 lines (47% reduction)
+- Created comprehensive README.md documentation for the context system
+
+### Learnings
+- next-intl guide alone accounts for ~350 lines duplicated across 5 projects
+- Base rules (CLAUDE_COUNTER, git safety) appear in virtually every project
+- Project-specific content is typically only ~50-100 lines after extraction
+- Monorepo sub-apps may need different contexts than root CLAUDE.md
