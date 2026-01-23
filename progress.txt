@@ -229,3 +229,12 @@
 - Failure reasons displayed both to console and logged to progress.txt
 - All 8 acceptance criteria complete
 ---
+
+## Iteration 16 - V-TEST (BLOCKED)
+- Model: haiku
+- V-TEST is a verification story designed to test parallel agent spawning infrastructure
+- Story requires browser extension (Claude-in-Chrome) to be connected for agents to spawn and verify
+- ⚠️ BLOCKED: Browser extension not connected - extension required for parallel agent verification
+- Moved V-TEST to blocked array, updated nextStory to US-008
+- Updated stats: pending=14, blocked=1
+---
