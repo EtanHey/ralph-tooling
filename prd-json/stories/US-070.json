@@ -7,15 +7,15 @@
   "storyPoints": 3,
   "status": "pending",
   "acceptanceCriteria": [
-    {"text": "Create workflows/user-deletion.md in ~/.claude/commands/convex/", "checked": false},
-    {"text": "Document pattern: find user by email, get userId", "checked": false},
-    {"text": "Document pattern: delete from auth tables (user, session, account)", "checked": false},
-    {"text": "Document pattern: delete from all app tables with userId foreign key", "checked": false},
-    {"text": "Include table discovery query to find all tables with userId field", "checked": false},
-    {"text": "Include example mutation code for deleteUserAndAllData", "checked": false},
-    {"text": "Document index usage (by_user, by_email) for efficient deletion", "checked": false},
-    {"text": "Add CLI command pattern: npx convex run admin:deleteUserAndAllData", "checked": false}
+    {"text": "Create workflows/user-deletion.md in ~/.claude/commands/convex/", "checked": true},
+    {"text": "Document pattern: find user by email, get userId", "checked": true},
+    {"text": "Document pattern: delete from auth tables (user, session, account)", "checked": true},
+    {"text": "Document pattern: delete from all app tables with userId foreign key", "checked": true},
+    {"text": "Include table discovery query to find all tables with userId field", "checked": true},
+    {"text": "Include example mutation code for deleteUserAndAllData", "checked": true},
+    {"text": "Document index usage (by_user, by_email) for efficient deletion", "checked": true},
+    {"text": "Add CLI command pattern: npx convex run admin:deleteUserAndAllData", "checked": true}
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true
 }

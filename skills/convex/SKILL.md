@@ -28,6 +28,7 @@ If no `convex/` directory: Run `npx convex init` to initialize.
 | Export data | [workflows/data-export.md](workflows/data-export.md) |
 | Import data | [workflows/data-import.md](workflows/data-import.md) |
 | Inspect/validate schema | [workflows/schema.md](workflows/schema.md) |
+| Delete user and all data | [workflows/user-deletion.md](workflows/user-deletion.md) |
 | Fix errors | [workflows/troubleshooting.md](workflows/troubleshooting.md) |
 
 ---

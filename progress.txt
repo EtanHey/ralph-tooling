@@ -93,3 +93,23 @@ Changes:
 - Single-file skills may be appropriate if simple/linear (prd.md, skills.md)
 - Duplicate skills cause confusion (brave.md vs brave/ directory)
 - Skills referencing external CLIs don't necessarily need scripts/ (already have CLI)
+
+## Iteration 7
+Story: US-070 - Convex skill: Complete user deletion pattern
+Status: COMPLETED (opus)
+Changes:
+- Created ~/.claude/commands/convex/workflows/user-deletion.md with complete deletion pattern
+- Documented: find user by email (getUserByEmail query with by_email index)
+- Documented: delete from auth tables (sessions, accounts, verificationTokens, users - order matters)
+- Documented: delete from all app tables with userId foreign key (helper function pattern)
+- Included table discovery query and grep command (discoverUserTables)
+- Included complete deleteUserAndAllData mutation code with deletion report
+- Documented required indexes (by_user, by_email) in schema.ts section
+- Added CLI command: npx convex run admin:deleteUserAndAllData
+- Updated SKILL.md Quick Actions table with link to new workflow
+- All 8 acceptance criteria met
+
+### Learnings
+- Auth table deletion order matters: sessions→accounts→tokens→user (avoid FK issues)
+- Include deletion report in response for audit/compliance tracking
+- Table discovery requires manual schema.ts check (Convex has no introspection API)
