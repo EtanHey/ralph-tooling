@@ -380,28 +380,45 @@ _ralph_init_colors() {
   fi
 
   # Parse JSON-like structure and set color variables
-  # For color code values, prepend \033[ and append m
-  RALPH_COLOR_SUCCESS=$(jq -r '.success' <<< "$scheme_json" 2>/dev/null || echo "32")
-  RALPH_COLOR_ERROR=$(jq -r '.error' <<< "$scheme_json" 2>/dev/null || echo "31")
-  RALPH_COLOR_WARNING=$(jq -r '.warning' <<< "$scheme_json" 2>/dev/null || echo "33")
-  RALPH_COLOR_INFO=$(jq -r '.info' <<< "$scheme_json" 2>/dev/null || echo "36")
+  # Build full ANSI sequences from color codes: \033[{code}m
+  local code
+
+  code=$(jq -r '.success' <<< "$scheme_json" 2>/dev/null || echo "32")
+  RALPH_COLOR_SUCCESS=$'\033['"${code}m"
+  code=$(jq -r '.error' <<< "$scheme_json" 2>/dev/null || echo "31")
+  RALPH_COLOR_ERROR=$'\033['"${code}m"
+  code=$(jq -r '.warning' <<< "$scheme_json" 2>/dev/null || echo "33")
+  RALPH_COLOR_WARNING=$'\033['"${code}m"
+  code=$(jq -r '.info' <<< "$scheme_json" 2>/dev/null || echo "36")
+  RALPH_COLOR_INFO=$'\033['"${code}m"
 
   # Update story type colors
-  RALPH_COLOR_BLUE=$(jq -r '.US' <<< "$scheme_json" 2>/dev/null || echo "34") # US
-  RALPH_COLOR_PURPLE=$(jq -r '.V' <<< "$scheme_json" 2>/dev/null || echo "35") # V
-  RALPH_COLOR_RED=$(jq -r '.BUG' <<< "$scheme_json" 2>/dev/null || echo "31") # BUG
-  RALPH_COLOR_YELLOW=$(jq -r '.TEST' <<< "$scheme_json" 2>/dev/null || echo "33") # TEST
-  RALPH_COLOR_MAGENTA=$(jq -r '.AUDIT' <<< "$scheme_json" 2>/dev/null || echo "35") # AUDIT
+  code=$(jq -r '.US' <<< "$scheme_json" 2>/dev/null || echo "34")
+  RALPH_COLOR_BLUE=$'\033['"${code}m"
+  code=$(jq -r '.V' <<< "$scheme_json" 2>/dev/null || echo "35")
+  RALPH_COLOR_PURPLE=$'\033['"${code}m"
+  code=$(jq -r '.BUG' <<< "$scheme_json" 2>/dev/null || echo "31")
+  RALPH_COLOR_RED=$'\033['"${code}m"
+  code=$(jq -r '.TEST' <<< "$scheme_json" 2>/dev/null || echo "33")
+  RALPH_COLOR_YELLOW=$'\033['"${code}m"
+  code=$(jq -r '.AUDIT' <<< "$scheme_json" 2>/dev/null || echo "35")
+  RALPH_COLOR_MAGENTA=$'\033['"${code}m"
 
   # Update model colors
-  RALPH_COLOR_GOLD=$(jq -r '.opus' <<< "$scheme_json" 2>/dev/null || echo "33") # opus
-  RALPH_COLOR_CYAN=$(jq -r '.sonnet' <<< "$scheme_json" 2>/dev/null || echo "36") # sonnet
-  RALPH_COLOR_GREEN=$(jq -r '.haiku' <<< "$scheme_json" 2>/dev/null || echo "32") # haiku
+  code=$(jq -r '.opus' <<< "$scheme_json" 2>/dev/null || echo "33")
+  RALPH_COLOR_GOLD=$'\033['"${code}m"
+  code=$(jq -r '.sonnet' <<< "$scheme_json" 2>/dev/null || echo "36")
+  RALPH_COLOR_CYAN=$'\033['"${code}m"
+  code=$(jq -r '.haiku' <<< "$scheme_json" 2>/dev/null || echo "32")
+  RALPH_COLOR_GREEN=$'\033['"${code}m"
 
   # Store cost thresholds for dynamic coloring
-  RALPH_COST_COLOR_LOW=$(jq -r '.cost_low' <<< "$scheme_json" 2>/dev/null || echo "32")
-  RALPH_COST_COLOR_MED=$(jq -r '.cost_med' <<< "$scheme_json" 2>/dev/null || echo "33")
-  RALPH_COST_COLOR_HIGH=$(jq -r '.cost_high' <<< "$scheme_json" 2>/dev/null || echo "31")
+  code=$(jq -r '.cost_low' <<< "$scheme_json" 2>/dev/null || echo "32")
+  RALPH_COST_COLOR_LOW=$'\033['"${code}m"
+  code=$(jq -r '.cost_med' <<< "$scheme_json" 2>/dev/null || echo "33")
+  RALPH_COST_COLOR_MED=$'\033['"${code}m"
+  code=$(jq -r '.cost_high' <<< "$scheme_json" 2>/dev/null || echo "31")
+  RALPH_COST_COLOR_HIGH=$'\033['"${code}m"
 }
 
 # ═══════════════════════════════════════════════════════════════════
