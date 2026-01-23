@@ -499,9 +499,93 @@ _ralph_load_config() {
     [[ -n "$max_iter" && "$max_iter" != "null" ]] && RALPH_MAX_ITERATIONS="$max_iter"
     [[ -n "$sleep_sec" && "$sleep_sec" != "null" ]] && RALPH_SLEEP_SECONDS="$sleep_sec"
 
+    # Load parallel verification settings
+    RALPH_PARALLEL_VERIFICATION=$(jq -r '.parallelVerification // false' "$RALPH_CONFIG_FILE" 2>/dev/null)
+    RALPH_PARALLEL_AGENTS=$(jq -r '.parallelAgents // 2' "$RALPH_CONFIG_FILE" 2>/dev/null)
+
     return 0
   fi
   return 1
+}
+
+# Run parallel verification for V-* stories
+# Spawns multiple agents with different viewport/focus prompts
+# Usage: _ralph_run_parallel_verification "V-001" "/path/to/prd-json" "prompt_text"
+_ralph_run_parallel_verification() {
+  local story_id="$1"
+  local prd_json_dir="$2"
+  local base_prompt="$3"
+  local num_agents="${RALPH_PARALLEL_AGENTS:-2}"
+
+  # Temp directory for parallel agent results
+  local temp_dir="/tmp/ralph_parallel_${story_id}_$$"
+  mkdir -p "$temp_dir"
+
+  local pids=()
+  local agent_prompts=()
+
+  # Define agent-specific prompts based on focus area
+  # Agent 1: Desktop viewport (1920x1080)
+  agent_prompts[1]="VIEWPORT FOCUS: Desktop (1920x1080). Verify all acceptance criteria at desktop resolution. Check layout, spacing, and interactions at full width.\n\n$base_prompt"
+
+  # Agent 2: Mobile viewport (375x812)
+  agent_prompts[2]="VIEWPORT FOCUS: Mobile (375x812 iPhone X). Verify all acceptance criteria at mobile resolution. Check responsive behavior, touch targets, and mobile-specific issues.\n\n$base_prompt"
+
+  # Agent 3: Accessibility focus (if parallelAgents >= 3)
+  agent_prompts[3]="ACCESSIBILITY FOCUS: Verify keyboard navigation, screen reader compatibility, color contrast, and ARIA labels. Check all acceptance criteria with accessibility in mind.\n\n$base_prompt"
+
+  echo "  🔀 Running parallel verification with $num_agents agents..."
+
+  # Spawn agents in parallel
+  for ((agent=1; agent<=num_agents && agent<=3; agent++)); do
+    local agent_prompt="${agent_prompts[$agent]}"
+    local agent_output="$temp_dir/agent_${agent}.txt"
+
+    (
+      claude --chrome --dangerously-skip-permissions --model haiku \
+        -p "$agent_prompt" > "$agent_output" 2>&1
+    ) &
+    pids+=($!)
+    echo "    📍 Agent $agent spawned (PID: ${pids[-1]})"
+  done
+
+  # Wait for all agents to complete
+  echo "  ⏳ Waiting for all agents to complete..."
+  local failed=0
+  for pid in "${pids[@]}"; do
+    if ! wait "$pid"; then
+      ((failed++))
+    fi
+  done
+
+  # Collect results
+  echo "  📊 Collecting results..."
+  local all_pass=true
+  for ((agent=1; agent<=num_agents && agent<=3; agent++)); do
+    local agent_output="$temp_dir/agent_${agent}.txt"
+    if [[ -f "$agent_output" ]]; then
+      if grep -q "<promise>COMPLETE</promise>" "$agent_output" 2>/dev/null; then
+        echo "    ✅ Agent $agent: PASSED"
+      else
+        echo "    ❌ Agent $agent: INCOMPLETE"
+        all_pass=false
+      fi
+    else
+      echo "    ⚠️ Agent $agent: No output file"
+      all_pass=false
+    fi
+  done
+
+  # Cleanup temp directory
+  rm -rf "$temp_dir"
+
+  if $all_pass; then
+    echo "  ✅ All parallel verification agents passed"
+    return 0
+  else
+    echo "  ❌ Some parallel verification agents failed"
+    return 1
+  fi
 }
 
 # Get model for a story based on smart routing

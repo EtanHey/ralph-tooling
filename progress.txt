@@ -195,10 +195,18 @@
 - Returns immediately after printing version
 - All 5 acceptance criteria complete
 
-## Summary
-- Model: haiku
-- Completed 4 stories: V-001, US-018, BUG-001, US-004, US-005
-- Removed debug output, fixed counting issues, added changelog infrastructure, implemented version flag
-- Index updated: stats now 13 completed, 16 pending (29 total)
-- Next story: US-006 (Parallel agent spawning - 8 criteria)
+## Iteration 14 - US-006 Parallel agent spawning for V-* stories
+- Model: opus
+- Implemented parallel verification infrastructure:
+  1. ✓ Added RALPH_PARALLEL_VERIFICATION and RALPH_PARALLEL_AGENTS config loading in _ralph_load_config()
+  2. ✓ Created _ralph_run_parallel_verification() function for spawning N background agents
+  3. ✓ Agent 1: Desktop viewport prompt (1920x1080) - layout, spacing, full-width interactions
+  4. ✓ Agent 2: Mobile viewport prompt (375x812 iPhone X) - responsive, touch targets, mobile issues
+  5. ✓ Agent 3 (if parallelAgents >= 3): Accessibility focus - keyboard nav, screen reader, ARIA
+  6. ✓ Each agent writes to temp file: /tmp/ralph_parallel_{story_id}_{pid}/agent_{n}.txt
+  7. ✓ Function waits for all agents, collects results, reports pass/fail per agent
+  8. ✓ Typecheck passes (zsh -n ralph.zsh)
+- Parallel agents use haiku model for fast verification
+- Results collected and cleanup of temp directory after completion
+- All 8 acceptance criteria complete
 ---
