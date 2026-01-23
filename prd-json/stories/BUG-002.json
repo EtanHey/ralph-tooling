@@ -1,0 +1,17 @@
+{
+  "id": "BUG-002",
+  "title": "Handle 'No messages returned' Claude CLI error",
+  "description": "Detect and handle the 'No messages returned' Claude CLI crash. Add specific retry logic for this error type.",
+  "acceptanceCriteria": [
+    { "text": "Detect 'No messages returned' in claude output/error", "checked": false },
+    { "text": "Log error to error log file with timestamp", "checked": false },
+    { "text": "Wait 30 seconds before retry (API cooldown)", "checked": false },
+    { "text": "Generate fresh session ID on retry", "checked": false },
+    { "text": "Max 3 retries for this specific error", "checked": false },
+    { "text": "If still failing, skip story and continue to next", "checked": false },
+    { "text": "Send ntfy notification on persistent failure", "checked": false },
+    { "text": "Typecheck passes (zsh -n ralph.zsh)", "checked": false }
+  ],
+  "passes": false,
+  "blockedBy": null
+}
