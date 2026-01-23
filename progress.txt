@@ -238,3 +238,20 @@
 - Moved V-TEST to blocked array, updated nextStory to US-008
 - Updated stats: pending=14, blocked=1
 ---
+
+## Iteration 17 - US-008 Add ralph projects management
+- Model: haiku
+- Implemented ralph-projects() function with three subcommands: add, remove, list
+- Features:
+  1. ✓ ralph-projects add <name> <path>: Adds project to ~/.config/ralphtools/projects.json
+  2. ✓ ralph-projects remove <name>: Removes project from registry
+  3. ✓ ralph-projects list: Shows all registered projects with paths and creation timestamps
+  4. ✓ Path validation: Rejects invalid paths before adding
+  5. ✓ Duplicate detection: Prevents adding projects with the same name
+  6. ✓ Data structure: Stores {name, path, mcps: [], created timestamp} for each project
+  7. ✓ Full paths for commands: Used /bin/date, /usr/bin/jq, /bin/mv to ensure compatibility in zsh subshells
+- All 7 acceptance criteria completed
+- Typecheck passes (zsh -n ralph.zsh)
+- Updated stats: completed=16, pending=13
+- Committed and ready for next story
+---

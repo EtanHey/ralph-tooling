@@ -2888,6 +2888,111 @@ _ralph_show_prd_json() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# RALPH-PROJECTS - Manage projects registry
+# ═══════════════════════════════════════════════════════════════════
+# Usage: ralph-projects [add|remove|list] [args]
+# Manage projects in ~/.config/ralphtools/projects.json
+# ═══════════════════════════════════════════════════════════════════
+
+function ralph-projects() {
+  local RED='\033[0;31m'
+  local GREEN='\033[0;32m'
+  local NC='\033[0m'
+  local projects_file="$HOME/.config/ralphtools/projects.json"
+  local subcommand="${1:-list}"
+
+  case "$subcommand" in
+    add)
+      if [[ $# -lt 3 ]]; then
+        echo "Usage: ralph-projects add <name> <path>"
+        return 1
+      fi
+
+      local name="$2"
+      local path="$3"
+
+      # Validate path exists
+      if [[ ! -d "$path" ]]; then
+        echo "${RED}Error: Path does not exist: $path${NC}"
+        return 1
+      fi
+
+      # Initialize projects.json if it doesn't exist
+      if [[ ! -f "$projects_file" ]]; then
+        echo '{"projects": []}' > "$projects_file"
+      fi
+
+      # Check if project already exists
+      local existing=$(/usr/bin/jq -r ".projects[] | select(.name==\"$name\") | .name" "$projects_file" 2>/dev/null)
+      if [[ -n "$existing" ]]; then
+        echo "${RED}Error: Project '$name' already exists${NC}"
+        return 1
+      fi
+
+      # Add new project
+      local timestamp=$(/bin/date -u +"%Y-%m-%dT%H:%M:%SZ")
+      /usr/bin/jq ".projects += [{\"name\": \"$name\", \"path\": \"$path\", \"mcps\": [], \"created\": \"$timestamp\"}]" "$projects_file" > "${projects_file}.tmp"
+      /bin/mv "${projects_file}.tmp" "$projects_file"
+
+      echo "${GREEN}✓ Project '$name' added${NC}"
+      ;;
+
+    remove)
+      if [[ $# -lt 2 ]]; then
+        echo "Usage: ralph-projects remove <name>"
+        return 1
+      fi
+
+      local name="$2"
+
+      if [[ ! -f "$projects_file" ]]; then
+        echo "${RED}Error: No projects registered${NC}"
+        return 1
+      fi
+
+      # Check if project exists
+      local existing=$(/usr/bin/jq -r ".projects[] | select(.name==\"$name\") | .name" "$projects_file" 2>/dev/null)
+      if [[ -z "$existing" ]]; then
+        echo "${RED}Error: Project '$name' not found${NC}"
+        return 1
+      fi
+
+      # Remove project
+      /usr/bin/jq ".projects |= map(select(.name != \"$name\"))" "$projects_file" > "${projects_file}.tmp"
+      /bin/mv "${projects_file}.tmp" "$projects_file"
+
+      echo "${GREEN}✓ Project '$name' removed${NC}"
+      ;;
+
+    list)
+      if [[ ! -f "$projects_file" ]]; then
+        echo "No projects registered"
+        return 0
+      fi
+
+      local count=$(/usr/bin/jq '.projects | length' "$projects_file" 2>/dev/null || echo "0")
+      if [[ "$count" -eq 0 ]]; then
+        echo "No projects registered"
+        return 0
+      fi
+
+      echo "Registered projects:"
+      /usr/bin/jq -r '.projects[] | "  \(.name)\n    Path: \(.path)\n    Created: \(.created)"' "$projects_file"
+      ;;
+
+    *)
+      echo "Usage: ralph-projects [add|remove|list]"
+      echo ""
+      echo "Subcommands:"
+      echo "  add <name> <path>  - Add a new project"
+      echo "  remove <name>      - Remove a project"
+      echo "  list               - List all registered projects"
+      return 1
+      ;;
+  esac
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # RALPH-AUTO - Auto-restart wrapper for Ralph
 # ═══════════════════════════════════════════════════════════════════
 # Usage: ralph-auto [same args as ralph]
