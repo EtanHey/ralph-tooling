@@ -61,11 +61,11 @@
     },
     {
       "text": "Commit: feat: [STORY-ID] description",
-      "checked": false
+      "checked": true
     }
   ],
   "storyType": "US",
   "priority": "medium",
   "createdAt": "2026-01-24T04:05:00.000Z",
-  "passes": false
+  "passes": true
 }

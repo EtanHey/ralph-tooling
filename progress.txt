@@ -1029,3 +1029,32 @@ Changes:
 - ${0:a:h} in ZSH functions returns the directory + function name, not the script path
 - Use global SCRIPT_DIR variable set at script load time for consistent paths in tests
 - Context templates should use project-standard patterns (npm run typegen, Tables<> helpers)
+
+## Iteration 51
+Story: US-099 - Add Obsidian MCP to ralphtools ecosystem
+Status: COMPLETED (opus)
+Changes:
+- Created scripts/install-obsidian-mcp.sh with full installation workflow:
+  - Auto-detects Obsidian vault locations from config and common paths
+  - Supports multiple vault selection with numbered menu
+  - Guides user through community plugin installation
+  - Configures MCP port with user prompt (default: 22360)
+  - Optional 1Password storage for MCP URL
+  - Generates proper JSON config with jq (heredoc fallback if jq unavailable)
+  - Tests connection to MCP server
+- Added "📓 Configure Obsidian MCP" to ralph-setup wizard (menu option + handler)
+- Created _ralph_setup_obsidian_mcp() function with full setup flow (gum + fallback modes)
+- Added Obsidian MCP section to README.md with:
+  - Setup instructions (wizard and manual)
+  - MCP configuration examples
+  - 1Password integration
+  - Troubleshooting table (port conflicts, connection issues)
+- CodeRabbit issues fixed: store_op variable initialization, jq fallback for JSON generation
+- All 229 tests pass (129 ZSH + 17 skills + 83 Bun)
+
+### Learnings
+- Obsidian Claude Code MCP plugin is a community plugin installed via Obsidian's built-in system
+- Plugin runs MCP server inside Obsidian on port 22360 (configurable per vault)
+- Claude Code CLI can auto-discover vaults via /ide command
+- jq --arg handles shell variable escaping properly (quotes, spaces, backslashes)
+- Bash scripts need fallback patterns when jq isn't available
