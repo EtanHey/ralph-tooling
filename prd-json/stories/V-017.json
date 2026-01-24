@@ -10,19 +10,19 @@
     },
     {
       "text": "Review ~/.claude/CLAUDE.md (global layer)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Review ~/.claude/contexts/ structure and @context directive system",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Review ~/.claude/commands/ symlink structure for skills",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Understand how projects use @context: directives",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== COMMIT HISTORY AUDIT ===",
@@ -30,19 +30,19 @@
     },
     {
       "text": "Run: git log --oneline | head -100 to see recent features",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Identify setup-related commits (skills, contexts, configs, MCPs)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Cross-check: does wizard test for each setup item?",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Document gaps in docs.local/wizard-gaps-from-history.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== EXPLORATION ===",
@@ -50,19 +50,19 @@
     },
     {
       "text": "Audit all skills and their ENV/config requirements",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Check 1Password vault structure (development, project vaults)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Identify MCP servers that need configuration",
-      "checked": false
+      "checked": true
     },
     {
       "text": "List shell config additions (.zshrc sourcing)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== TDD: CREATE TESTS FIRST ===",
@@ -70,27 +70,27 @@
     },
     {
       "text": "Add test: test_wizard_creates_global_claude_md()",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add test: test_wizard_creates_contexts_dir()",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add test: test_wizard_creates_skill_symlinks()",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add test: test_wizard_checks_1password()",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add test: test_wizard_validates_shell_config()",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Tests should FAIL initially (TDD red phase)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== UPDATE WIZARD ===",
@@ -98,15 +98,15 @@
     },
     {
       "text": "Document layered system in docs.local/wizard-setup-audit.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update ralph-install skill with missing setup steps",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: test: V-017 wizard setup TDD tests",

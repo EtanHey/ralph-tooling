@@ -102,6 +102,39 @@ Skills are then available as `/golem-powers:skill-name`:
 | `~/.config/ralphtools/config.json` | User settings |
 | `~/.claude/commands/golem-powers` | Skills symlink |
 | `~/.claude/CLAUDE.md` | Global Claude instructions |
+| `~/.claude/contexts/` | Modular context files |
+
+---
+
+## Contexts Directory
+
+The contexts directory contains reusable CLAUDE.md modules:
+
+```
+~/.claude/contexts/
+├── base.md               # Universal rules (scratchpad, AIDEV-NOTE, type safety)
+├── tech/
+│   ├── nextjs.md         # Next.js patterns
+│   ├── supabase.md       # Supabase patterns
+│   ├── convex.md         # Convex patterns
+│   └── react-native.md   # React Native patterns
+└── workflow/
+    ├── interactive.md    # Interactive Claude rules (CLAUDE_COUNTER)
+    ├── ralph.md          # Ralph autonomous execution
+    ├── rtl.md            # RTL layout rules
+    ├── testing.md        # Testing standards
+    └── design-system.md  # Component guidelines
+```
+
+Projects reference contexts with `@context:` directives:
+```markdown
+## Contexts
+@context: base
+@context: tech/nextjs
+@context: workflow/rtl
+```
+
+The contexts are in the ralphtools repo at `~/.claude/contexts/` (not symlinked, copied during setup).
 
 ---
 

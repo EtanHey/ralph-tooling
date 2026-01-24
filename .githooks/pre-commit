@@ -75,7 +75,8 @@ else
       # Run shellcheck with common exclusions
       # SC1091: Not following sourced file (can't resolve paths)
       # SC2034: Variable appears unused (common in sourced files)
-      if shellcheck -e SC1091,SC2034 "$file" 2>&1; then
+      # SC2088: Tilde in quotes warning (often intentional for display labels)
+      if shellcheck -e SC1091,SC2034,SC2088 "$file" 2>&1; then
         echo "  ${GREEN}✓${NC} $file"
       else
         echo "  ${RED}✗${NC} $file has shellcheck warnings/errors"

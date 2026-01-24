@@ -120,6 +120,8 @@ echo "=== Directories ==="
 check "~/.config/ralphtools exists" "test -d ~/.config/ralphtools"
 check "~/.claude/commands exists" "test -d ~/.claude/commands"
 check_warn "~/.claude/CLAUDE.md exists" "test -f ~/.claude/CLAUDE.md"
+check_warn "~/.claude/contexts exists" "test -d ~/.claude/contexts"
+check_warn "~/.claude/contexts/base.md exists" "test -f ~/.claude/contexts/base.md"
 echo ""
 
 # Section: Skills

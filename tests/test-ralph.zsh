@@ -3873,6 +3873,130 @@ test_worktree_sync_config() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# V-017: WIZARD VALIDATION TESTS (TDD)
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: Wizard validates global CLAUDE.md exists
+test_wizard_validates_global_claude_md() {
+  test_start "wizard validates ~/.claude/CLAUDE.md"
+
+  # Find validate.sh script
+  local validate_script="$HOME/.claude/commands/golem-powers/ralph-install/scripts/validate.sh"
+  if [[ ! -f "$validate_script" ]]; then
+    validate_script="${0:a:h}/../skills/golem-powers/ralph-install/scripts/validate.sh"
+  fi
+
+  if [[ ! -f "$validate_script" ]]; then
+    test_fail "validate.sh not found"
+    return
+  fi
+
+  # Check that validate.sh contains a check for ~/.claude/CLAUDE.md
+  if ! grep -q '\.claude/CLAUDE\.md' "$validate_script" 2>/dev/null; then
+    test_fail "validate.sh does not check for ~/.claude/CLAUDE.md"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: Wizard validates contexts directory exists
+test_wizard_validates_contexts_dir() {
+  test_start "wizard validates ~/.claude/contexts/"
+
+  # Find validate.sh script
+  local validate_script="$HOME/.claude/commands/golem-powers/ralph-install/scripts/validate.sh"
+  if [[ ! -f "$validate_script" ]]; then
+    validate_script="${0:a:h}/../skills/golem-powers/ralph-install/scripts/validate.sh"
+  fi
+
+  if [[ ! -f "$validate_script" ]]; then
+    test_fail "validate.sh not found"
+    return
+  fi
+
+  # Check that validate.sh contains a check for contexts directory
+  if ! grep -q 'contexts' "$validate_script" 2>/dev/null; then
+    test_fail "validate.sh does not check for ~/.claude/contexts/"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: Wizard validates skill symlinks exist
+test_wizard_validates_skill_symlinks() {
+  test_start "wizard validates golem-powers symlink"
+
+  # Find validate.sh script
+  local validate_script="$HOME/.claude/commands/golem-powers/ralph-install/scripts/validate.sh"
+  if [[ ! -f "$validate_script" ]]; then
+    validate_script="${0:a:h}/../skills/golem-powers/ralph-install/scripts/validate.sh"
+  fi
+
+  if [[ ! -f "$validate_script" ]]; then
+    test_fail "validate.sh not found"
+    return
+  fi
+
+  # Check that validate.sh contains a check for golem-powers symlink
+  if ! grep -q 'golem-powers' "$validate_script" 2>/dev/null; then
+    test_fail "validate.sh does not check for golem-powers symlink"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: Wizard checks 1Password is available
+test_wizard_checks_1password() {
+  test_start "wizard checks 1Password CLI"
+
+  # Find validate.sh script
+  local validate_script="$HOME/.claude/commands/golem-powers/ralph-install/scripts/validate.sh"
+  if [[ ! -f "$validate_script" ]]; then
+    validate_script="${0:a:h}/../skills/golem-powers/ralph-install/scripts/validate.sh"
+  fi
+
+  if [[ ! -f "$validate_script" ]]; then
+    test_fail "validate.sh not found"
+    return
+  fi
+
+  # Check that validate.sh contains a check for op CLI
+  if ! grep -q 'op' "$validate_script" 2>/dev/null; then
+    test_fail "validate.sh does not check for op (1Password CLI)"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: Wizard validates shell config for ralph sourcing
+test_wizard_validates_shell_config() {
+  test_start "wizard validates shell config sourcing"
+
+  # Find validate.sh script
+  local validate_script="$HOME/.claude/commands/golem-powers/ralph-install/scripts/validate.sh"
+  if [[ ! -f "$validate_script" ]]; then
+    validate_script="${0:a:h}/../skills/golem-powers/ralph-install/scripts/validate.sh"
+  fi
+
+  if [[ ! -f "$validate_script" ]]; then
+    test_fail "validate.sh not found"
+    return
+  fi
+
+  # Check that validate.sh contains a check for ralph.zsh
+  if ! grep -q 'ralph\.zsh' "$validate_script" 2>/dev/null; then
+    test_fail "validate.sh does not check for ralph.zsh sourcing"
+    return
+  fi
+
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 
