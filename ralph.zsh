@@ -2809,6 +2809,40 @@ _ralph_cleanup_context_file() {
   fi
 }
 
+# Build context for interactive (non-Ralph) Claude sessions
+# Used by generated launcher functions ({name}Claude)
+# Returns context string (not file path) for --append-system-prompt
+# Usage: local ctx=$(_ralph_interactive_context)
+_ralph_interactive_context() {
+  local contexts_dir="${RALPH_CONTEXTS_DIR:-$HOME/.claude/contexts}"
+  local context=""
+
+  # 1. Base context (always)
+  if [[ -f "$contexts_dir/base.md" ]]; then
+    context+="$(<"$contexts_dir/base.md")"
+    context+=$'\n---\n'
+  fi
+
+  # 2. Interactive workflow (NOT ralph workflow)
+  if [[ -f "$contexts_dir/workflow/interactive.md" ]]; then
+    context+="$(<"$contexts_dir/workflow/interactive.md")"
+    context+=$'\n---\n'
+  fi
+
+  # 3. Auto-detect tech stack and load relevant contexts
+  local detected_tech
+  detected_tech=$(_ralph_detect_tech_stack 2>/dev/null)
+  for tech in ${=detected_tech}; do
+    if [[ -f "$contexts_dir/tech/${tech}.md" ]]; then
+      context+="$(<"$contexts_dir/tech/${tech}.md")"
+      context+=$'\n---\n'
+    fi
+  done
+
+  # Return context string (caller uses with --append-system-prompt)
+  print -r -- "$context"
+}
+
 # ═══════════════════════════════════════════════════════════════════
 # JSON MODE HELPERS
 # ═══════════════════════════════════════════════════════════════════

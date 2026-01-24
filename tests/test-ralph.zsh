@@ -2026,6 +2026,118 @@ TESTEOF
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# INTERACTIVE CONTEXT TESTS
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: _ralph_interactive_context returns base context when available
+test_interactive_context_loads_base() {
+  test_start "interactive_context loads base.md"
+  _setup_test_fixtures
+
+  # Create mock contexts directory
+  local mock_contexts="$TEST_TMP_DIR/contexts"
+  mkdir -p "$mock_contexts/workflow" "$mock_contexts/tech"
+
+  # Create base.md
+  echo "# Base Context" > "$mock_contexts/base.md"
+  echo "Base rules here" >> "$mock_contexts/base.md"
+
+  # Override contexts directory
+  local old_dir="$RALPH_CONTEXTS_DIR"
+  RALPH_CONTEXTS_DIR="$mock_contexts"
+
+  # Call the function
+  local result=$(_ralph_interactive_context)
+
+  # Restore
+  RALPH_CONTEXTS_DIR="$old_dir"
+
+  # Verify base content is included
+  if [[ "$result" != *"Base Context"* ]]; then
+    test_fail "interactive_context should include base.md content"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_interactive_context loads interactive workflow (not ralph)
+test_interactive_context_loads_interactive_workflow() {
+  test_start "interactive_context loads workflow/interactive.md"
+  _setup_test_fixtures
+
+  # Create mock contexts directory
+  local mock_contexts="$TEST_TMP_DIR/contexts"
+  mkdir -p "$mock_contexts/workflow"
+
+  # Create base.md and interactive.md
+  echo "# Base" > "$mock_contexts/base.md"
+  echo "# Interactive Workflow" > "$mock_contexts/workflow/interactive.md"
+  echo "Ask before committing" >> "$mock_contexts/workflow/interactive.md"
+
+  # Override contexts directory
+  local old_dir="$RALPH_CONTEXTS_DIR"
+  RALPH_CONTEXTS_DIR="$mock_contexts"
+
+  # Call the function
+  local result=$(_ralph_interactive_context)
+
+  # Restore
+  RALPH_CONTEXTS_DIR="$old_dir"
+
+  # Verify interactive workflow is included
+  if [[ "$result" != *"Interactive Workflow"* ]]; then
+    test_fail "interactive_context should include workflow/interactive.md"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify it does NOT include ralph.md (if it existed)
+  echo "# Ralph Workflow" > "$mock_contexts/workflow/ralph.md"
+  RALPH_CONTEXTS_DIR="$mock_contexts"
+  result=$(_ralph_interactive_context)
+  RALPH_CONTEXTS_DIR="$old_dir"
+
+  if [[ "$result" == *"Ralph Workflow"* ]]; then
+    test_fail "interactive_context should NOT include workflow/ralph.md"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_interactive_context returns empty string gracefully when no contexts
+test_interactive_context_handles_missing_contexts() {
+  test_start "interactive_context handles missing contexts gracefully"
+  _setup_test_fixtures
+
+  # Point to non-existent directory
+  local old_dir="$RALPH_CONTEXTS_DIR"
+  RALPH_CONTEXTS_DIR="$TEST_TMP_DIR/nonexistent"
+
+  # Call the function - should not error
+  local result=$(_ralph_interactive_context 2>&1)
+  local exit_code=$?
+
+  # Restore
+  RALPH_CONTEXTS_DIR="$old_dir"
+
+  # Should return empty or near-empty, no error
+  if [[ $exit_code -ne 0 ]]; then
+    test_fail "interactive_context should not error on missing contexts dir"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 
