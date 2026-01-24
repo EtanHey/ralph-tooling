@@ -28,8 +28,24 @@ if [ -f "supabase/config.toml" ] || grep -q '"@supabase' package.json 2>/dev/nul
 fi
 
 # UI Detection (React, Next.js, etc.)
-if [ -d "src/components" ] || [ -d "components" ] || [ -d "app" ]; then
-    echo "| ✅ | UI/Frontend | \`/golem-powers:brave\` | Found components/ or app/ |"
+UI_DETECTED=""
+if [ -d "src/components" ]; then
+    UI_DETECTED="src/components/"
+elif [ -d "components" ]; then
+    UI_DETECTED="components/"
+elif [ -d "app" ]; then
+    UI_DETECTED="app/"
+elif ls -d */src/components 2>/dev/null | head -1 | grep -q .; then
+    UI_DETECTED=$(ls -d */src/components 2>/dev/null | head -1)
+elif ls -d *-ui/src 2>/dev/null | head -1 | grep -q .; then
+    UI_DETECTED=$(ls -d *-ui/src 2>/dev/null | head -1)
+elif ls -d apps/*/src 2>/dev/null | head -1 | grep -q .; then
+    UI_DETECTED=$(ls -d apps/*/src 2>/dev/null | head -1)
+elif ls -d packages/*/src 2>/dev/null | head -1 | grep -q .; then
+    UI_DETECTED=$(ls -d packages/*/src 2>/dev/null | head -1)
+fi
+if [ -n "$UI_DETECTED" ]; then
+    echo "| ✅ | UI/Frontend | \`/golem-powers:brave\` | Found $UI_DETECTED |"
 fi
 
 # Playwright
