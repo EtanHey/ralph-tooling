@@ -9,43 +9,43 @@
   "acceptanceCriteria": [
     {
       "text": "Create bun/ directory structure",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create core/config.ts - reads config.json",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create core/models.ts - model routing logic",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create core/costs.ts - cost tracking to costs.jsonl",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create core/stories.ts - read/write prd-json/",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create core/claude.ts - spawn Claude CLI with prompt",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Export all modules from core/index.ts",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add unit tests for each core module",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Core modules work standalone with Bun",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: feat: [STORY-ID] description",
