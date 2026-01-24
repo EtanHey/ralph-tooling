@@ -352,3 +352,29 @@ Changes:
 - Context file contents can be passed as the prompt argument value
 - Tech detection uses package.json, config files, and directory presence
 - Context cleanup must happen per-iteration since file is generated in loop
+
+## Iteration 19
+Story: US-078 - Migrate all existing skills to golem-powers namespace
+Status: COMPLETED (opus)
+Changes:
+- Moved all directory-based skills to skills/golem-powers/:
+  - 1password, archive, brave, convex, critique-waves, linear, ralph-install, worktrees
+- Converted single-file skills to directories with SKILL.md:
+  - github.md → golem-powers/github/SKILL.md
+  - prd.md → golem-powers/prd/SKILL.md
+  - skills.md → golem-powers/skills/SKILL.md
+- All skills already had proper YAML frontmatter (name, description)
+- Removed old symlinks from ~/.claude/commands/ (1password, archive, brave, etc.)
+- Single golem-powers symlink already existed and works for all skills
+- Updated ralph.zsh skill references to use golem-powers namespace:
+  - /1password → /golem-powers:1password
+  - /prd → /golem-powers:prd
+- skills/ now only contains golem-powers/ subdirectory
+- Verified all skills accessible via /golem-powers:skillname
+- All 46 tests pass
+
+### Learnings
+- Git detects moves correctly when using `mv` command (R100 = 100% rename)
+- update/ skill mentioned in criteria doesn't exist - was already deprecated
+- All existing skills already had proper YAML frontmatter from previous iterations
+- Single golem-powers symlink + subdirectories is cleaner than multiple individual symlinks
