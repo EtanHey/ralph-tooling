@@ -846,3 +846,14 @@ Moved US-100 to blocked array, set nextStory to US-101.
 - 1Password vault operations require biometric authentication - block immediately
 - Stories involving user secrets should be marked as blocked, not attempted
 - Header criteria (=== SECTION ===) can be pre-checked as they're organizational markers, not actionable tasks
+
+## Iteration 41
+Story: US-101 - Migrate hardcoded MCP secrets from unionClaude/domicaClaude to 1Password
+Status: BLOCKED (opus)
+Reason: Same as US-100 - requires creating secrets in 1Password vaults (Cantaloupe, Domica, Development)
+which needs biometric authentication via the `op` CLI.
+
+Moved US-101 to blocked array, set nextStory to TEST-003.
+
+### Learnings
+- Multiple 1Password stories should all be blocked in sequence rather than attempted
