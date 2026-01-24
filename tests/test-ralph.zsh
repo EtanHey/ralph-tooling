@@ -2568,6 +2568,95 @@ test_status_file_cleanup() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# STDERR CAPTURE TESTS (BUG-028)
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: stderr capture mechanism exists in ralph.zsh
+test_stderr_capture_pattern_exists() {
+  test_start "stderr capture with RALPH_STDERR (BUG-028)"
+
+  # Check that the new stderr capture pattern exists in ralph.zsh
+  local ralph_file="${SCRIPT_DIR}/../ralph.zsh"
+  if [[ ! -f "$ralph_file" ]]; then
+    ralph_file="$HOME/.config/ralph/ralph.zsh"
+  fi
+
+  # Look for RALPH_STDERR variable declaration
+  if ! grep -q 'RALPH_STDERR=' "$ralph_file" 2>/dev/null; then
+    test_fail "RALPH_STDERR variable not found in ralph.zsh"
+    return
+  fi
+
+  # Look for stderr being redirected to file
+  if ! grep -q '2>"$RALPH_STDERR"' "$ralph_file" 2>/dev/null; then
+    test_fail 'stderr redirect to $RALPH_STDERR not found'
+    return
+  fi
+
+  # Look for stderr being appended to RALPH_TMP
+  if ! grep -q 'RALPH_STDERR.*RALPH_TMP' "$ralph_file" 2>/dev/null; then
+    test_fail 'stderr append to RALPH_TMP not found'
+    return
+  fi
+
+  test_pass
+}
+
+# Test: debug capture logging exists
+test_debug_capture_logging_exists() {
+  test_start "debug capture logging (BUG-028)"
+
+  local ralph_file="${SCRIPT_DIR}/../ralph.zsh"
+  if [[ ! -f "$ralph_file" ]]; then
+    ralph_file="$HOME/.config/ralph/ralph.zsh"
+  fi
+
+  # Look for RALPH_DEBUG_CAPTURE environment variable check
+  if ! grep -q 'RALPH_DEBUG_CAPTURE' "$ralph_file" 2>/dev/null; then
+    test_fail "RALPH_DEBUG_CAPTURE env var check not found"
+    return
+  fi
+
+  # Look for debug log file creation
+  if ! grep -q 'ralph_debug_capture' "$ralph_file" 2>/dev/null; then
+    test_fail "debug capture log file creation not found"
+    return
+  fi
+
+  # Look for pipestatus logging
+  if ! grep -q 'pipestatus array' "$ralph_file" 2>/dev/null; then
+    test_fail "pipestatus debug logging not found"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: error pattern detection includes has_error and is_no_messages_error debug
+test_error_detection_debug_logging() {
+  test_start "error detection debug logging (BUG-028)"
+
+  local ralph_file="${SCRIPT_DIR}/../ralph.zsh"
+  if [[ ! -f "$ralph_file" ]]; then
+    ralph_file="$HOME/.config/ralph/ralph.zsh"
+  fi
+
+  # Look for debug output showing has_error value
+  if ! grep -q 'has_error=\$has_error' "$ralph_file" 2>/dev/null; then
+    test_fail "has_error debug output not found"
+    return
+  fi
+
+  # Look for debug output showing is_no_messages_error value
+  if ! grep -q 'is_no_messages_error=\$is_no_messages_error' "$ralph_file" 2>/dev/null; then
+    test_fail "is_no_messages_error debug output not found"
+    return
+  fi
+
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 

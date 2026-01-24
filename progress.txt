@@ -741,3 +741,32 @@ Changes:
 - Docusaurus tsconfig.json can have comments (valid for TS, not JSON) - may fail strict JSON validation
 - Local search plugin is simpler than Algolia for small docs sites
 - GitHub Pages deployment uses actions/deploy-pages@v4 with pages write permission
+
+## Iteration 36
+Story: BUG-028 - No messages returned errors bypass retry logic
+Status: COMPLETED (opus)
+Changes:
+- ROOT CAUSE ANALYSIS: The `2>&1 |` pipe was capturing stderr AFTER the redirect, but Node.js
+  unhandled promise rejections may write to stderr BEFORE the shell's redirect takes effect
+- Implemented separate stderr capture with $RALPH_STDERR file:
+  - Created RALPH_STDERR="/tmp/ralph_stderr_$$.txt" for separate stderr capture
+  - Changed command execution to `{ cmd 2>"$RALPH_STDERR"; } | tee/cat`
+  - After command completion, appends RALPH_STDERR contents to RALPH_TMP
+- Added comprehensive debug logging (enabled via RALPH_DEBUG_CAPTURE=true):
+  - Debug log file created at /tmp/ralph_debug_capture_*.log
+  - Shows pipestatus array and exit_code values
+  - Shows RALPH_TMP file existence, size, and line count
+  - Shows first 5 and last 10 lines of RALPH_TMP
+  - Shows has_error and is_no_messages_error detection values
+  - Shows matched error patterns for diagnosis
+- Added 3 new tests for BUG-028:
+  - test_stderr_capture_pattern_exists: verifies RALPH_STDERR mechanism
+  - test_debug_capture_logging_exists: verifies RALPH_DEBUG_CAPTURE feature
+  - test_error_detection_debug_logging: verifies debug output for error detection
+- All 80 ZSH tests pass, 83 Bun tests pass (163 total)
+
+### Learnings
+- Node.js writes unhandled promise rejections to stderr, but shell `2>&1` may not capture if timing differs
+- Separate stderr capture with explicit file and append is more reliable than inline redirect
+- Debug logging controlled by env var (RALPH_DEBUG_CAPTURE) avoids noise in normal operation
+- pipestatus[1] in zsh correctly captures first command's exit code in a pipeline

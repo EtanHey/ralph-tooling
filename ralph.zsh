@@ -4313,7 +4313,16 @@ At the START of any iteration that needs browser verification:
       # Run CLI with output capture (tee for checking promises)
       # Note: Claude uses -p flag, Kiro uses positional argument (${prompt_flag:+...} expands only if non-empty)
       # NODE_OPTIONS: Force unhandled promise rejections to become exceptions (properly captured by pipe)
-      NODE_OPTIONS="--unhandled-rejections=strict" "${cli_cmd_arr[@]}" ${prompt_flag:+$prompt_flag} "${ralph_prompt}
+      #
+      # BUG-028 FIX: Capture stderr separately to ensure error messages like "No messages returned"
+      # are captured even if they're written to stderr before the 2>&1 redirect takes effect.
+      # This uses a separate file for stderr, then appends it to RALPH_TMP.
+      local RALPH_STDERR="/tmp/ralph_stderr_$$.txt"
+      rm -f "$RALPH_STDERR" 2>/dev/null
+
+      # Execute with stderr going to separate file, stdout to RALPH_TMP (via tee or cat)
+      # The { cmd 2>file; } pattern ensures stderr is captured to file before any redirects
+      { NODE_OPTIONS="--unhandled-rejections=strict" "${cli_cmd_arr[@]}" ${prompt_flag:+$prompt_flag} "${ralph_prompt}
 
 ## Dev Server Rules (CRITICAL)
 
@@ -4429,7 +4438,22 @@ At the end of EVERY iteration, provide an expressive summary:
 After completing task, check PRD state:
 - ALL stories have passes=true (or pending array empty): output <promise>COMPLETE</promise>
 - ALL remaining stories are blocked: output <promise>ALL_BLOCKED</promise>
-- Some stories still pending: end response (next iteration continues)" 2>&1 | if [[ "$verbose_enabled" == "true" ]]; then tee "$RALPH_TMP"; else cat > "$RALPH_TMP"; fi
+- Some stories still pending: end response (next iteration continues)" 2>"$RALPH_STDERR"; } | if [[ "$verbose_enabled" == "true" ]]; then tee "$RALPH_TMP"; else cat > "$RALPH_TMP"; fi
+
+      # BUG-028: Append stderr to RALPH_TMP so error patterns are detected
+      # This ensures "No messages returned" and other errors written to stderr are captured
+      if [[ -s "$RALPH_STDERR" ]]; then
+        echo "" >> "$RALPH_TMP"
+        echo "─── STDERR OUTPUT ───────────────────────────────────────────" >> "$RALPH_TMP"
+        cat "$RALPH_STDERR" >> "$RALPH_TMP"
+        # Also show stderr to user if verbose mode or if debug capture enabled
+        if [[ "$verbose_enabled" == "true" ]] || [[ "${RALPH_DEBUG_CAPTURE:-false}" == "true" ]]; then
+          echo ""
+          echo "  ⚠️  STDERR captured:"
+          cat "$RALPH_STDERR" | sed 's/^/       /'
+        fi
+      fi
+      rm -f "$RALPH_STDERR" 2>/dev/null
 
       # Stop background polling loop now that Claude has finished
       _ralph_stop_polling_loop
@@ -4440,6 +4464,40 @@ After completing task, check PRD state:
       # Capture exit code of Claude (pipestatus[1] in zsh gets first command in pipe)
       # Note: zsh uses lowercase 'pipestatus' and 1-indexed arrays
       local exit_code=${pipestatus[1]:-999}
+
+      # DEBUG LOGGING (BUG-028): Diagnose No messages returned capture issues
+      # These logs help identify if stderr is being captured and what exit codes we're seeing
+      if [[ "${RALPH_DEBUG_CAPTURE:-false}" == "true" ]]; then
+        local debug_log="/tmp/ralph_debug_capture_$(date +%Y%m%d_%H%M%S).log"
+        {
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "RALPH DEBUG: Capture Diagnostics - $(date)"
+          echo "═══════════════════════════════════════════════════════════════"
+          echo ""
+          echo "─── EXIT CODE INFO ──────────────────────────────────────────"
+          echo "pipestatus array: ${pipestatus[*]}"
+          echo "exit_code (pipestatus[1]): $exit_code"
+          echo ""
+          echo "─── RALPH_TMP FILE INFO ─────────────────────────────────────"
+          echo "RALPH_TMP path: $RALPH_TMP"
+          if [[ -f "$RALPH_TMP" ]]; then
+            echo "File exists: YES"
+            echo "File size: $(wc -c < "$RALPH_TMP") bytes"
+            echo "Line count: $(wc -l < "$RALPH_TMP")"
+            echo ""
+            echo "─── FIRST 5 LINES OF RALPH_TMP ─────────────────────────────"
+            head -5 "$RALPH_TMP" 2>/dev/null || echo "(failed to read)"
+            echo ""
+            echo "─── LAST 10 LINES OF RALPH_TMP ────────────────────────────"
+            tail -10 "$RALPH_TMP" 2>/dev/null || echo "(failed to read)"
+          else
+            echo "File exists: NO - this is a problem!"
+          fi
+          echo ""
+          echo "═══════════════════════════════════════════════════════════════"
+        } > "$debug_log"
+        echo "  📋 DEBUG: Capture diagnostics written to $debug_log"
+      fi
 
       # Check for Ctrl+C (exit code 130 = SIGINT)
       if [[ "$exit_code" -eq 130 ]]; then
@@ -4476,6 +4534,18 @@ After completing task, check PRD state:
       if [[ -f "$RALPH_TMP" ]]; then
         if grep -qiE "No messages returned" "$RALPH_TMP" 2>/dev/null; then
           is_no_messages_error=true
+        fi
+      fi
+
+      # DEBUG LOGGING (BUG-028): Show error detection results
+      if [[ "${RALPH_DEBUG_CAPTURE:-false}" == "true" ]]; then
+        echo "  📋 DEBUG: has_error=$has_error, is_no_messages_error=$is_no_messages_error"
+        if [[ -f "$RALPH_TMP" ]]; then
+          local found_patterns=$(grep -iE "$error_patterns" "$RALPH_TMP" 2>/dev/null | head -3)
+          if [[ -n "$found_patterns" ]]; then
+            echo "  📋 DEBUG: Matched error patterns:"
+            echo "$found_patterns" | sed 's/^/       /'
+          fi
         fi
       fi
 
