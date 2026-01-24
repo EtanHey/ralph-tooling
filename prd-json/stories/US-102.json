@@ -8,27 +8,27 @@
   "acceptanceCriteria": [
     {
       "text": "Create ~/.claude/contexts/workflow/interactive.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Move git safety rules from base.md to interactive.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Move CLAUDE_COUNTER system from base.md to interactive.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update base.md to only contain truly universal rules",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Remove OVERRIDE comment from ralph.md (no longer needed)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update README.md in contexts with new architecture",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit changes",
