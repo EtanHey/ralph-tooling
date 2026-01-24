@@ -92,23 +92,44 @@ categorize_skill() {
     fi
 }
 
-# Scan for skills
-for item in "$SKILLS_DIR"/*; do
-    [[ ! -e "$item" ]] && continue
-    name=$(basename "$item" .md)
+# Scan for skills (handles namespaced skills like golem-powers/)
+scan_skill_dir() {
+    local dir="$1"
+    local namespace="$2"
 
-    # Skip the skills command itself
-    [[ "$name" == "skills" ]] && continue
+    for item in "$dir"/*; do
+        [[ ! -e "$item" ]] && continue
+        local name=$(basename "$item" .md)
 
-    # Determine if multi-file or single-file skill
-    if [[ -d "$item" ]]; then
-        # Multi-file skill - look for SKILL.md
-        if [[ -f "$item/SKILL.md" ]]; then
-            desc=$(extract_desc "$item/SKILL.md")
-            workflows=$(count_workflows "$item")
-            source=$(get_source "$item")
-            category=$(categorize_skill "$name" "$desc")
-            entry="$name|$desc|$source|$workflows"
+        # Skip meta items
+        [[ "$name" == "skills" ]] && continue
+
+        if [[ -d "$item" ]]; then
+            # Check if this is a skill directory (has SKILL.md)
+            if [[ -f "$item/SKILL.md" ]]; then
+                local full_name="${namespace}${name}"
+                local desc=$(extract_desc "$item/SKILL.md")
+                local workflows=$(count_workflows "$item")
+                local source=$(get_source "$item")
+                local category=$(categorize_skill "$name" "$desc")
+                local entry="$full_name|$desc|$source|$workflows"
+
+                case $category in
+                    infra) infra_skills+=("$entry") ;;
+                    domain) domain_skills+=("$entry") ;;
+                    *) custom_skills+=("$entry") ;;
+                esac
+            else
+                # This is a namespace directory (like golem-powers/), recurse
+                scan_skill_dir "$item" "${name}:"
+            fi
+        elif [[ -f "$item" && "$item" == *.md ]]; then
+            # Single-file skill
+            local full_name="${namespace}${name}"
+            local desc=$(extract_desc "$item")
+            local source=$(get_source "$item")
+            local category=$(categorize_skill "$name" "$desc")
+            local entry="$full_name|$desc|$source|0"
 
             case $category in
                 infra) infra_skills+=("$entry") ;;
@@ -116,20 +137,11 @@ for item in "$SKILLS_DIR"/*; do
                 *) custom_skills+=("$entry") ;;
             esac
         fi
-    elif [[ -f "$item" && "$item" == *.md ]]; then
-        # Single-file skill
-        desc=$(extract_desc "$item")
-        source=$(get_source "$item")
-        category=$(categorize_skill "$name" "$desc")
-        entry="$name|$desc|$source|0"
+    done
+}
 
-        case $category in
-            infra) infra_skills+=("$entry") ;;
-            domain) domain_skills+=("$entry") ;;
-            *) custom_skills+=("$entry") ;;
-        esac
-    fi
-done
+# Start scanning from the root commands directory
+scan_skill_dir "$SKILLS_DIR" ""
 
 # Print function
 print_skills() {

@@ -158,8 +158,9 @@ Projects can access Ralph's skills automatically - they're globally available th
 
 | Skill | Description |
 |-------|-------------|
+| `/project-context` | **Auto-detect project tools and MCP servers** |
 | `/prd` | PRD generation for Ralph |
-| `/update` | Add or modify PRD stories safely |
+| `/prd-manager` | Add or modify PRD stories safely |
 | `/archive` | Archive completed PRD stories |
 | `/convex` | Convex workflows: dev server, deployment, user deletion |
 | `/1password` | Secret management, .env migration |
@@ -168,8 +169,36 @@ Projects can access Ralph's skills automatically - they're globally available th
 | `/worktrees` | Git worktree isolation |
 | `/brave` | Brave browser automation (fallback) |
 | `/coderabbit` | Code review workflows |
+| `/context7` | Library documentation lookup |
+| `/ralph-commit` | Atomic commit + criterion check for Ralph |
 | `/critique-waves` | Iterative verification with parallel agents |
+| `/catchup` | Context recovery after long breaks |
 | `/skills` | List available skills |
+
+### Project Context Detection
+
+Run `/project-context` at session start to auto-detect:
+
+- **Project tools**: Convex, Linear, Supabase, UI frameworks, 1Password, PRD
+- **MCP servers**: Shows installed MCPs with skill alternatives
+- **Git context**: Current branch and project root
+
+```bash
+# Example output:
+| Detected | Tool | Skill |
+|----------|------|-------|
+| ✅ | Convex | `/golem-powers:convex` |
+| ✅ | Linear | `/golem-powers:linear` |
+| ✅ | 1Password | `/golem-powers:1password` |
+
+## MCP Servers (with Skill Alternatives)
+| MCP Server | Installed | Skill Alternative |
+|------------|-----------|-------------------|
+| Linear | ✅ plugin | `/golem-powers:linear` - uses API directly |
+| Context7 | ✅ plugin | `/golem-powers:context7` - uses API directly |
+```
+
+**Tip:** Skills call APIs directly and are often faster than MCP servers.
 
 ### Updating Skills
 

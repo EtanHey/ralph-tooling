@@ -643,6 +643,31 @@ test_brave_skill_compliant() {
   test_pass
 }
 
+# Test: project-context skill is compliant
+test_project_context_skill_compliant() {
+  test_start "project-context skill is compliant"
+
+  local skill_path=$(_get_skill_path "project-context")
+
+  # Must have SKILL.md
+  assert_file_exists "$skill_path/SKILL.md" "project-context missing SKILL.md" || return
+
+  # Must have scripts directory
+  assert_dir_exists "$skill_path/scripts" "project-context missing scripts/" || return
+
+  # detect.sh must exist and be executable
+  assert_file_exists "$skill_path/scripts/detect.sh" "project-context missing detect.sh" || return
+  assert_executable "$skill_path/scripts/detect.sh" "detect.sh not executable" || return
+
+  # detect.sh must run without errors (basic syntax check)
+  if ! bash -n "$skill_path/scripts/detect.sh" 2>/dev/null; then
+    test_fail "detect.sh has syntax errors"
+    return
+  fi
+
+  test_pass
+}
+
 # ═══════════════════════════════════════════════════════════════════
 # TEST RUNNER
 # ═══════════════════════════════════════════════════════════════════

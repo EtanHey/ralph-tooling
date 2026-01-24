@@ -19,13 +19,73 @@ Create PRDs for autonomous AI implementation via Ralph loop.
 
 1. Ask 3-5 clarifying questions (use `AskUserQuestion` tool)
 2. Find git root: `git rev-parse --show-toplevel`
-3. Create JSON output:
+3. **Discover relevant skills** for this project (see below)
+4. Create JSON output:
    - `prd-json/index.json` - Story order and stats
    - `prd-json/stories/{US-XXX}.json` - One file per story
-4. Create `progress.txt` at git root
-5. **STOP and say: "PRD ready. Run Ralph to execute."**
+5. Create `prd-json/AGENTS.md` with skills section
+6. Create `progress.txt` at git root
+7. **STOP and say: "PRD ready. Run Ralph to execute."**
 
 **🛑 DO NOT IMPLEMENT** - Ralph handles that externally.
+
+---
+
+## Skill Discovery (CRITICAL for Ralph)
+
+**Before creating stories, determine which skills are relevant for THIS project:**
+
+### Step 1: Check Project Context
+
+```bash
+# What's in this project?
+[ -f "convex.json" ] && echo "HAS_CONVEX=true"
+[ -f ".linear" ] || grep -q "linear" package.json 2>/dev/null && echo "HAS_LINEAR=true"
+[ -d "src/components" ] || [ -d "app" ] && echo "HAS_UI=true"
+[ -f "playwright.config.ts" ] && echo "HAS_PLAYWRIGHT=true"
+```
+
+### Step 2: Match Skills to Project
+
+**UNIVERSAL (always include):**
+
+| Skill | Why |
+|-------|-----|
+| `/ralph-commit` | Atomic commits with criterion check |
+| `/coderabbit` | Code review before commits (iterate until clean) |
+| `/context7` | Look up library docs when unsure about APIs |
+| `/github` | Git operations, PRs, issues |
+| `/create-pr` | Push and create PRs |
+| `/catchup` | Context recovery after long breaks |
+
+**PROJECT-SPECIFIC (include if detected):**
+
+| If Project Has... | Include Skill | Why |
+|-------------------|---------------|-----|
+| `convex.json` | `/convex` | Dev server, deploy, functions |
+| `.linear` or Linear in deps | `/linear` | Issue tracking |
+| UI (`/app`, `/components`) | `/brave` | Browser automation |
+| 1Password secrets | `/1password` | Secrets management |
+| Complex PRD (10+ stories) | `/prd-manager` | Bulk story operations |
+| Needs isolation | `/worktrees` | Branch isolation |
+
+**DO NOT INCLUDE (meta skills, not for Ralph):**
+- `/prd`, `/skills`, `/writing-skills`, `/ralph-install`, `/example-*`
+
+### Step 3: List Available Skills (Reference)
+
+```bash
+# See all installed skills
+ls -1 ~/.claude/commands/golem-powers/*/SKILL.md 2>/dev/null | while read f; do
+  skill=$(dirname "$f" | xargs basename)
+  desc=$(awk '/^description:/{gsub(/^description: *"?/, ""); gsub(/"$/, ""); print}' "$f")
+  echo "/$skill: $desc"
+done
+```
+
+### Step 4: Include ONLY Relevant Skills in AGENTS.md
+
+Don't dump all skills - only include ones this project will actually use. Ralph should see a focused list, not 20+ skills.
 
 ---
 
@@ -172,8 +232,46 @@ Create at repository root:
 - `progress.txt`
 
 ### AGENTS.md Template
+
+**IMPORTANT:** Run skill discovery first and include ACTUAL descriptions in AGENTS.md:
+
+```bash
+# Generate skills table for AGENTS.md
+echo "| Skill | When to Use |"
+echo "|-------|-------------|"
+ls -1 ~/.claude/commands/golem-powers/*/SKILL.md 2>/dev/null | while read f; do
+  skill=$(dirname "$f" | xargs basename)
+  desc=$(awk '/^description:/{gsub(/^description: *"?/, ""); gsub(/"$/, ""); print}' "$f")
+  echo "| \`/$skill\` | $desc |"
+done
+```
+
 ```markdown
 # AI Agent Instructions for PRD
+
+## 🚀 Available Skills
+
+**Invoke skills via `/skill-name` - read the description to know WHEN to use each:**
+
+<!-- PASTE OUTPUT FROM SKILL DISCOVERY HERE -->
+| Skill | When to Use |
+|-------|-------------|
+| `/ralph-commit` | Atomic commit + criterion check for Ralph stories. Use for "Commit:" criteria. |
+| `/coderabbit` | Runs AI code reviews. Use when reviewing changes, preparing PRs, or checking code quality. |
+| `/prd-manager` | Manage PRD stories - add, update, bulk operations. |
+| `/catchup` | Recover context by reading all files changed since diverging from main. |
+
+## 🔄 CodeRabbit Iteration Rule
+
+**For "Run CodeRabbit review" criteria, iterate until clean:**
+
+1. Run: `cr review --prompt-only --type uncommitted`
+2. If issues found → Fix them
+3. Run CR again
+4. Repeat until: "No issues found" or only intentional patterns remain
+5. If intentional pattern → Add to CLAUDE.md's CodeRabbit Context section
+
+**Never skip CR or commit with unresolved issues.**
 
 ## ⚠️ NEVER EDIT index.json DIRECTLY
 
@@ -205,9 +303,10 @@ To add/modify stories, use `update.json`:
 
 ## Checklist
 
+- [ ] Ran skill discovery - identified relevant skills for project
 - [ ] prd-json/ created at repo root
 - [ ] index.json has valid stats, storyOrder, pending
-- [ ] AGENTS.md created with update.json instructions
+- [ ] AGENTS.md created with skills section + update.json instructions
 - [ ] Each story has its own JSON file
 - [ ] Stories ordered by dependency
 - [ ] All criteria are verifiable
