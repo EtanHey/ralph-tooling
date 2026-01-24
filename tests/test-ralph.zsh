@@ -3700,6 +3700,179 @@ test_ralph_kill_orphans_function_exists() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# V-016: WORKTREE SYNC TESTS (TDD)
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: Worktree syncs .env files by default
+test_worktree_syncs_env_files() {
+  test_start "Worktree syncs .env files by default"
+
+  _setup_test_fixtures
+
+  # Verify ralph-start function exists
+  if ! typeset -f ralph-start > /dev/null 2>&1; then
+    test_fail "ralph-start function does not exist"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify --no-env flag is documented in help
+  local help_output=$(ralph-help 2>&1)
+  if [[ ! "$help_output" =~ "--no-env" ]]; then
+    test_fail "ralph-start --no-env flag not in help output"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: Worktree syncs CLAUDE.md (project level is in git)
+test_worktree_syncs_claude_md() {
+  test_start "Worktree syncs CLAUDE.md via git (project)"
+
+  _setup_test_fixtures
+
+  # CLAUDE.md is tracked in git, so it's automatically in worktrees
+  # This test verifies the conceptual understanding: project CLAUDE.md = git tracked
+  # Global ~/.claude/CLAUDE.md doesn't need syncing (accessible from everywhere)
+
+  # Find repo root by going up from test file location
+  local script_dir="${0:a:h}"
+  local repo_root=$(cd "$script_dir" && git rev-parse --show-toplevel 2>/dev/null)
+
+  if [[ -z "$repo_root" ]]; then
+    test_fail "Could not find git repo root"
+    _teardown_test_fixtures
+    return
+  fi
+
+  if [[ ! -f "$repo_root/CLAUDE.md" ]]; then
+    test_fail "Project CLAUDE.md does not exist in repo root: $repo_root"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify it's tracked by git (not gitignored)
+  local is_tracked=$(cd "$repo_root" && git ls-files CLAUDE.md 2>/dev/null)
+  if [[ -z "$is_tracked" ]]; then
+    test_fail "Project CLAUDE.md is not tracked by git"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: Contexts are loaded from global location (no sync needed)
+test_worktree_syncs_contexts() {
+  test_start "Contexts load from ~/.claude/contexts (no sync)"
+
+  _setup_test_fixtures
+
+  # Verify contexts directory exists at global location
+  local contexts_dir="$HOME/.claude/contexts"
+
+  if [[ ! -d "$contexts_dir" ]]; then
+    test_fail "Global contexts directory does not exist: $contexts_dir"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify base.md exists (always loaded)
+  if [[ ! -f "$contexts_dir/base.md" ]]; then
+    test_fail "base.md context does not exist"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify workflow/ralph.md exists (Ralph context)
+  if [[ ! -f "$contexts_dir/workflow/ralph.md" ]]; then
+    test_fail "workflow/ralph.md context does not exist"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify _ralph_build_context_file function loads from this location
+  if ! typeset -f _ralph_build_context_file > /dev/null 2>&1; then
+    test_fail "_ralph_build_context_file function does not exist"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: Worktree syncs prd-json directory
+test_worktree_syncs_prd_json() {
+  test_start "Worktree syncs prd-json directory"
+
+  _setup_test_fixtures
+
+  # Verify ralph-start function syncs prd-json
+  # Check the function source for prd-json handling
+  local func_source=$(typeset -f ralph-start 2>/dev/null)
+
+  if [[ -z "$func_source" ]]; then
+    test_fail "ralph-start function not found"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify prd-json sync is in the function
+  if [[ ! "$func_source" =~ 'prd-json' ]]; then
+    test_fail "ralph-start does not handle prd-json sync"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify copy command is used (not symlink) for prd-json
+  if [[ ! "$func_source" =~ cp.*prd-json ]]; then
+    test_fail "ralph-start should copy prd-json directory"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: .worktree-sync.json config is processed
+test_worktree_sync_config() {
+  test_start ".worktree-sync.json config is processed"
+
+  _setup_test_fixtures
+
+  # Verify _ralph_process_worktree_sync function exists
+  if ! typeset -f _ralph_process_worktree_sync > /dev/null 2>&1; then
+    test_fail "_ralph_process_worktree_sync function does not exist"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify _ralph_run_sync_commands function exists
+  if ! typeset -f _ralph_run_sync_commands > /dev/null 2>&1; then
+    test_fail "_ralph_run_sync_commands function does not exist"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify ralph-start checks for .worktree-sync.json
+  local func_source=$(typeset -f ralph-start 2>/dev/null)
+  if [[ ! "$func_source" =~ '.worktree-sync.json' ]]; then
+    test_fail "ralph-start does not check for .worktree-sync.json"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 

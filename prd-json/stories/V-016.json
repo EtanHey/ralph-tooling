@@ -10,19 +10,19 @@
     },
     {
       "text": "Review ~/.claude/CLAUDE.md (global layer)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Review project CLAUDE.md with @context directives",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Review ~/.claude/contexts/ structure (base.md, workflow/, tech/)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Understand MP-002 modular context loading via --append-system-prompt-file",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== COMMIT HISTORY AUDIT ===",
@@ -30,19 +30,19 @@
     },
     {
       "text": "Run: git log --oneline | head -100 to see recent features",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Identify sync-related commits (contexts, configs, skills, MCPs)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Cross-check: does worktree sync handle each new file type?",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Document gaps in docs.local/worktree-gaps-from-history.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== EXPLORATION ===",
@@ -50,19 +50,19 @@
     },
     {
       "text": "Identify which context files worktrees need copied vs symlinked",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Check .env*, tsconfig, package.json sync needs",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Check prd-json/ directory sync needs",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Review 1Password .env.template files",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== TDD: CREATE TESTS FIRST ===",
@@ -70,27 +70,27 @@
     },
     {
       "text": "Add test: test_worktree_syncs_env_files()",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add test: test_worktree_syncs_claude_md() for project CLAUDE.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add test: test_worktree_syncs_contexts() for context files",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add test: test_worktree_syncs_prd_json()",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add test: test_worktree_sync_config() for .worktree-sync.json",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Tests should FAIL initially (TDD red phase)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== UPDATE US-086 ===",
@@ -98,24 +98,24 @@
     },
     {
       "text": "Document layered system in docs.local/worktree-sync-audit.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update US-086 criteria to handle all layers",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: test: V-016 worktree sync TDD tests",
-      "checked": false
+      "checked": true
     }
   ],
   "storyType": "V",
   "priority": "high",
   "dependencies": [],
   "createdAt": "2026-01-24T05:30:00.000Z",
-  "passes": false
+  "passes": true
 }

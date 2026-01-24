@@ -950,3 +950,28 @@ Changes:
 - React Ink components use fs.statSync for file modification time (not Bun.file)
 - Polling at 1s interval is more reliable than fs.watch for /tmp files
 - All status indicators conditionally render based on ralphStatus state
+
+## Iteration 48
+Story: V-016 - Verify: ralph-start worktree sync completeness (TDD)
+Status: COMPLETED (opus)
+Changes:
+- Audited layered CLAUDE.md system: global (~/.claude/CLAUDE.md), project (./CLAUDE.md), contexts (~/.claude/contexts/)
+- Reviewed MP-002 modular context loading via --append-system-prompt
+- Analyzed 100 recent commits for sync-related features
+- Created docs.local/worktree-gaps-from-history.md documenting gap analysis
+- Created docs.local/worktree-sync-audit.md with complete audit results
+- Added 5 TDD tests: test_worktree_syncs_env_files, test_worktree_syncs_claude_md, test_worktree_syncs_contexts, test_worktree_syncs_prd_json, test_worktree_sync_config
+- Fixed CodeRabbit issue: unquoted regex pattern in test (cp.*prd-json)
+- Confirmed US-086 implementation is complete - no additional criteria needed
+- All 112 ZSH tests pass, CodeRabbit: PASS
+
+### Key Findings
+- Global files (~/claude/CLAUDE.md, ~/.claude/contexts/) don't need sync - accessible everywhere
+- Project CLAUDE.md is git-tracked - automatic in worktrees
+- Contexts loaded dynamically at runtime via _ralph_build_context_file()
+- Current sync (prd-json/, progress.txt, AGENTS.md, .env files) is sufficient
+
+### Learnings
+- Layered CLAUDE.md system separates global, project, and runtime contexts
+- TDD verification for existing implementation verifies tests pass (green phase)
+- Git rev-parse --show-toplevel is more reliable than relative paths for repo root
