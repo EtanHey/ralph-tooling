@@ -1,0 +1,22 @@
+{
+  "id": "US-106",
+  "title": "Add check-progress workflow to prd-manager skill",
+  "description": "Add a quick way to check current PRD progress and active story status. Useful for Claude to quickly understand where Ralph is in execution.\n\nThe workflow should show:\n- Current/next story ID and title\n- Progress on current story (X/Y criteria checked)\n- Overall PRD stats (completed/pending/blocked)\n- Any partial progress or learnings",
+  "type": "feature",
+  "priority": "medium",
+  "storyPoints": 2,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Add check-progress workflow to prd-manager skill", "checked": false},
+    {"text": "Workflow reads index.json nextStory field", "checked": false},
+    {"text": "Workflow reads current story JSON and shows criteria progress", "checked": false},
+    {"text": "Workflow shows overall stats (completed/pending/blocked)", "checked": false},
+    {"text": "Output is concise and machine-readable for Claude", "checked": false},
+    {"text": "Can be invoked via /prd-manager check-progress or similar", "checked": false},
+    {"text": "Add to prd-manager SKILL.md documentation", "checked": false},
+    {"text": "Run CodeRabbit review", "checked": false},
+    {"text": "Commit: feat: US-106 add check-progress workflow to prd-manager", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}

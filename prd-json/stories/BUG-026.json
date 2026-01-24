@@ -1,0 +1,20 @@
+{
+  "id": "BUG-026",
+  "title": "Pre-commit hook has false positives blocking commits",
+  "description": "The pre-commit hook incorrectly blocks valid commits due to:\n\n1. Brace balance check counts braces in strings/patterns/heredocs, not just code braces\n2. Break statement check doesn't properly detect that break is inside a loop\n\nThese cause valid code to fail pre-commit even when all tests pass.",
+  "type": "bug",
+  "priority": "high",
+  "storyPoints": 2,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Fix brace balance check to ignore braces in strings/heredocs or tolerate small imbalances", "checked": false},
+    {"text": "Fix break detection to verify break is actually outside a loop (check for while/for/until context)", "checked": false},
+    {"text": "Add test case for valid code with braces in strings", "checked": false},
+    {"text": "Add test case for break inside retry loop", "checked": false},
+    {"text": "Verify ralph.zsh passes pre-commit without --no-verify", "checked": false},
+    {"text": "Run CodeRabbit review", "checked": false},
+    {"text": "Commit: fix: BUG-026 reduce pre-commit hook false positives", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}
