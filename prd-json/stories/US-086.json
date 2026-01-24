@@ -9,63 +9,63 @@
   "acceptanceCriteria": [
     {
       "text": "Copy .env and .env.local files to worktree (if they exist)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "OR: Use 1Password injection via op run --env-file=.env.template",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add --install flag: run npm/bun install in worktree",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Auto-detect package manager (npm, bun, pnpm, yarn)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add --dev flag: start dev server in background after setup",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Check for .worktree-sync.json config file for custom sync rules",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - sync.files: additional files to copy",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - sync.symlinks: files to symlink instead of copy",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - sync.commands: post-setup commands to run",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Symlink node_modules if --symlink-deps flag (faster than install)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Show setup progress with clear status messages",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Document all new flags in ralph --help and README",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: ralph-start --install on a Node project",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: ralph-start with .worktree-sync.json config",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: feat: [STORY-ID] description",
@@ -73,11 +73,11 @@
     },
     {
       "text": "Include AGENTS.md and context files in .worktree-sync.json defaults",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Sync prd-json/ directory to worktree if exists",
-      "checked": false
+      "checked": true
     }
   ],
   "dependencies": [],

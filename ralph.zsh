@@ -4715,6 +4715,11 @@ function ralph-help() {
   echo ""
   echo "${GREEN}Session Isolation:${NC}"
   echo "  ${BOLD}ralph-start${NC}           Create worktree for isolated Ralph session"
+  echo "    ${GRAY}--install${NC}           Run package manager install in worktree"
+  echo "    ${GRAY}--dev${NC}               Start dev server in background after setup"
+  echo "    ${GRAY}--symlink-deps${NC}      Symlink node_modules (faster than install)"
+  echo "    ${GRAY}--1password${NC}         Use 1Password injection (.env.template)"
+  echo "    ${GRAY}--no-env${NC}            Skip copying .env files"
   echo "  ${BOLD}ralph-cleanup${NC}         Merge changes and remove worktree"
   echo ""
   echo "${GRAY}Flags:${NC}"
@@ -4987,7 +4992,13 @@ EOF
 # ═══════════════════════════════════════════════════════════════════
 
 # ralph-start - Create a worktree for Ralph session isolation
-# Usage: ralph-start [args to pass to ralph]
+# Usage: ralph-start [flags] [args to pass to ralph]
+# Flags:
+#   --install           Run package manager install in worktree
+#   --dev               Start dev server in background after setup
+#   --symlink-deps      Symlink node_modules instead of installing (faster)
+#   --no-env            Skip copying .env files
+#   --1password         Use 1Password injection (op run --env-file=.env.template)
 # Creates worktree at ~/worktrees/<repo>/ralph-session
 function ralph-start() {
   local CYAN='\033[0;36m'
@@ -4996,6 +5007,43 @@ function ralph-start() {
   local RED='\033[0;31m'
   local BOLD='\033[1m'
   local NC='\033[0m'
+
+  # Parse flags
+  local do_install=false
+  local do_dev=false
+  local symlink_deps=false
+  local skip_env=false
+  local use_1password=false
+  local ralph_args=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --install)
+        do_install=true
+        shift
+        ;;
+      --dev)
+        do_dev=true
+        shift
+        ;;
+      --symlink-deps)
+        symlink_deps=true
+        shift
+        ;;
+      --no-env)
+        skip_env=true
+        shift
+        ;;
+      --1password)
+        use_1password=true
+        shift
+        ;;
+      *)
+        ralph_args+=("$1")
+        shift
+        ;;
+    esac
+  done
 
   # Get repo info
   local repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
@@ -5018,13 +5066,13 @@ function ralph-start() {
     echo "${YELLOW}⚠️  Worktree already exists: $worktree_path${NC}"
     echo ""
     echo "   Options:"
-    echo "   1. cd $worktree_path && source ~/.config/ralph/ralph.zsh && ralph $@"
+    echo "   1. cd $worktree_path && source ~/.config/ralph/ralph.zsh && ralph ${ralph_args[*]}"
     echo "   2. ralph-cleanup (to remove it first)"
     echo ""
     read -q "REPLY?Resume existing worktree? (y/n) "
     echo ""
     if [[ "$REPLY" == "y" ]]; then
-      _ralph_output_worktree_command "$worktree_path" "$@"
+      _ralph_output_worktree_command "$worktree_path" "${ralph_args[@]}"
       return 0
     else
       return 1
@@ -5050,31 +5098,276 @@ function ralph-start() {
   echo "${GREEN}✓ Worktree created${NC}"
   echo ""
 
-  # Copy prd-json if it exists (worktree starts clean)
+  # ─────────────────────────────────────────────────────────────
+  # Phase 1: Sync files from main repo
+  # ─────────────────────────────────────────────────────────────
+  echo "${CYAN}${BOLD}📦 Syncing files...${NC}"
+  echo ""
+
+  # Load .worktree-sync.json if exists
+  local sync_config="$repo_root/.worktree-sync.json"
+  local has_sync_config=false
+  if [[ -f "$sync_config" ]]; then
+    has_sync_config=true
+    echo "${GREEN}✓ Found .worktree-sync.json${NC}"
+  fi
+
+  # Always sync: prd-json, progress.txt, AGENTS.md
   if [[ -d "$repo_root/prd-json" ]]; then
     cp -r "$repo_root/prd-json" "$worktree_path/"
     echo "${GREEN}✓ Copied prd-json/ to worktree${NC}"
   fi
 
-  # Copy progress.txt if it exists
   if [[ -f "$repo_root/progress.txt" ]]; then
     cp "$repo_root/progress.txt" "$worktree_path/"
     echo "${GREEN}✓ Copied progress.txt to worktree${NC}"
   fi
 
+  if [[ -f "$repo_root/AGENTS.md" ]]; then
+    cp "$repo_root/AGENTS.md" "$worktree_path/"
+    echo "${GREEN}✓ Copied AGENTS.md to worktree${NC}"
+  fi
+
+  # Sync .env files (unless skipped or using 1Password)
+  if ! $skip_env && ! $use_1password; then
+    if [[ -f "$repo_root/.env" ]]; then
+      cp "$repo_root/.env" "$worktree_path/"
+      echo "${GREEN}✓ Copied .env to worktree${NC}"
+    fi
+    if [[ -f "$repo_root/.env.local" ]]; then
+      cp "$repo_root/.env.local" "$worktree_path/"
+      echo "${GREEN}✓ Copied .env.local to worktree${NC}"
+    fi
+  fi
+
+  # Handle 1Password injection
+  if $use_1password; then
+    if [[ -f "$repo_root/.env.template" ]]; then
+      cp "$repo_root/.env.template" "$worktree_path/"
+      echo "${GREEN}✓ Copied .env.template for 1Password injection${NC}"
+      echo "${YELLOW}   Use: op run --env-file=.env.template -- <command>${NC}"
+    else
+      echo "${YELLOW}⚠️  No .env.template found for 1Password injection${NC}"
+    fi
+  fi
+
+  # Process .worktree-sync.json if exists
+  if $has_sync_config; then
+    _ralph_process_worktree_sync "$repo_root" "$worktree_path" "$sync_config"
+  fi
+
   echo ""
+
+  # ─────────────────────────────────────────────────────────────
+  # Phase 2: Handle dependencies
+  # ─────────────────────────────────────────────────────────────
+  if $symlink_deps || $do_install; then
+    echo "${CYAN}${BOLD}📦 Setting up dependencies...${NC}"
+    echo ""
+
+    # Detect package manager
+    local pkg_manager=$(_ralph_detect_package_manager "$worktree_path")
+    echo "   Package manager: ${BOLD}$pkg_manager${NC}"
+
+    if $symlink_deps; then
+      # Symlink node_modules from main repo (faster than install)
+      if [[ -d "$repo_root/node_modules" ]]; then
+        ln -s "$repo_root/node_modules" "$worktree_path/node_modules"
+        echo "${GREEN}✓ Symlinked node_modules from main repo${NC}"
+      else
+        echo "${YELLOW}⚠️  No node_modules found in main repo, running install instead${NC}"
+        do_install=true
+      fi
+    fi
+
+    if $do_install; then
+      echo "   Running $pkg_manager install..."
+      (
+        cd "$worktree_path" || exit 1
+        case "$pkg_manager" in
+          bun)
+            bun install
+            ;;
+          pnpm)
+            pnpm install
+            ;;
+          yarn)
+            yarn install
+            ;;
+          *)
+            npm install
+            ;;
+        esac
+      )
+      if [[ $? -eq 0 ]]; then
+        echo "${GREEN}✓ Dependencies installed${NC}"
+      else
+        echo "${RED}❌ Failed to install dependencies${NC}"
+      fi
+    fi
+
+    echo ""
+  fi
+
+  # ─────────────────────────────────────────────────────────────
+  # Phase 3: Start dev server (if requested)
+  # ─────────────────────────────────────────────────────────────
+  if $do_dev; then
+    echo "${CYAN}${BOLD}🚀 Starting dev server...${NC}"
+    echo ""
+
+    local pkg_manager=$(_ralph_detect_package_manager "$worktree_path")
+    (
+      cd "$worktree_path" || exit 1
+      case "$pkg_manager" in
+        bun)
+          bun run dev &
+          ;;
+        pnpm)
+          pnpm run dev &
+          ;;
+        yarn)
+          yarn dev &
+          ;;
+        *)
+          npm run dev &
+          ;;
+      esac
+    )
+    echo "${GREEN}✓ Dev server started in background${NC}"
+    echo ""
+  fi
+
+  # ─────────────────────────────────────────────────────────────
+  # Phase 4: Run post-setup commands from .worktree-sync.json
+  # ─────────────────────────────────────────────────────────────
+  if $has_sync_config; then
+    _ralph_run_sync_commands "$worktree_path" "$sync_config"
+  fi
+
   echo "${CYAN}─────────────────────────────────────────────────────────────${NC}"
   echo ""
   echo "${BOLD}Session isolated! Run this command to start Ralph:${NC}"
   echo ""
 
-  _ralph_output_worktree_command "$worktree_path" "$@"
+  _ralph_output_worktree_command "$worktree_path" "${ralph_args[@]}"
 
   echo ""
   echo "${CYAN}─────────────────────────────────────────────────────────────${NC}"
   echo ""
   echo "When done, run ${BOLD}ralph-cleanup${NC} from the worktree to merge back."
   echo ""
+}
+
+# Detect package manager based on lock files
+_ralph_detect_package_manager() {
+  local dir="$1"
+
+  if [[ -f "$dir/bun.lockb" ]] || [[ -f "$dir/bun.lock" ]]; then
+    echo "bun"
+  elif [[ -f "$dir/pnpm-lock.yaml" ]]; then
+    echo "pnpm"
+  elif [[ -f "$dir/yarn.lock" ]]; then
+    echo "yarn"
+  else
+    echo "npm"
+  fi
+}
+
+# Process .worktree-sync.json for custom sync rules
+_ralph_process_worktree_sync() {
+  local repo_root="$1"
+  local worktree_path="$2"
+  local sync_config="$3"
+
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[1;33m'
+  local NC='\033[0m'
+
+  # Process sync.files - additional files to copy
+  local files_count=$(jq -r '.sync.files | length // 0' "$sync_config" 2>/dev/null)
+  if [[ "$files_count" -gt 0 ]]; then
+    local i=0
+    while [[ $i -lt $files_count ]]; do
+      local file=$(jq -r ".sync.files[$i]" "$sync_config" 2>/dev/null)
+      if [[ -f "$repo_root/$file" ]]; then
+        # Create parent directory if needed
+        local parent_dir=$(dirname "$file")
+        if [[ "$parent_dir" != "." ]]; then
+          mkdir -p "$worktree_path/$parent_dir"
+        fi
+        cp "$repo_root/$file" "$worktree_path/$file"
+        echo "${GREEN}✓ Copied $file${NC}"
+      elif [[ -d "$repo_root/$file" ]]; then
+        # Create parent directory if needed for directories too
+        local parent_dir=$(dirname "$file")
+        if [[ "$parent_dir" != "." ]]; then
+          mkdir -p "$worktree_path/$parent_dir"
+        fi
+        cp -r "$repo_root/$file" "$worktree_path/$file"
+        echo "${GREEN}✓ Copied $file/${NC}"
+      else
+        echo "${YELLOW}⚠️  File not found: $file${NC}"
+      fi
+      i=$((i + 1))
+    done
+  fi
+
+  # Process sync.symlinks - files to symlink instead of copy
+  local symlinks_count=$(jq -r '.sync.symlinks | length // 0' "$sync_config" 2>/dev/null)
+  if [[ "$symlinks_count" -gt 0 ]]; then
+    local i=0
+    while [[ $i -lt $symlinks_count ]]; do
+      local file=$(jq -r ".sync.symlinks[$i]" "$sync_config" 2>/dev/null)
+      if [[ -e "$repo_root/$file" ]]; then
+        # Create parent directory if needed
+        local parent_dir=$(dirname "$file")
+        if [[ "$parent_dir" != "." ]]; then
+          mkdir -p "$worktree_path/$parent_dir"
+        fi
+        ln -s "$repo_root/$file" "$worktree_path/$file"
+        echo "${GREEN}✓ Symlinked $file${NC}"
+      else
+        echo "${YELLOW}⚠️  Path not found for symlink: $file${NC}"
+      fi
+      i=$((i + 1))
+    done
+  fi
+}
+
+# Run post-setup commands from .worktree-sync.json
+_ralph_run_sync_commands() {
+  local worktree_path="$1"
+  local sync_config="$2"
+
+  local GREEN='\033[0;32m'
+  local RED='\033[0;31m'
+  local CYAN='\033[0;36m'
+  local BOLD='\033[1m'
+  local NC='\033[0m'
+
+  local commands_count=$(jq -r '.sync.commands | length // 0' "$sync_config" 2>/dev/null)
+  if [[ "$commands_count" -gt 0 ]]; then
+    echo "${CYAN}${BOLD}🔧 Running post-setup commands...${NC}"
+    echo ""
+
+    local i=0
+    while [[ $i -lt $commands_count ]]; do
+      local cmd=$(jq -r ".sync.commands[$i]" "$sync_config" 2>/dev/null)
+      echo "   Running: $cmd"
+      (
+        cd "$worktree_path" || exit 1
+        eval "$cmd"
+      )
+      if [[ $? -eq 0 ]]; then
+        echo "${GREEN}✓ Command succeeded${NC}"
+      else
+        echo "${RED}❌ Command failed${NC}"
+      fi
+      i=$((i + 1))
+    done
+    echo ""
+  fi
 }
 
 # Helper to output the cd + source + ralph command
