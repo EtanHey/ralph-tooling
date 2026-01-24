@@ -5,59 +5,59 @@
   "acceptanceCriteria": [
     {
       "text": "Create scripts/install-obsidian-mcp.sh that builds and installs plugin",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Script auto-detects Obsidian vault locations",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Script handles multiple vaults (let user choose)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add 'Obsidian MCP' step to ralph-setup wizard",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Wizard asks if user wants Obsidian integration",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Wizard runs install script if yes",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Wizard prompts for MCP port from Obsidian plugin settings",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Store Obsidian MCP URL in 1Password (op://Private/Obsidian-MCP/url)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Generate settings.json MCP config that references 1Password",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Document Obsidian MCP in README.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add troubleshooting section (port conflicts, connection issues)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Fresh install works on new vault",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Plugin appears in Obsidian after install",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: feat: [STORY-ID] description",

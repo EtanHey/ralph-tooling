@@ -196,6 +196,7 @@ Run `/project-context` at session start to auto-detect:
 |------------|-----------|-------------------|
 | Linear | ✅ plugin | `/golem-powers:linear` - uses API directly |
 | Context7 | ✅ plugin | `/golem-powers:context7` - uses API directly |
+| Obsidian | via community plugin | See [Obsidian MCP](#obsidian-mcp) below |
 ```
 
 **Tip:** Skills call APIs directly and are often faster than MCP servers.
@@ -262,6 +263,73 @@ op run --env-file=~/.config/ralph/skills/.env.template -- claude
 # Option 3: Shell alias (recommended)
 alias claude-with-keys='op run --env-file=~/.config/ralph/skills/.env.template -- claude'
 ```
+
+### Obsidian MCP
+
+Connect Claude to your Obsidian vault using the [Claude Code MCP plugin](https://github.com/iansinnott/obsidian-claude-code-mcp).
+
+**Setup via wizard:**
+
+```bash
+ralph-setup
+# Select "📓 Configure Obsidian MCP"
+```
+
+**Manual setup:**
+
+```bash
+./scripts/install-obsidian-mcp.sh
+```
+
+**Prerequisites:**
+- Obsidian installed
+- Claude Code MCP plugin installed from Obsidian Community Plugins
+
+**How it works:**
+1. The plugin runs an MCP server inside Obsidian (default port: 22360)
+2. Claude Code connects via WebSocket or HTTP/SSE
+3. Use `/ide` in Claude Code CLI to auto-discover your vault
+
+**MCP Configuration (for settings.json):**
+
+```json
+{
+  "mcpServers": {
+    "obsidian": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:22360/sse"]
+    }
+  }
+}
+```
+
+**1Password integration:**
+
+Store the MCP URL securely:
+```bash
+op item create --category "API Credential" --vault "Private" --title "Obsidian-MCP" "url=http://localhost:22360/sse"
+```
+
+Then reference in config:
+```json
+{
+  "mcpServers": {
+    "obsidian": {
+      "command": "npx",
+      "args": ["mcp-remote", "op://Private/Obsidian-MCP/url"]
+    }
+  }
+}
+```
+
+**Troubleshooting:**
+
+| Issue | Solution |
+|-------|----------|
+| Connection refused | Ensure Obsidian is running with the plugin enabled |
+| Port in use | Change port in plugin settings (Settings → Community Plugins → Claude Code) |
+| Multiple vaults | Each vault needs a unique port (22360, 22361, etc.) |
+| /ide not finding vault | Check for `.lock` files in `~/.config/claude/ide/` |
 
 ---
 
