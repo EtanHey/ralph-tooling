@@ -44,11 +44,19 @@
       "checked": false
     },
     {
+      "text": "Add unit tests for wizard config validation functions",
+      "checked": false
+    },
+    {
       "text": "Test: Fresh install runs wizard",
       "checked": false
     },
     {
       "text": "Test: Config changes respected without flags",
+      "checked": false
+    },
+    {
+      "text": "Run existing test suite - must pass (49/49 after BUG-020 fix)",
       "checked": false
     },
     {

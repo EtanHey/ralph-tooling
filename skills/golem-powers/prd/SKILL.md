@@ -49,6 +49,23 @@ Each story must complete in ONE context window (~10 min of AI work).
 - Include "Verify in browser" for UI stories
 - Include commit criterion with proper type (see Commit Convention below)
 
+### TDD / Test Enforcement (CRITICAL)
+**When to add test criteria:**
+- **New functions/helpers:** "Add unit test for [function] in tests/"
+- **Bug fixes:** "Add regression test to prevent reintroduction"
+- **Core logic changes:** "Verify all existing tests pass (X/X)"
+- **Refactors that touch tested code:** "Run test suite - must pass with same count"
+
+**Why this matters:**
+If a function has tests, and a future story accidentally deletes that function, the tests will fail and block the commit. Tests are your safety net against regressions.
+
+**Example criteria:**
+```
+"Add unit test for _ralph_new_helper_function"
+"Run ./tests/test-ralph.zsh - must pass (49/49)"
+"Add regression test: verify X doesn't break when Y"
+```
+
 ### Commit Convention
 Every story ends with a commit criterion. Match type to story:
 
