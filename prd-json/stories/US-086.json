@@ -69,7 +69,7 @@
     },
     {
       "text": "Commit: feat: [STORY-ID] description",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Include AGENTS.md and context files in .worktree-sync.json defaults",
@@ -81,5 +81,5 @@
     }
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true
 }

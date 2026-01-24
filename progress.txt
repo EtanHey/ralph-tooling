@@ -653,3 +653,29 @@ Changes:
 - Pre-commit hook tests verify the hook structure (checking for exit codes, component sections)
 - Meta-tests (test_precommit_meta_test_failure_detection) verify the test framework itself propagates failures
 - scripts/README.md serves as the canonical documentation for hook behavior
+
+## Iteration 32
+Story: US-086 - Enhance ralph-start with full worktree setup
+Status: COMPLETED (opus)
+Changes:
+- Added --install flag: auto-detects package manager and runs install
+- Added --dev flag: starts dev server in background after setup
+- Added --symlink-deps flag: symlinks node_modules for faster setup
+- Added --1password flag: copies .env.template for 1Password injection
+- Added --no-env flag: skips copying .env files
+- Added .worktree-sync.json config file support:
+  - sync.files: additional files to copy
+  - sync.symlinks: files to symlink instead of copy
+  - sync.commands: post-setup commands to run
+- Auto-syncs AGENTS.md, prd-json/, progress.txt, and .env files by default
+- Auto-detects package manager (bun, pnpm, yarn, npm) from lock files
+- Shows clear progress messages during each setup phase
+- Updated ralph-help with new flags documentation
+- Added .worktree-sync.json documentation to README.md
+- All 139 tests pass (56 ZSH + 83 Bun)
+
+### Learnings
+- ZSH array syntax: `ralph_args+=("$1")` for building arrays from args
+- Package manager detection: check for bun.lockb, pnpm-lock.yaml, yarn.lock
+- mkdir -p needed for nested paths when copying sync.files directories
+- Pre-commit hook brace check has false positives from ${var} syntax
