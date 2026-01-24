@@ -7,6 +7,20 @@ import { NotificationStatus } from './NotificationStatus.js';
 import { useFileWatch } from '../hooks/useFileWatch.js';
 import type { DashboardProps, PRDStats } from '../types.js';
 
+// Live clock hook
+function useLiveClock(): string {
+  const [time, setTime] = useState(() => new Date().toLocaleTimeString());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTime(new Date().toLocaleTimeString());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return time;
+}
+
 // Wrapper component that conditionally uses input
 function KeyboardHandler({ onExit }: { onExit: () => void }) {
   useInput((input, key) => {
@@ -23,11 +37,13 @@ export function Dashboard({
   iteration = 1,
   model = 'sonnet',
   startTime = Date.now(),
-}: DashboardProps) {
+  ntfyTopic,
+}: DashboardProps & { ntfyTopic?: string }) {
   const { stdout } = useStdout();
   const { isRawModeSupported } = useStdin();
   const { exit } = useApp();
   const [terminalWidth, setTerminalWidth] = useState(stdout?.columns || 80);
+  const currentTime = useLiveClock();
 
   // Watch for file changes in live mode
   const liveStats = useFileWatch({
@@ -62,9 +78,6 @@ export function Dashboard({
     };
   }, [stdout]);
 
-  // Determine notification topic (would come from config in real usage)
-  const ntfyTopic = process.env.RALPH_NTFY_TOPIC;
-
   return (
     <Box flexDirection="column" width={terminalWidth}>
       {/* Keyboard handler - only when raw mode is supported */}
@@ -76,8 +89,9 @@ export function Dashboard({
           ╭{'─'.repeat(Math.min(terminalWidth - 2, 78))}╮
         </Text>
       </Box>
-      <Box marginBottom={1} justifyContent="center">
+      <Box marginBottom={1} justifyContent="space-between" paddingX={2}>
         <Text bold color="blue">🐺 RALPH - React Ink Terminal UI</Text>
+        <Text color="cyan">🕐 {currentTime}</Text>
       </Box>
 
       {/* Iteration Header (shown in iteration/live modes) */}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { watch, existsSync } from 'fs';
 import { join } from 'path';
 import type { PRDStats } from '../types.js';
@@ -16,7 +16,9 @@ export function useFileWatch({
   debounceMs = 100,
 }: UseFileWatchOptions): PRDStats | null {
   const [stats, setStats] = useState<PRDStats | null>(null);
-  const loadStats = createStatsLoader(prdPath);
+
+  // Memoize the loader so it doesn't change on every render
+  const loadStats = useMemo(() => createStatsLoader(prdPath), [prdPath]);
 
   const reload = useCallback(() => {
     const newStats = loadStats();

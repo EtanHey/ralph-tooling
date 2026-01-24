@@ -1013,7 +1013,7 @@ _ralph_format_elapsed() {
 # REACT INK UI INTEGRATION
 # ═══════════════════════════════════════════════════════════════════
 
-# Usage: _ralph_show_ink_ui $mode $prd_path $iteration $model $start_time
+# Usage: _ralph_show_ink_ui $mode $prd_path $iteration $model $start_time $ntfy_topic
 # Modes: startup, iteration, live
 _ralph_show_ink_ui() {
   local mode="$1"
@@ -1021,6 +1021,7 @@ _ralph_show_ink_ui() {
   local iteration="${3:-1}"
   local model="${4:-sonnet}"
   local start_time="${5:-$(date +%s)}"
+  local ntfy_topic="${6:-}"
 
   # Check if bun is available
   if ! command -v bun &>/dev/null; then
@@ -1037,13 +1038,12 @@ _ralph_show_ink_ui() {
   # Convert start_time to milliseconds for JavaScript
   local start_time_ms=$((start_time * 1000))
 
+  # Build command with optional ntfy topic
+  local cmd=(bun "$RALPH_UI_PATH" --mode="$mode" --prd-path="$prd_path" --iteration="$iteration" --model="$model" --start-time="$start_time_ms")
+  [[ -n "$ntfy_topic" ]] && cmd+=(--ntfy-topic="$ntfy_topic")
+
   # Run the React Ink UI
-  bun "$RALPH_UI_PATH" \
-    --mode="$mode" \
-    --prd-path="$prd_path" \
-    --iteration="$iteration" \
-    --model="$model" \
-    --start-time="$start_time_ms"
+  "${cmd[@]}"
 
   return $?
 }
@@ -2697,10 +2697,11 @@ RALPH_CONTEXTS_DIR="${RALPH_CONTEXTS_DIR:-$HOME/.claude/contexts}"
 
 # Script directory (for finding ralph-ui and other assets)
 # Use ${0:A:h} to resolve symlinks (capital A = absolute path resolving symlinks)
-RALPH_SCRIPT_DIR="${RALPH_SCRIPT_DIR:-${0:A:h}}"
+# Always compute fresh - don't preserve stale values from previous sources
+RALPH_SCRIPT_DIR="${0:A:h}"
 
 # React Ink UI path for dashboard display (relative to script dir)
-RALPH_UI_PATH="${RALPH_UI_PATH:-${RALPH_SCRIPT_DIR}/ralph-ui/src/index.tsx}"
+RALPH_UI_PATH="${RALPH_SCRIPT_DIR}/ralph-ui/src/index.tsx"
 
 # Detect project technology stack for loading appropriate tech contexts
 # Returns: space-separated list of tech contexts (e.g., "nextjs supabase")
@@ -3605,7 +3606,7 @@ function ralph() {
 
   # Use React Ink UI for startup if enabled
   if [[ "$use_ink_ui" == "true" ]]; then
-    if _ralph_show_ink_ui "startup" "$PRD_JSON_DIR" "1" "${primary_model:-sonnet}" "$(date +%s)"; then
+    if _ralph_show_ink_ui "startup" "$PRD_JSON_DIR" "1" "${primary_model:-sonnet}" "$(date +%s)" "$ntfy_topic"; then
       # Ink UI succeeded, skip shell-based startup banner
       :
     else
@@ -4536,7 +4537,7 @@ After completing task, check PRD state:
 
       # Use React Ink UI if enabled, otherwise fall back to shell UI
       if [[ "$use_ink_ui" == "true" ]]; then
-        if ! _ralph_show_ink_ui "iteration" "$PRD_JSON_DIR" "$i" "$routed_model" "$ralph_start_time"; then
+        if ! _ralph_show_ink_ui "iteration" "$PRD_JSON_DIR" "$i" "$routed_model" "$ralph_start_time" "$ntfy_topic"; then
           # Ink UI failed, fall back to shell UI
           _ralph_show_iteration_status "$PRD_JSON_DIR" "$ralph_start_time" "$i" "$MAX" "$current_story" "$routed_model" "$compact_mode" "$pause_enabled" "$verbose_enabled" "$RALPH_HAS_GUM"
         fi

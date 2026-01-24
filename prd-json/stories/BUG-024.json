@@ -1,0 +1,20 @@
+{
+  "id": "BUG-024",
+  "title": "Ink UI keyboard input not working - cannot exit with 'q'",
+  "description": "The React Ink UI displays 'Press q to quit' but keyboard input doesn't work. User cannot exit the Ink screen without killing the terminal.\n\nLikely causes:\n1. useInput hook not receiving events in non-TTY context\n2. Raw mode not being enabled properly\n3. Ink render blocking the main process\n4. Need to check isRawModeSupported logic",
+  "type": "bug",
+  "priority": "high",
+  "storyPoints": 2,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "Debug why useInput hook doesn't receive keyboard events", "checked": false},
+    {"text": "Check if raw mode is properly enabled for stdin", "checked": false},
+    {"text": "Verify KeyboardHandler component is mounted", "checked": false},
+    {"text": "Test: Press 'q' exits the Ink UI cleanly", "checked": false},
+    {"text": "Test: Ctrl+C also exits the Ink UI", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: fix: BUG-024 enable keyboard input in Ink UI", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}

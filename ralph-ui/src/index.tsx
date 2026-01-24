@@ -10,6 +10,7 @@ function parseArgs(): {
   iteration: number;
   model: string;
   startTime: number;
+  ntfyTopic?: string;
 } {
   const args = process.argv.slice(2);
   let mode: 'startup' | 'iteration' | 'live' = 'startup';
@@ -17,6 +18,7 @@ function parseArgs(): {
   let iteration = 1;
   let model = 'sonnet';
   let startTime = Date.now();
+  let ntfyTopic: string | undefined = process.env.RALPH_NTFY_TOPIC;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -47,6 +49,10 @@ function parseArgs(): {
       startTime = parseInt(args[++i], 10) || Date.now();
     } else if (arg.startsWith('--start-time=')) {
       startTime = parseInt(arg.split('=')[1], 10) || Date.now();
+    } else if (arg === '--ntfy-topic') {
+      ntfyTopic = args[++i];
+    } else if (arg.startsWith('--ntfy-topic=')) {
+      ntfyTopic = arg.split('=')[1];
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
 Ralph UI - React Ink Terminal Dashboard
@@ -60,6 +66,7 @@ Options:
   --iteration, -i <num>   Current iteration number (default: 1)
   --model <model>         Current model name (default: sonnet)
   --start-time <ms>       Start timestamp in milliseconds (default: now)
+  --ntfy-topic <topic>    Ntfy notification topic (default: from env)
   --help, -h              Show this help message
 
 Modes:
@@ -71,7 +78,7 @@ Modes:
     }
   }
 
-  return { mode, prdPath, iteration, model, startTime };
+  return { mode, prdPath, iteration, model, startTime, ntfyTopic };
 }
 
 const config = parseArgs();
@@ -84,5 +91,6 @@ render(
     iteration={config.iteration}
     model={config.model}
     startTime={config.startTime}
+    ntfyTopic={config.ntfyTopic}
   />
 );
