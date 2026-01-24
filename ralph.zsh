@@ -7988,8 +7988,8 @@ function ralph-setup() {
         6) choice="🐰 Configure CodeRabbit" ;;
         7) choice="📓 Configure Obsidian MCP" ;;
         8) choice="📜 Migrate CLAUDE.md contexts" ;;
-        8) choice="📋 View current configuration" ;;
-        9|*) choice="🚪 Exit setup" ;;
+        9) choice="📋 View current configuration" ;;
+        10|*) choice="🚪 Exit setup" ;;
       esac
     fi
 
@@ -8038,6 +8038,9 @@ function ralph-setup() {
         ;;
       *"Configure CodeRabbit"*)
         _ralph_setup_configure_coderabbit
+        ;;
+      *"Configure Obsidian MCP"*)
+        _ralph_setup_obsidian_mcp
         ;;
       *"Migrate CLAUDE.md contexts"*)
         if $skip_context_migration; then
@@ -8950,6 +8953,194 @@ function _ralph_setup_configure_coderabbit() {
   echo ""
 }
 
+# Helper: Obsidian MCP setup
+function _ralph_setup_obsidian_mcp() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local CYAN='\033[0;36m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  📓 Obsidian Claude Code MCP Setup                          │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+  echo "This will help you configure the Obsidian Claude Code MCP plugin."
+  echo "The plugin enables Claude to read and write to your Obsidian vault."
+  echo ""
+  echo "${CYAN}Prerequisites:${NC}"
+  echo "  • Obsidian installed"
+  echo "  • Claude Code MCP plugin installed from Community Plugins"
+  echo ""
+
+  local do_setup=""
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    gum confirm "Would you like to set up Obsidian MCP integration?" && do_setup="yes"
+  else
+    echo -n "Would you like to set up Obsidian MCP integration? [y/N]: "
+    read do_setup_input
+    [[ "$do_setup_input" == [Yy]* ]] && do_setup="yes"
+  fi
+
+  if [[ -z "$do_setup" ]]; then
+    echo ""
+    echo "${YELLOW}Skipping Obsidian MCP setup${NC}"
+    return 0
+  fi
+
+  # Find and run the install script
+  local script_path=""
+
+  # Check in multiple locations
+  if [[ -f "${RALPH_SCRIPT_DIR}/scripts/install-obsidian-mcp.sh" ]]; then
+    script_path="${RALPH_SCRIPT_DIR}/scripts/install-obsidian-mcp.sh"
+  elif [[ -f "${RALPH_CONFIG_DIR}/../ralph/scripts/install-obsidian-mcp.sh" ]]; then
+    script_path="${RALPH_CONFIG_DIR}/../ralph/scripts/install-obsidian-mcp.sh"
+  elif [[ -f "$HOME/.config/ralph/scripts/install-obsidian-mcp.sh" ]]; then
+    script_path="$HOME/.config/ralph/scripts/install-obsidian-mcp.sh"
+  fi
+
+  if [[ -n "$script_path" ]] && [[ -f "$script_path" ]]; then
+    echo ""
+    echo "Running Obsidian MCP setup script..."
+    echo ""
+    bash "$script_path"
+  else
+    # Fallback: inline setup if script not found
+    echo ""
+    echo "${YELLOW}Setup script not found. Running inline setup...${NC}"
+    echo ""
+
+    # Detect vaults
+    local obsidian_config="$HOME/Library/Application Support/obsidian/obsidian.json"
+    local -a vaults=()
+
+    if [[ -f "$obsidian_config" ]] && command -v jq &>/dev/null; then
+      while IFS= read -r vault_path; do
+        [[ -d "$vault_path" ]] && vaults+=("$vault_path")
+      done < <(jq -r '.vaults | to_entries[] | .value.path // empty' "$obsidian_config" 2>/dev/null)
+    fi
+
+    if [[ ${#vaults[@]} -eq 0 ]]; then
+      echo "${YELLOW}No Obsidian vaults found automatically.${NC}"
+      echo "Please enter your vault path:"
+      if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+        local vault_path=$(gum input --placeholder "/path/to/vault")
+      else
+        echo -n "Vault path: "
+        read vault_path
+      fi
+      [[ -d "$vault_path" ]] && vaults+=("$vault_path")
+    fi
+
+    if [[ ${#vaults[@]} -eq 0 ]]; then
+      echo "${RED}No valid vault path provided.${NC}"
+      return 1
+    fi
+
+    local selected_vault="${vaults[1]}"  # zsh arrays start at 1
+    local vault_name=$(basename "$selected_vault")
+
+    if [[ ${#vaults[@]} -gt 1 ]]; then
+      echo ""
+      echo "Multiple vaults found. Please select one:"
+      local i=1
+      for v in "${vaults[@]}"; do
+        echo "  $i) $(basename "$v") - $v"
+        ((i++))
+      done
+      echo ""
+      if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+        local vault_names=()
+        for v in "${vaults[@]}"; do
+          vault_names+=("$(basename "$v")")
+        done
+        local selected_name=$(gum choose "${vault_names[@]}")
+        for i in {1..${#vaults[@]}}; do
+          if [[ "$(basename "${vaults[$i]}")" == "$selected_name" ]]; then
+            selected_vault="${vaults[$i]}"
+            vault_name="$selected_name"
+            break
+          fi
+        done
+      else
+        echo -n "Enter vault number [1-${#vaults[@]}]: "
+        read vault_num
+        if [[ "$vault_num" =~ ^[0-9]+$ ]] && [[ "$vault_num" -ge 1 ]] && [[ "$vault_num" -le ${#vaults[@]} ]]; then
+          selected_vault="${vaults[$vault_num]}"
+          vault_name=$(basename "$selected_vault")
+        fi
+      fi
+    fi
+
+    echo ""
+    echo "${GREEN}✓${NC} Selected vault: $vault_name"
+    echo "  Path: $selected_vault"
+
+    # Get port
+    local mcp_port=22360
+    echo ""
+    echo "Default MCP port is 22360."
+    if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+      local port_input=$(gum input --placeholder "22360" --value "22360" --header "MCP Port:")
+      [[ -n "$port_input" ]] && mcp_port="$port_input"
+    else
+      echo -n "MCP Port [22360]: "
+      read port_input
+      [[ -n "$port_input" ]] && mcp_port="$port_input"
+    fi
+
+    local mcp_url="http://localhost:$mcp_port/sse"
+
+    # Store in 1Password if available
+    if command -v op &>/dev/null; then
+      echo ""
+      local store_op=""
+      if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+        gum confirm "Store MCP URL in 1Password?" && store_op="yes"
+      else
+        echo -n "Store MCP URL in 1Password? [y/N]: "
+        read store_op_input
+        [[ "$store_op_input" == [Yy]* ]] && store_op="yes"
+      fi
+
+      if [[ "$store_op" == "yes" ]]; then
+        if op item get "Obsidian-MCP" --vault "Private" &>/dev/null 2>&1; then
+          op item edit "Obsidian-MCP" --vault "Private" "url=$mcp_url" "vault_name=$vault_name" "port=$mcp_port" &>/dev/null && \
+            echo "${GREEN}✓${NC} Updated 1Password item: Obsidian-MCP" || \
+            echo "${YELLOW}⚠${NC} Failed to update 1Password item"
+        else
+          op item create --category "API Credential" --vault "Private" --title "Obsidian-MCP" "url=$mcp_url" "vault_name=$vault_name" "port=$mcp_port" &>/dev/null && \
+            echo "${GREEN}✓${NC} Created 1Password item: Obsidian-MCP" || \
+            echo "${YELLOW}⚠${NC} Failed to create 1Password item"
+        fi
+      fi
+    fi
+
+    echo ""
+    echo "${CYAN}MCP Configuration for settings.json:${NC}"
+    echo ""
+    echo "{"
+    echo "  \"mcpServers\": {"
+    echo "    \"obsidian-$vault_name\": {"
+    echo "      \"command\": \"npx\","
+    echo "      \"args\": [\"mcp-remote\", \"$mcp_url\"]"
+    echo "    }"
+    echo "  }"
+    echo "}"
+    echo ""
+    echo "${GREEN}✓${NC} Obsidian MCP setup complete!"
+    echo ""
+    echo "${CYAN}Next steps:${NC}"
+    echo "  1. Ensure the Claude Code MCP plugin is installed in Obsidian"
+    echo "  2. Set the plugin port to: $mcp_port"
+    echo "  3. Enable the server in plugin settings"
+    echo "  4. Use 'claude' → '/ide' to connect"
+    echo ""
+  fi
+}
+
 # Helper: Context migration wizard
 function _ralph_setup_context_migration() {
   local GREEN='\033[0;32m'
@@ -9351,11 +9542,66 @@ function repoGolem() {
     echo \"Changed to: \$(pwd)\"
   }"
 
-  # Create {name}Claude function
+  # Create {name}Claude function with flag shortcuts
   eval "function ${lowercase_name}Claude() {
+    local should_update=false
+    local notify_mode=\"\"
+    local claude_args=()
+    local project_key=\"$lowercase_name\"
+    local ntfy_topic=\"etans-${lowercase_name}Claude\"
+
+    while [[ \$# -gt 0 ]]; do
+      case \"\$1\" in
+        -u|--update)
+          should_update=true
+          shift
+          ;;
+        -s|--skip-permissions)
+          claude_args+=(\"--dangerously-skip-permissions\")
+          shift
+          ;;
+        -c|--continue)
+          claude_args+=(\"--continue\")
+          shift
+          ;;
+        -QN|--quiet-notify)
+          notify_mode=\"quiet\"
+          shift
+          ;;
+        -SN|--simple-notify)
+          notify_mode=\"simple\"
+          shift
+          ;;
+        -VN|--verbose-notify)
+          notify_mode=\"verbose\"
+          shift
+          ;;
+        *)
+          claude_args+=(\"\$1\")
+          shift
+          ;;
+      esac
+    done
+
     cd \"$path\" || return 1
+
+    # Setup notifications
+    rm -f \"/tmp/.claude_notify_config_\${project_key}.json\" 2>/dev/null
+    if [[ -n \"\$notify_mode\" ]]; then
+      local quiet_val=\"false\"
+      local verbose_val=\"false\"
+      [[ \"\$notify_mode\" == \"quiet\" ]] && quiet_val=\"true\"
+      [[ \"\$notify_mode\" == \"verbose\" ]] && verbose_val=\"true\"
+      echo \"{\\\"name\\\":\\\"${capitalized_name} Claude\\\",\\\"topic\\\":\\\"\${ntfy_topic}\\\",\\\"quiet\\\":\${quiet_val},\\\"verbose\\\":\${verbose_val},\\\"cwd\\\":\\\"$path\\\"}\" > \"/tmp/.claude_notify_config_\${project_key}.json\"
+    fi
+
+    if \$should_update; then
+      echo \"Updating Claude Code...\"
+      claude update
+    fi
+
     _ralph_setup_mcps '$mcps_json'
-    claude \"\$@\"
+    claude \"\${claude_args[@]}\"
   }"
 }
 
