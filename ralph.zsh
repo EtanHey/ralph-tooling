@@ -3599,7 +3599,19 @@ function ralph() {
     RALPH_LIVE_ENABLED=false
   fi
 
-  if [[ "$compact_mode" == "true" ]]; then
+  # Use React Ink UI for startup if enabled
+  if [[ "$use_ink_ui" == "true" ]]; then
+    if _ralph_show_ink_ui "startup" "$PRD_JSON_DIR" "1" "${primary_model:-sonnet}" "$(date +%s)"; then
+      # Ink UI succeeded, skip shell-based startup banner
+      :
+    else
+      # Ink UI failed, fall through to shell UI
+      use_ink_ui=false
+    fi
+  fi
+
+  # Shell-based startup display (if not using Ink UI)
+  if [[ "$use_ink_ui" != "true" && "$compact_mode" == "true" ]]; then
     # Compact mode: single-line startup
     local project_name=$(basename "$(pwd)")
     local pending=$(jq -r '.stats.pending // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null || echo "?")
@@ -3609,8 +3621,8 @@ function ralph() {
     local crit_total=$(echo "$criteria_stats" | cut -d' ' -f2)
     echo ""
     echo "🚀 Ralph v${RALPH_VERSION} │ ${project_name} │ ${completed}/${pending}+${completed} stories │ ${crit_done}/${crit_total} criteria │ max ${MAX} iters"
-  else
-    # Normal mode: full startup banner
+  elif [[ "$use_ink_ui" != "true" ]]; then
+    # Normal mode: full startup banner (shell-based)
     echo ""
     echo "╔═══════════════════════════════════════════════════════════════╗"
     local title_str="🚀 RALPH v${RALPH_VERSION}"
@@ -4517,8 +4529,17 @@ After completing task, check PRD state:
     local remaining_stats
     if [[ "$use_json_mode" == "true" ]]; then
       remaining_stats=$(_ralph_json_remaining_stats "$PRD_JSON_DIR" 2>/dev/null)
-      # Use the new enhanced status display
-      _ralph_show_iteration_status "$PRD_JSON_DIR" "$ralph_start_time" "$i" "$MAX" "$current_story" "$routed_model" "$compact_mode" "$pause_enabled" "$verbose_enabled" "$RALPH_HAS_GUM"
+
+      # Use React Ink UI if enabled, otherwise fall back to shell UI
+      if [[ "$use_ink_ui" == "true" ]]; then
+        if ! _ralph_show_ink_ui "iteration" "$PRD_JSON_DIR" "$i" "$routed_model" "$ralph_start_time"; then
+          # Ink UI failed, fall back to shell UI
+          _ralph_show_iteration_status "$PRD_JSON_DIR" "$ralph_start_time" "$i" "$MAX" "$current_story" "$routed_model" "$compact_mode" "$pause_enabled" "$verbose_enabled" "$RALPH_HAS_GUM"
+        fi
+      else
+        # Use the shell-based status display
+        _ralph_show_iteration_status "$PRD_JSON_DIR" "$ralph_start_time" "$i" "$MAX" "$current_story" "$routed_model" "$compact_mode" "$pause_enabled" "$verbose_enabled" "$RALPH_HAS_GUM"
+      fi
     else
       remaining_stats="? ?"
       local remaining=$(grep -c '\- \[ \]' "$PRD_PATH" 2>/dev/null || echo "?")
