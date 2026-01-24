@@ -1,0 +1,33 @@
+{
+  "id": "US-110",
+  "title": "Terminal capability detection and testing",
+  "description": "Add ralph-terminal-check command that detects terminal type and tests capabilities for optimal Ralph UI experience.\n\nDetects:\n- Terminal app ($TERM_PROGRAM: iTerm, Ghostty, Kitty, Warp, etc.)\n- Color support (256, truecolor)\n- Unicode/emoji rendering\n- Kitty graphics protocol support\n- GPU acceleration hints\n\nTests:\n- ANSI escape sequence support\n- Cursor positioning accuracy\n- Live update rendering speed\n- Box drawing characters\n\nRecommendations:\n- Suggest better terminal if current one is limited\n- Note which UI features will/won't work",
+  "type": "feature",
+  "priority": "low",
+  "storyPoints": 3,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "=== DETECTION ===", "checked": false},
+    {"text": "Detect terminal from $TERM_PROGRAM, $TERM, $COLORTERM", "checked": false},
+    {"text": "Detect color support (tput colors, truecolor)", "checked": false},
+    {"text": "Detect Unicode support (test emoji rendering)", "checked": false},
+    {"text": "Detect Kitty graphics protocol support", "checked": false},
+    {"text": "=== CAPABILITY TESTS ===", "checked": false},
+    {"text": "Test ANSI cursor positioning (tput cup)", "checked": false},
+    {"text": "Test box drawing characters render correctly", "checked": false},
+    {"text": "Test live update speed (render loop benchmark)", "checked": false},
+    {"text": "Test emoji width calculation", "checked": false},
+    {"text": "=== COMMAND ===", "checked": false},
+    {"text": "Create ralph-terminal-check command", "checked": false},
+    {"text": "Show detected terminal and capabilities", "checked": false},
+    {"text": "Show pass/fail for each test", "checked": false},
+    {"text": "Recommend improvements if issues found", "checked": false},
+    {"text": "=== INTEGRATION ===", "checked": false},
+    {"text": "Run automatically on first ralph startup (optional)", "checked": false},
+    {"text": "Save terminal profile to config for future reference", "checked": false},
+    {"text": "Warn if terminal has known issues with Ink/Gum", "checked": false},
+    {"text": "Commit: feat: US-110 terminal capability detection", "checked": false}
+  ],
+  "dependencies": [],
+  "passes": false
+}
