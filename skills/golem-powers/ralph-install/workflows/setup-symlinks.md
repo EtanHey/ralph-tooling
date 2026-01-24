@@ -1,6 +1,6 @@
 # Setup Symlinks Workflow
 
-Create symlinks in ~/.claude/commands/ to enable skills for Claude Code.
+Create symlinks in ~/.claude/commands/ to enable golem-powers skills for Claude Code.
 
 ---
 
@@ -19,85 +19,74 @@ mkdir -p ~/.claude/commands
 
 ---
 
-## Symlink All Skills
+## Symlink Golem-Powers (Recommended)
 
-Run this from the ralphtools directory:
+All skills are now under the `golem-powers` namespace. Create a single symlink:
 
 ```bash
 #!/bin/bash
-SKILLS_DIR="$(pwd)/skills"
+RALPHTOOLS_DIR="${RALPHTOOLS_DIR:-$HOME/path/to/ralphtools}"
 COMMANDS_DIR="$HOME/.claude/commands"
 
-echo "Creating skill symlinks..."
-echo "Source: $SKILLS_DIR"
-echo "Target: $COMMANDS_DIR"
+echo "Creating golem-powers symlink..."
+echo "Source: $RALPHTOOLS_DIR/skills/golem-powers"
+echo "Target: $COMMANDS_DIR/golem-powers"
 echo ""
 
 # Create commands directory if missing
 mkdir -p "$COMMANDS_DIR"
 
-# Single-file skills (*.md at root)
-for skill in "$SKILLS_DIR"/*.md; do
-  if [ -f "$skill" ]; then
-    name=$(basename "$skill" .md)
-    ln -sf "$skill" "$COMMANDS_DIR/$name.md"
-    echo "[OK] $name.md"
+# Remove old individual skill symlinks if they exist
+OLD_SKILLS=(1password archive brave coderabbit convex context7 critique-waves github linear prd ralph-install skills test-plan worktrees)
+for skill in "${OLD_SKILLS[@]}"; do
+  if [ -L "$COMMANDS_DIR/$skill" ] || [ -L "$COMMANDS_DIR/$skill.md" ]; then
+    rm -f "$COMMANDS_DIR/$skill" "$COMMANDS_DIR/$skill.md"
+    echo "[REMOVED] old symlink: $skill"
   fi
 done
 
-# Multi-file skills (directories with SKILL.md)
-for skill_dir in "$SKILLS_DIR"/*/; do
-  if [ -f "${skill_dir}SKILL.md" ]; then
-    name=$(basename "$skill_dir")
-    ln -sf "${skill_dir%/}" "$COMMANDS_DIR/$name"
-    echo "[OK] $name/"
-  fi
-done
+# Create the golem-powers symlink
+ln -sf "$RALPHTOOLS_DIR/skills/golem-powers" "$COMMANDS_DIR/golem-powers"
+echo "[OK] golem-powers symlink created"
 
 echo ""
-echo "Symlinks created! Skills available via /skill-name"
+echo "Skills now available as /golem-powers:skill-name"
+echo "Example: /golem-powers:1password, /golem-powers:convex, /golem-powers:github"
 ```
 
 ---
 
-## Manual Symlinks
+## Quick Setup (One-liner)
 
-If you prefer to link skills individually:
-
-### Single-file skills
+Replace `/path/to/ralphtools` with your actual path:
 
 ```bash
-# Format: ln -sf <source> <target>
-ln -sf ~/path/to/ralphtools/skills/github.md ~/.claude/commands/github.md
-ln -sf ~/path/to/ralphtools/skills/skills.md ~/.claude/commands/skills.md
-ln -sf ~/path/to/ralphtools/skills/prd.md ~/.claude/commands/prd.md
-```
-
-### Multi-file skills (directories)
-
-```bash
-# Link the entire directory
-ln -sf ~/path/to/ralphtools/skills/1password ~/.claude/commands/1password
-ln -sf ~/path/to/ralphtools/skills/linear ~/.claude/commands/linear
-ln -sf ~/path/to/ralphtools/skills/convex ~/.claude/commands/convex
-ln -sf ~/path/to/ralphtools/skills/ralph-install ~/.claude/commands/ralph-install
+mkdir -p ~/.claude/commands && ln -sf /path/to/ralphtools/skills/golem-powers ~/.claude/commands/golem-powers
 ```
 
 ---
 
-## Verify Symlinks
+## Verify Symlink
 
-Check that symlinks are correctly pointing:
+Check that the symlink is correctly pointing:
 
 ```bash
-ls -la ~/.claude/commands/
+ls -la ~/.claude/commands/golem-powers
 ```
 
-Expected output shows arrows pointing to skill files:
+Expected output:
 ```
-github.md -> /Users/.../ralphtools/skills/github.md
-1password -> /Users/.../ralphtools/skills/1password
-linear -> /Users/.../ralphtools/skills/linear
+golem-powers -> /Users/.../ralphtools/skills/golem-powers
+```
+
+List available skills:
+```bash
+ls ~/.claude/commands/golem-powers/
+```
+
+Expected:
+```
+1password/  archive/  brave/  coderabbit/  context7/  convex/  ...
 ```
 
 ---
@@ -106,27 +95,64 @@ linear -> /Users/.../ralphtools/skills/linear
 
 In a new Claude Code session, run:
 ```
-/skills
+/golem-powers:skills
 ```
 
-Should list all available skills.
+Should list all available golem-powers skills.
+
+---
+
+## Remove Old Individual Symlinks
+
+If you have old individual skill symlinks, remove them:
+
+```bash
+# List old symlinks
+ls -la ~/.claude/commands/ | grep -E "1password|linear|convex|github|prd|skills"
+
+# Remove old symlinks (one by one)
+rm ~/.claude/commands/1password
+rm ~/.claude/commands/linear
+rm ~/.claude/commands/convex
+# etc.
+```
+
+Or use this cleanup script:
+```bash
+#!/bin/bash
+COMMANDS_DIR="$HOME/.claude/commands"
+OLD_SKILLS=(1password archive brave coderabbit convex context7 critique-waves github linear prd ralph-install skills test-plan worktrees)
+
+for skill in "${OLD_SKILLS[@]}"; do
+  if [ -L "$COMMANDS_DIR/$skill" ]; then
+    rm -f "$COMMANDS_DIR/$skill"
+    echo "Removed: $skill"
+  fi
+  if [ -L "$COMMANDS_DIR/$skill.md" ]; then
+    rm -f "$COMMANDS_DIR/$skill.md"
+    echo "Removed: $skill.md"
+  fi
+done
+
+echo "Old symlinks cleaned up"
+```
 
 ---
 
 ## Troubleshooting
 
-### Symlinks broken (red in ls -la)
+### Symlink broken (red in ls -la)
 
-The source file was moved or deleted. Recreate:
+The source directory was moved. Recreate with correct path:
 ```bash
-rm ~/.claude/commands/broken-link
-ln -sf /correct/path ~/.claude/commands/skill-name
+rm ~/.claude/commands/golem-powers
+ln -sf /correct/path/to/ralphtools/skills/golem-powers ~/.claude/commands/golem-powers
 ```
 
 ### Skills not appearing in Claude
 
 1. Check Claude Code version supports skills
-2. Verify symlink target exists
+2. Verify symlink target exists: `ls $(readlink ~/.claude/commands/golem-powers)`
 3. Restart Claude Code session
 
 ### Permission denied
@@ -134,8 +160,7 @@ ln -sf /correct/path ~/.claude/commands/skill-name
 Fix permissions:
 ```bash
 chmod 755 ~/.claude/commands
-chmod 644 ~/.claude/commands/*.md
-chmod 755 ~/.claude/commands/*/
+chmod -R 755 ~/.claude/commands/golem-powers
 ```
 
 ---
@@ -144,4 +169,4 @@ chmod 755 ~/.claude/commands/*/
 
 After creating symlinks:
 1. Run [validate](validate.md) to test the full installation
-2. Try `/skills` in Claude Code to see available skills
+2. Try `/golem-powers:skills` in Claude Code to see available skills

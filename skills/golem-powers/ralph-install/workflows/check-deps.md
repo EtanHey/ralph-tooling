@@ -15,7 +15,7 @@ echo ""
 
 MISSING=()
 
-# Check each required CLI
+# Check each required CLI (core)
 for cmd in gh op gum fswatch jq git; do
   if command -v $cmd &>/dev/null; then
     VERSION=$($cmd --version 2>&1 | head -1)
@@ -25,6 +25,24 @@ for cmd in gh op gum fswatch jq git; do
     MISSING+=($cmd)
   fi
 done
+
+# Check Bun (for TypeScript skills)
+if command -v bun &>/dev/null; then
+  VERSION=$(bun --version 2>&1 | head -1)
+  echo "[OK] bun: $VERSION"
+else
+  echo "[MISSING] bun (required for TypeScript skills)"
+  MISSING+=(bun)
+fi
+
+# Check CodeRabbit CLI (for code review skill)
+if command -v cr &>/dev/null; then
+  VERSION=$(cr --version 2>&1 | head -1)
+  echo "[OK] cr: $VERSION"
+else
+  echo "[MISSING] cr (CodeRabbit CLI, optional for code review)"
+  MISSING+=(cr)
+fi
 
 echo ""
 
@@ -102,6 +120,36 @@ git --version
 
 Expected: Version number (e.g., git version 2.43.0).
 
+### Bun (TypeScript Runtime)
+
+```bash
+bun --version
+```
+
+Expected: Version number (e.g., 1.0.0).
+
+Required for TypeScript-based golem-powers skills.
+
+If not installed:
+```bash
+brew install oven-sh/bun/bun
+```
+
+### CodeRabbit CLI (cr)
+
+```bash
+cr --version
+```
+
+Expected: Version number.
+
+Optional but recommended for `/coderabbit` skill.
+
+If not installed:
+```bash
+curl -fsSL https://coderabbit.ai/install.sh | bash
+```
+
 ---
 
 ## Quick Check Script
@@ -109,7 +157,7 @@ Expected: Version number (e.g., git version 2.43.0).
 Copy and run this one-liner:
 
 ```bash
-for cmd in gh op gum fswatch jq git; do command -v $cmd &>/dev/null && echo "[OK] $cmd" || echo "[MISSING] $cmd"; done
+for cmd in gh op gum fswatch jq git bun cr; do command -v $cmd &>/dev/null && echo "[OK] $cmd" || echo "[MISSING] $cmd"; done
 ```
 
 ---

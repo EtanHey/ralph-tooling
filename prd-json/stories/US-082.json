@@ -9,87 +9,87 @@
   "acceptanceCriteria": [
     {
       "text": "Update skills/ralph-install/workflows/check-deps.md:",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Add check for Bun: command -v bun",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Add check for CodeRabbit CLI: command -v cr",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update skills/ralph-install/workflows/install-deps.md:",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Add Bun installation: brew install oven-sh/bun/bun",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Add CodeRabbit CLI installation: curl script",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update skills/ralph-install/workflows/setup-tokens.md:",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Guide user to create CONTEXT7_API_KEY in 1Password",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Guide user to create LINEAR_API_KEY in 1Password",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Provide op:// path format for each",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update skills/ralph-install/workflows/setup-symlinks.md:",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Create ~/.claude/commands/golem-powers symlink",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Remove old individual skill symlinks",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update skills/ralph-install/workflows/validate.md:",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Test: bun --version",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Test: cr --version",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Test: op read context7 key (if configured)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - Test: golem-powers symlink exists and is valid",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update SKILL.md to reflect new workflow steps",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Run /ralph-install on fresh machine simulation",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: All validations pass after setup",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit changes with message: feat/fix: [STORY-ID] description",

@@ -36,6 +36,13 @@ brew install --cask 1password-cli  # 1Password CLI
 brew install gum         # Interactive prompts
 brew install fswatch     # File watching
 brew install jq          # JSON processing
+brew install oven-sh/bun/bun  # Bun runtime for TypeScript skills
+
+# Install CodeRabbit CLI (optional, for code review skill)
+if ! command -v cr &>/dev/null; then
+  echo "Installing CodeRabbit CLI..."
+  curl -fsSL https://coderabbit.ai/install.sh | bash
+fi
 
 echo ""
 echo "Installation complete! Run check-deps workflow to verify."
@@ -107,6 +114,34 @@ Verify:
 ```bash
 jq --version
 ```
+
+### Bun (TypeScript Runtime)
+
+Required for TypeScript-based golem-powers skills.
+
+```bash
+brew install oven-sh/bun/bun
+```
+
+Verify:
+```bash
+bun --version
+```
+
+### CodeRabbit CLI (Optional)
+
+For the `/coderabbit` code review skill.
+
+```bash
+curl -fsSL https://coderabbit.ai/install.sh | bash
+```
+
+Verify:
+```bash
+cr --version
+```
+
+**Note:** CodeRabbit requires an account. Sign up at https://coderabbit.ai.
 
 ---
 

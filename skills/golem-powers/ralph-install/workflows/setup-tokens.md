@@ -18,6 +18,59 @@ Configure API tokens in 1Password for use with ralphtools.
 | GitHub PAT | GitHub CLI | github.com/settings/tokens |
 | Linear API Key | Linear skill | linear.app/settings/api |
 | Anthropic API Key | Claude | console.anthropic.com |
+| Context7 API Key | Context7 skill | context7.com/settings |
+
+---
+
+## Golem-Powers Skills API Keys (Recommended)
+
+Store API keys for golem-powers skills in a single `claude-golem` item with sections:
+
+### Create the claude-golem Item
+
+```bash
+op item create --category "API Credential" --vault "Private" --title "claude-golem"
+```
+
+### Add Context7 API Key
+
+Get key from: https://context7.com/settings
+
+```bash
+op item edit "claude-golem" --vault "Private" "context7.API_KEY[concealed]=ctx7sk_your_key_here"
+```
+
+**op:// path:** `op://Private/claude-golem/context7/API_KEY`
+
+Verify:
+```bash
+op read "op://Private/claude-golem/context7/API_KEY"
+```
+
+### Add Linear API Key
+
+Get key from: https://linear.app/settings/api
+
+```bash
+op item edit "claude-golem" --vault "Private" "linear.API_KEY[concealed]=lin_api_your_key_here"
+```
+
+**op:// path:** `op://Private/claude-golem/linear/API_KEY`
+
+Verify:
+```bash
+op read "op://Private/claude-golem/linear/API_KEY"
+```
+
+### Using Skills with 1Password
+
+Skills automatically read from 1Password when available. You can also inject manually:
+
+```bash
+# Run a skill command with injected ENV
+CONTEXT7_API_KEY=$(op read "op://Private/claude-golem/context7/API_KEY") \
+  bash ~/.claude/commands/golem-powers/context7/scripts/default.sh
+```
 
 ---
 
@@ -107,11 +160,11 @@ else
   echo "[MISSING] GitHub token"
 fi
 
-# Linear
+# Linear (legacy path)
 if op read "op://Private/linear/api-key" &>/dev/null; then
-  echo "[OK] Linear API key"
+  echo "[OK] Linear API key (legacy)"
 else
-  echo "[MISSING] Linear API key"
+  echo "[SKIP] Linear API key (legacy) - check claude-golem instead"
 fi
 
 # Anthropic
@@ -119,6 +172,23 @@ if op read "op://Private/anthropic/api-key" &>/dev/null; then
   echo "[OK] Anthropic API key"
 else
   echo "[MISSING] Anthropic API key"
+fi
+
+echo ""
+echo "=== Golem-Powers Skills (claude-golem item) ==="
+
+# Context7 API Key
+if op read "op://Private/claude-golem/context7/API_KEY" &>/dev/null; then
+  echo "[OK] Context7 API key"
+else
+  echo "[MISSING] Context7 API key"
+fi
+
+# Linear API Key (golem-powers)
+if op read "op://Private/claude-golem/linear/API_KEY" &>/dev/null; then
+  echo "[OK] Linear API key (golem-powers)"
+else
+  echo "[MISSING] Linear API key (golem-powers)"
 fi
 ```
 
@@ -158,6 +228,7 @@ op signin
 - GitHub: Starts with `ghp_` or `github_pat_`
 - Linear: Starts with `lin_api_`
 - Anthropic: Starts with `sk-ant-`
+- Context7: Starts with `ctx7sk_`
 
 ---
 

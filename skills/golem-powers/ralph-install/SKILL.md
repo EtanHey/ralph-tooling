@@ -5,7 +5,7 @@ description: Install wizard for ralphtools. Checks dependencies, installs missin
 
 # Ralph Install Wizard
 
-> Guides new users through ralphtools setup. Checks for required CLIs, configures tokens in 1Password, sets up symlinks, and validates everything works.
+> Guides new users through ralphtools setup. Checks for required CLIs, configures tokens in 1Password, sets up the golem-powers symlink, and validates everything works.
 
 ## Available Scripts
 
@@ -13,9 +13,9 @@ Run these directly - standalone setup and validation:
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `scripts/check-deps.sh` | Check dependencies | `bash ~/.claude/commands/ralph-install/scripts/check-deps.sh` |
-| `scripts/install-deps.sh` | Install missing | `bash ~/.claude/commands/ralph-install/scripts/install-deps.sh --all` |
-| `scripts/validate.sh` | Full validation | `bash ~/.claude/commands/ralph-install/scripts/validate.sh` |
+| `scripts/check-deps.sh` | Check dependencies | `bash ~/.claude/commands/golem-powers/ralph-install/scripts/check-deps.sh` |
+| `scripts/install-deps.sh` | Install missing | `bash ~/.claude/commands/golem-powers/ralph-install/scripts/install-deps.sh --all` |
+| `scripts/validate.sh` | Full validation | `bash ~/.claude/commands/golem-powers/ralph-install/scripts/validate.sh` |
 
 ---
 
@@ -25,15 +25,17 @@ For a full installation, run through these workflows in order:
 
 | Step | Workflow | Purpose |
 |------|----------|---------|
-| 1 | [check-deps](workflows/check-deps.md) | Verify required CLIs are installed |
-| 2 | [install-deps](workflows/install-deps.md) | Install missing dependencies via brew |
-| 3 | [setup-tokens](workflows/setup-tokens.md) | Configure API tokens in 1Password |
-| 4 | [setup-symlinks](workflows/setup-symlinks.md) | Create skill symlinks in ~/.claude/commands |
+| 1 | [check-deps](workflows/check-deps.md) | Verify required CLIs are installed (including Bun) |
+| 2 | [install-deps](workflows/install-deps.md) | Install missing dependencies via brew (+ CodeRabbit via curl) |
+| 3 | [setup-tokens](workflows/setup-tokens.md) | Configure API tokens in 1Password (claude-golem item) |
+| 4 | [setup-symlinks](workflows/setup-symlinks.md) | Create golem-powers symlink, remove old symlinks |
 | 5 | [validate](workflows/validate.md) | Verify installation works end-to-end |
 
 ---
 
 ## Required Dependencies
+
+### Core CLIs
 
 | CLI | Purpose | Check Command |
 |-----|---------|---------------|
@@ -43,6 +45,15 @@ For a full installation, run through these workflows in order:
 | `fswatch` | File watching for live mode | `fswatch --version` |
 | `jq` | JSON processing | `jq --version` |
 | `git` | Version control | `git --version` |
+
+### TypeScript Skills
+
+| CLI | Purpose | Check Command |
+|-----|---------|---------------|
+| `bun` | TypeScript runtime for golem-powers | `bun --version` |
+| `cr` | CodeRabbit CLI for code review (optional) | `cr --version` |
+
+---
 
 ## Required API Keys
 
@@ -63,13 +74,33 @@ op item edit "claude-golem" --vault "Private" "linear.API_KEY[concealed]=lin_api
 
 ---
 
+## Golem-Powers Symlink
+
+All skills are under the `golem-powers` namespace. Create a single symlink:
+
+```bash
+mkdir -p ~/.claude/commands
+ln -sf /path/to/ralphtools/skills/golem-powers ~/.claude/commands/golem-powers
+```
+
+Skills are then available as `/golem-powers:skill-name`:
+- `/golem-powers:1password`
+- `/golem-powers:convex`
+- `/golem-powers:github`
+- `/golem-powers:linear`
+- `/golem-powers:context7`
+- `/golem-powers:coderabbit`
+- etc.
+
+---
+
 ## Configuration Paths
 
 | Path | Purpose |
 |------|---------|
 | `~/.config/ralphtools/` | Main config directory |
 | `~/.config/ralphtools/config.json` | User settings |
-| `~/.claude/commands/` | Skill symlinks |
+| `~/.claude/commands/golem-powers` | Skills symlink |
 | `~/.claude/CLAUDE.md` | Global Claude instructions |
 
 ---
@@ -90,11 +121,18 @@ Ensure:
 2. Settings > Developer > CLI integration is enabled
 3. Biometric unlock is enabled for CLI
 
-### Skills not appearing in Claude
+### Bun not installing via brew
 
-Check symlinks exist:
+Try the official installer:
 ```bash
-ls -la ~/.claude/commands/
+curl -fsSL https://bun.sh/install | bash
 ```
 
-If missing, run [setup-symlinks](workflows/setup-symlinks.md) workflow.
+### Skills not appearing in Claude
+
+Check the golem-powers symlink:
+```bash
+ls -la ~/.claude/commands/golem-powers
+```
+
+If missing or broken, run [setup-symlinks](workflows/setup-symlinks.md) workflow.

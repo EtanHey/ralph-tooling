@@ -73,14 +73,20 @@ check_warn() {
     fi
 }
 
-# Section: Dependencies
-echo "=== Dependencies ==="
+# Section: Core Dependencies
+echo "=== Core Dependencies ==="
 check "gh (GitHub CLI)" "command -v gh"
 check "op (1Password CLI)" "command -v op"
 check "gum (Interactive prompts)" "command -v gum"
 check "fswatch (File watching)" "command -v fswatch"
 check "jq (JSON processing)" "command -v jq"
 check "git (Version control)" "command -v git"
+echo ""
+
+# Section: TypeScript Skills Dependencies
+echo "=== TypeScript Skills Dependencies ==="
+check "bun (TypeScript runtime)" "command -v bun"
+check_warn "cr (CodeRabbit CLI)" "command -v cr"
 echo ""
 
 if [ "$QUICK" = true ]; then
@@ -156,7 +162,7 @@ if [ $FAIL -eq 0 ]; then
     echo ""
     echo "Next steps:"
     echo "  1. Restart Claude Code to load skills"
-    echo "  2. Test with: /skills"
+    echo "  2. Test with: /golem-powers:skills"
     exit 0
 else
     echo ""
