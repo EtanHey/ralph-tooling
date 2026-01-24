@@ -97,10 +97,10 @@
       "checked": true
     },
     {
-      "text": "Commit changes with message: feat/fix: [STORY-ID] description",
-      "checked": false
+      "text": "Commit: feat: [STORY-ID] description",
+      "checked": true
     }
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true
 }
