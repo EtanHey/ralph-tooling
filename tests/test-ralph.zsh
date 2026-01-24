@@ -3333,6 +3333,373 @@ EOF
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# BUG-023: ORPHAN PROCESS TRACKING AND CRASH LOGGING TESTS
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: PID tracking file is created correctly
+test_pid_tracking_file_creation() {
+  test_start "PID tracking file is created correctly"
+
+  _setup_test_fixtures
+
+  # Use a unique temp file for testing
+  local test_pid_file="/tmp/ralph-test-pids-$$.txt"
+  local original_file="$RALPH_PID_TRACKING_FILE"
+  RALPH_PID_TRACKING_FILE="$test_pid_file"
+
+  # Track a fake PID
+  _ralph_track_pid "12345" "test-process"
+
+  # Verify file was created
+  if [[ ! -f "$test_pid_file" ]]; then
+    test_fail "PID tracking file was not created"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify content format (pid type timestamp parent_pid)
+  local content=$(cat "$test_pid_file")
+  if [[ ! "$content" =~ ^12345[[:space:]]test-process[[:space:]][0-9]+[[:space:]][0-9]+$ ]]; then
+    test_fail "PID tracking format incorrect: $content"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  rm -f "$test_pid_file"
+  RALPH_PID_TRACKING_FILE="$original_file"
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: PID untracking removes entry from file
+test_pid_untracking_removes_entry() {
+  test_start "PID untracking removes entry from file"
+
+  _setup_test_fixtures
+
+  local test_pid_file="/tmp/ralph-test-pids-$$.txt"
+  local original_file="$RALPH_PID_TRACKING_FILE"
+  RALPH_PID_TRACKING_FILE="$test_pid_file"
+
+  # Track two PIDs
+  _ralph_track_pid "12345" "process-a"
+  _ralph_track_pid "67890" "process-b"
+
+  # Verify both are tracked
+  local line_count=$(wc -l < "$test_pid_file")
+  if [[ "$line_count" -ne 2 ]]; then
+    test_fail "Expected 2 lines, got $line_count"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Untrack one PID
+  _ralph_untrack_pid "12345"
+
+  # Verify only one remains
+  line_count=$(wc -l < "$test_pid_file")
+  if [[ "$line_count" -ne 1 ]]; then
+    test_fail "Expected 1 line after untrack, got $line_count"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify the right one remains
+  if ! grep -q "^67890 " "$test_pid_file"; then
+    test_fail "Wrong PID was untracked"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  rm -f "$test_pid_file"
+  RALPH_PID_TRACKING_FILE="$original_file"
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: Session untracking removes all session PIDs
+test_session_untracking_removes_all_session_pids() {
+  test_start "Session untracking removes all session PIDs"
+
+  _setup_test_fixtures
+
+  local test_pid_file="/tmp/ralph-test-pids-$$.txt"
+  local original_file="$RALPH_PID_TRACKING_FILE"
+  RALPH_PID_TRACKING_FILE="$test_pid_file"
+
+  # Track two PIDs from current session
+  _ralph_track_pid "11111" "process-a"
+  _ralph_track_pid "22222" "process-b"
+
+  # Add a fake entry from a different session (fake parent PID 99999)
+  echo "33333 other-process $(date +%s) 99999" >> "$test_pid_file"
+
+  # Verify 3 lines
+  local line_count=$(wc -l < "$test_pid_file")
+  if [[ "$line_count" -ne 3 ]]; then
+    test_fail "Expected 3 lines, got $line_count"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Untrack current session
+  _ralph_untrack_session
+
+  # Verify only the other session's PID remains
+  line_count=$(wc -l < "$test_pid_file")
+  if [[ "$line_count" -ne 1 ]]; then
+    test_fail "Expected 1 line after session untrack, got $line_count"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  if ! grep -q "^33333 " "$test_pid_file"; then
+    test_fail "Other session's PID should remain"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  rm -f "$test_pid_file"
+  RALPH_PID_TRACKING_FILE="$original_file"
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: Orphan detection finds dead parent processes
+test_orphan_detection_finds_dead_parents() {
+  test_start "Orphan detection finds dead parent processes"
+
+  _setup_test_fixtures
+
+  local test_pid_file="/tmp/ralph-test-pids-$$.txt"
+  local original_file="$RALPH_PID_TRACKING_FILE"
+  RALPH_PID_TRACKING_FILE="$test_pid_file"
+
+  # Create an entry with a dead parent (PID 1 is init, unlikely to be our parent)
+  # Use a non-existent parent PID
+  echo "$$ test-orphan $(date +%s) 99999999" > "$test_pid_file"
+
+  # This should detect an orphan (current PID with dead parent 99999999)
+  local orphans=$(_ralph_find_orphans)
+
+  if [[ -z "$orphans" ]]; then
+    test_fail "Should have detected an orphan process"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify the orphan is our fake entry (check for current PID)
+  local current_pid="$$"
+  if [[ ! "$orphans" =~ "test-orphan" ]]; then
+    test_fail "Orphan detection returned wrong process: $orphans"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  rm -f "$test_pid_file"
+  RALPH_PID_TRACKING_FILE="$original_file"
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: No orphans when parent is still running
+test_no_orphans_when_parent_alive() {
+  test_start "No orphans detected when parent is still running"
+
+  _setup_test_fixtures
+
+  local test_pid_file="/tmp/ralph-test-pids-$$.txt"
+  local original_file="$RALPH_PID_TRACKING_FILE"
+  RALPH_PID_TRACKING_FILE="$test_pid_file"
+
+  # Track a PID with current shell as parent (should not be orphaned)
+  _ralph_track_pid "$$" "current-process"
+
+  # This should NOT detect orphans (parent $$ is running)
+  local orphans=$(_ralph_find_orphans)
+
+  if [[ -n "$orphans" ]]; then
+    test_fail "Should not detect orphans when parent is alive: $orphans"
+    rm -f "$test_pid_file"
+    RALPH_PID_TRACKING_FILE="$original_file"
+    _teardown_test_fixtures
+    return
+  fi
+
+  rm -f "$test_pid_file"
+  RALPH_PID_TRACKING_FILE="$original_file"
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: Crash log is created with correct format
+test_crash_log_creation() {
+  test_start "Crash log is created with correct format"
+
+  _setup_test_fixtures
+
+  local test_logs_dir="/tmp/ralph-test-logs-$$"
+  local original_dir="$RALPH_LOGS_DIR"
+  RALPH_LOGS_DIR="$test_logs_dir"
+
+  # Log a crash
+  local log_file=$(_ralph_log_crash "5" "US-123" "Test criterion" "Test error message")
+
+  # Verify file was created
+  if [[ ! -f "$log_file" ]]; then
+    test_fail "Crash log file was not created"
+    rm -rf "$test_logs_dir"
+    RALPH_LOGS_DIR="$original_dir"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Verify content
+  if ! grep -q "Iteration: 5" "$log_file"; then
+    test_fail "Crash log missing iteration"
+    rm -rf "$test_logs_dir"
+    RALPH_LOGS_DIR="$original_dir"
+    _teardown_test_fixtures
+    return
+  fi
+
+  if ! grep -q "Story: US-123" "$log_file"; then
+    test_fail "Crash log missing story"
+    rm -rf "$test_logs_dir"
+    RALPH_LOGS_DIR="$original_dir"
+    _teardown_test_fixtures
+    return
+  fi
+
+  if ! grep -q "Criteria: Test criterion" "$log_file"; then
+    test_fail "Crash log missing criteria"
+    rm -rf "$test_logs_dir"
+    RALPH_LOGS_DIR="$original_dir"
+    _teardown_test_fixtures
+    return
+  fi
+
+  if ! grep -q "Test error message" "$log_file"; then
+    test_fail "Crash log missing error message"
+    rm -rf "$test_logs_dir"
+    RALPH_LOGS_DIR="$original_dir"
+    _teardown_test_fixtures
+    return
+  fi
+
+  rm -rf "$test_logs_dir"
+  RALPH_LOGS_DIR="$original_dir"
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: Recent crash detection finds crash within 24 hours
+test_recent_crash_detection() {
+  test_start "Recent crash detection finds crash within 24 hours"
+
+  _setup_test_fixtures
+
+  local test_logs_dir="/tmp/ralph-test-logs-$$"
+  local original_dir="$RALPH_LOGS_DIR"
+  RALPH_LOGS_DIR="$test_logs_dir"
+
+  # Create a fresh crash log
+  _ralph_log_crash "1" "BUG-001" "Some criterion" "Some error" > /dev/null
+
+  # Recent crash should be found (strip ANSI codes for reliable matching)
+  local output=$(_ralph_show_recent_crash 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
+  if [[ ! "$output" =~ "Recent crash detected" ]]; then
+    test_fail "Should have detected recent crash"
+    rm -rf "$test_logs_dir"
+    RALPH_LOGS_DIR="$original_dir"
+    _teardown_test_fixtures
+    return
+  fi
+
+  rm -rf "$test_logs_dir"
+  RALPH_LOGS_DIR="$original_dir"
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: ralph-logs function exists and runs without error
+test_ralph_logs_function_exists() {
+  test_start "ralph-logs function exists and runs"
+
+  _setup_test_fixtures
+
+  # Function should exist
+  if ! typeset -f ralph-logs > /dev/null 2>&1; then
+    test_fail "ralph-logs function does not exist"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Should run without error (even with no logs dir)
+  local output=$(ralph-logs 2>&1)
+  if [[ "$?" -ne 0 && "$?" -ne 1 ]]; then
+    test_fail "ralph-logs returned unexpected exit code"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: ralph-kill-orphans function exists and runs without error
+test_ralph_kill_orphans_function_exists() {
+  test_start "ralph-kill-orphans function exists and runs"
+
+  _setup_test_fixtures
+
+  # Function should exist
+  if ! typeset -f ralph-kill-orphans > /dev/null 2>&1; then
+    test_fail "ralph-kill-orphans function does not exist"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Should run without error (even with no orphans)
+  local output=$(ralph-kill-orphans 2>&1)
+  if [[ "$?" -ne 0 ]]; then
+    test_fail "ralph-kill-orphans returned error exit code"
+    _teardown_test_fixtures
+    return
+  fi
+
+  # Should show cleanup message
+  if [[ ! "$output" =~ "Cleanup complete" ]]; then
+    test_fail "ralph-kill-orphans missing completion message"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 

@@ -717,6 +717,7 @@ _ralph_start_watcher() {
     } </dev/null >/dev/null 2>&1 &
     RALPH_WATCHER_PID=$!
     disown $RALPH_WATCHER_PID 2>/dev/null
+    _ralph_track_pid "$RALPH_WATCHER_PID" "fswatch-wrapper"
   else
     # Linux: inotifywait
     # Detach stdin from TTY to prevent "suspended (tty output)" messages
@@ -729,6 +730,7 @@ _ralph_start_watcher() {
     } </dev/null >/dev/null 2>&1 &
     RALPH_WATCHER_PID=$!
     disown $RALPH_WATCHER_PID 2>/dev/null
+    _ralph_track_pid "$RALPH_WATCHER_PID" "inotifywait-wrapper"
   fi
 
   _ralph_debug_live "start_watcher: SUCCESS, PID=$RALPH_WATCHER_PID"
@@ -746,6 +748,7 @@ _ralph_stop_watcher() {
     watcher_pid=$(<"$RALPH_WATCHER_PIDFILE")
     if [[ -n "$watcher_pid" ]]; then
       kill "$watcher_pid" 2>/dev/null
+      _ralph_untrack_pid "$watcher_pid"
     fi
     rm -f "$RALPH_WATCHER_PIDFILE"
     RALPH_WATCHER_PIDFILE=""
@@ -753,6 +756,7 @@ _ralph_stop_watcher() {
 
   # Kill the wrapper shell
   if [[ -n "$RALPH_WATCHER_PID" ]]; then
+    _ralph_untrack_pid "$RALPH_WATCHER_PID"
     kill "$RALPH_WATCHER_PID" 2>/dev/null
     # Brief wait for cleanup
     sleep 0.1
@@ -980,6 +984,7 @@ _ralph_start_polling_loop() {
   } &
   RALPH_POLLING_PID=$!
   disown $RALPH_POLLING_PID 2>/dev/null
+  _ralph_track_pid "$RALPH_POLLING_PID" "polling-loop"
 
   _ralph_debug_live "start_polling_loop: SUCCESS, PID=$RALPH_POLLING_PID"
   return 0
@@ -991,11 +996,383 @@ _ralph_stop_polling_loop() {
   setopt LOCAL_OPTIONS NO_MONITOR NO_NOTIFY
 
   if [[ -n "$RALPH_POLLING_PID" ]]; then
+    _ralph_untrack_pid "$RALPH_POLLING_PID"
     kill "$RALPH_POLLING_PID" 2>/dev/null
     # Brief wait for cleanup
     sleep 0.1
     RALPH_POLLING_PID=""
   fi
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# ORPHAN PROCESS TRACKING AND CLEANUP
+# ═══════════════════════════════════════════════════════════════════
+# Tracks Ralph child processes in a persistent file so orphans can be
+# detected and cleaned up after hard crashes (Ctrl+C during infinite loop,
+# terminal reset, etc.) when the normal cleanup trap doesn't run.
+
+# Global PID tracking file (persists across sessions)
+RALPH_PID_TRACKING_FILE="${RALPH_CONFIG_DIR:-$HOME/.config/ralphtools}/ralph-pids.txt"
+RALPH_LOGS_DIR="${RALPH_CONFIG_DIR:-$HOME/.config/ralphtools}/logs"
+
+# Register a child process PID for tracking
+# Usage: _ralph_track_pid <pid> <type>
+# Example: _ralph_track_pid $RALPH_WATCHER_PID "fswatch"
+_ralph_track_pid() {
+  local pid="$1"
+  local type="$2"
+  local timestamp=$(date +%s)
+
+  [[ -z "$pid" || "$pid" == "0" ]] && return 1
+
+  mkdir -p "$(dirname "$RALPH_PID_TRACKING_FILE")"
+
+  # Append PID with type and timestamp
+  echo "$pid $type $timestamp $$" >> "$RALPH_PID_TRACKING_FILE"
+}
+
+# Unregister a PID (called during normal cleanup)
+# Usage: _ralph_untrack_pid <pid>
+_ralph_untrack_pid() {
+  local pid="$1"
+
+  [[ -z "$pid" || ! -f "$RALPH_PID_TRACKING_FILE" ]] && return 0
+
+  # Remove line with this PID (first field)
+  local tmp="${RALPH_PID_TRACKING_FILE}.tmp"
+  grep -v "^$pid " "$RALPH_PID_TRACKING_FILE" > "$tmp" 2>/dev/null
+  mv "$tmp" "$RALPH_PID_TRACKING_FILE" 2>/dev/null
+
+  # Remove file if empty
+  if [[ ! -s "$RALPH_PID_TRACKING_FILE" ]]; then
+    rm -f "$RALPH_PID_TRACKING_FILE"
+  fi
+}
+
+# Unregister all PIDs from current session (parent PID)
+# Usage: _ralph_untrack_session
+_ralph_untrack_session() {
+  [[ ! -f "$RALPH_PID_TRACKING_FILE" ]] && return 0
+
+  # Remove all lines belonging to current session (4th field = $$)
+  local tmp="${RALPH_PID_TRACKING_FILE}.tmp"
+  grep -v " $$\$" "$RALPH_PID_TRACKING_FILE" > "$tmp" 2>/dev/null
+  mv "$tmp" "$RALPH_PID_TRACKING_FILE" 2>/dev/null
+
+  # Remove file if empty
+  if [[ ! -s "$RALPH_PID_TRACKING_FILE" ]]; then
+    rm -f "$RALPH_PID_TRACKING_FILE"
+  fi
+}
+
+# Check for orphan processes from previous Ralph runs
+# Returns: 0 if orphans found, 1 if none
+# Outputs: list of orphan PIDs and their types
+_ralph_find_orphans() {
+  [[ ! -f "$RALPH_PID_TRACKING_FILE" ]] && return 1
+
+  local found_orphans=false
+  local orphan_list=""
+
+  while read -r pid type timestamp parent_pid; do
+    [[ -z "$pid" ]] && continue
+
+    # Check if parent process (Ralph session) is still running
+    if ! kill -0 "$parent_pid" 2>/dev/null; then
+      # Parent is dead - check if child is still running
+      if kill -0 "$pid" 2>/dev/null; then
+        found_orphans=true
+        orphan_list+="$pid $type $timestamp $parent_pid\n"
+      fi
+    fi
+  done < "$RALPH_PID_TRACKING_FILE"
+
+  if [[ "$found_orphans" == "true" ]]; then
+    echo -e "$orphan_list"
+    return 0
+  fi
+
+  return 1
+}
+
+# Kill orphan processes and clean up tracking file
+# Usage: _ralph_kill_orphans [--quiet]
+_ralph_kill_orphans() {
+  local quiet=false
+  [[ "$1" == "--quiet" ]] && quiet=true
+
+  local orphans=$(_ralph_find_orphans)
+
+  if [[ -z "$orphans" ]]; then
+    [[ "$quiet" == "false" ]] && echo "No orphan processes found."
+    return 0
+  fi
+
+  local killed=0
+
+  while read -r pid type timestamp parent_pid; do
+    [[ -z "$pid" ]] && continue
+
+    if kill -0 "$pid" 2>/dev/null; then
+      if [[ "$quiet" == "false" ]]; then
+        local age=$(( $(date +%s) - timestamp ))
+        echo "  Killing orphan: PID $pid ($type, age: ${age}s)"
+      fi
+      kill "$pid" 2>/dev/null
+      ((killed++))
+    fi
+
+    # Remove from tracking file
+    _ralph_untrack_pid "$pid"
+  done <<< "$orphans"
+
+  [[ "$quiet" == "false" ]] && echo "Killed $killed orphan process(es)."
+
+  return 0
+}
+
+# Check for orphans at startup and offer to kill them
+# Usage: _ralph_check_orphans_at_startup
+_ralph_check_orphans_at_startup() {
+  local orphans=$(_ralph_find_orphans)
+
+  if [[ -z "$orphans" ]]; then
+    return 0
+  fi
+
+  local count=$(echo -e "$orphans" | grep -c '^[0-9]')
+
+  echo ""
+  echo "${RALPH_COLOR_YELLOW:-\033[1;33m}⚠️  Found $count orphan process(es) from previous Ralph run(s):${RALPH_COLOR_RESET:-\033[0m}"
+
+  while read -r pid type timestamp parent_pid; do
+    [[ -z "$pid" ]] && continue
+    local age=$(( $(date +%s) - timestamp ))
+    local age_str
+    if (( age < 60 )); then
+      age_str="${age}s"
+    elif (( age < 3600 )); then
+      age_str="$(( age / 60 ))m"
+    else
+      age_str="$(( age / 3600 ))h"
+    fi
+    echo "   PID $pid ($type, age: $age_str)"
+  done <<< "$orphans"
+
+  echo ""
+
+  # Offer to kill orphans
+  if [[ -t 0 ]]; then
+    # Interactive terminal - ask user
+    echo -n "Kill these orphan processes? [Y/n] "
+    read -r response
+    if [[ "$response" != "n" && "$response" != "N" ]]; then
+      _ralph_kill_orphans --quiet
+      echo "${RALPH_COLOR_GREEN:-\033[0;32m}✓ Orphan processes killed${RALPH_COLOR_RESET:-\033[0m}"
+    fi
+  else
+    # Non-interactive - auto-kill orphans
+    echo "Auto-killing orphans (non-interactive mode)..."
+    _ralph_kill_orphans --quiet
+    echo "${RALPH_COLOR_GREEN:-\033[0;32m}✓ Orphan processes killed${RALPH_COLOR_RESET:-\033[0m}"
+  fi
+
+  echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# CRASH LOGGING
+# ═══════════════════════════════════════════════════════════════════
+# Logs crash information to ~/.config/ralphtools/logs/ for debugging
+# when Ralph exits unexpectedly.
+
+# Log crash information
+# Usage: _ralph_log_crash <iteration> <story_id> <criteria> <error_message>
+_ralph_log_crash() {
+  local iteration="${1:-unknown}"
+  local story_id="${2:-unknown}"
+  local criteria="${3:-unknown}"
+  local error_message="${4:-unknown}"
+  local timestamp=$(date '+%Y-%m-%d_%H-%M-%S')
+
+  mkdir -p "$RALPH_LOGS_DIR"
+
+  local log_file="$RALPH_LOGS_DIR/crash-$timestamp.log"
+
+  {
+    echo "# Ralph Crash Log"
+    echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
+    echo "Working Dir: $(pwd)"
+    echo ""
+    echo "## State at Crash"
+    echo "Iteration: $iteration"
+    echo "Story: $story_id"
+    echo "Criteria: $criteria"
+    echo ""
+    echo "## Error"
+    echo "$error_message"
+    echo ""
+    echo "## Recent Git"
+    git log -3 --oneline 2>/dev/null || echo "(git log unavailable)"
+    echo ""
+    echo "## Environment"
+    echo "RALPH_VERSION: $RALPH_VERSION"
+    echo "Shell: $SHELL"
+    echo "Terminal: ${TERM:-unknown}"
+  } > "$log_file"
+
+  echo "$log_file"
+}
+
+# Show recent crash info on startup if available
+# Usage: _ralph_show_recent_crash
+_ralph_show_recent_crash() {
+  [[ ! -d "$RALPH_LOGS_DIR" ]] && return 1
+
+  # Find most recent crash log (within last 24 hours)
+  local recent_crash=$(find "$RALPH_LOGS_DIR" -name "crash-*.log" -mtime -1 2>/dev/null | sort -r | head -1)
+
+  [[ -z "$recent_crash" ]] && return 1
+
+  local crash_time=$(basename "$recent_crash" | sed 's/crash-//; s/\.log$//' | tr '_' ' ')
+  local crash_story=$(grep "^Story:" "$recent_crash" 2>/dev/null | head -1 | cut -d' ' -f2)
+  local crash_error=$(grep -A1 "^## Error" "$recent_crash" 2>/dev/null | tail -1)
+
+  echo ""
+  echo "${RALPH_COLOR_YELLOW:-\033[1;33m}⚠️  Recent crash detected:${RALPH_COLOR_RESET:-\033[0m}"
+  echo "   Time: $crash_time"
+  [[ -n "$crash_story" && "$crash_story" != "unknown" ]] && echo "   Story: $crash_story"
+  [[ -n "$crash_error" && ${#crash_error} -lt 100 ]] && echo "   Error: $crash_error"
+  echo "   Log: $recent_crash"
+  echo "   Run ${RALPH_COLOR_CYAN:-\033[0;36m}ralph-logs${RALPH_COLOR_RESET:-\033[0m} to view full details"
+  echo ""
+
+  return 0
+}
+
+# List recent crash logs
+# Usage: ralph-logs [count]
+ralph-logs() {
+  local count="${1:-5}"
+
+  if [[ ! -d "$RALPH_LOGS_DIR" ]]; then
+    echo "No logs directory found at $RALPH_LOGS_DIR"
+    return 1
+  fi
+
+  local logs=($(find "$RALPH_LOGS_DIR" -name "crash-*.log" 2>/dev/null | sort -r | head -"$count"))
+
+  if [[ ${#logs[@]} -eq 0 ]]; then
+    echo "No crash logs found."
+    return 0
+  fi
+
+  echo ""
+  echo "${RALPH_COLOR_CYAN:-\033[0;36m}Recent Ralph Crash Logs:${RALPH_COLOR_RESET:-\033[0m}"
+  echo ""
+
+  for log in "${logs[@]}"; do
+    local timestamp=$(basename "$log" | sed 's/crash-//; s/\.log$//' | tr '_' ' ')
+    local story=$(grep "^Story:" "$log" 2>/dev/null | head -1 | cut -d' ' -f2)
+    echo "  📄 $timestamp"
+    [[ -n "$story" && "$story" != "unknown" ]] && echo "     Story: $story"
+    echo "     Path: $log"
+    echo ""
+  done
+
+  echo "To view a log: ${RALPH_COLOR_GRAY:-\033[0;90m}cat <path>${RALPH_COLOR_RESET:-\033[0m}"
+  echo ""
+}
+
+# Kill all Ralph-related orphan processes
+# Usage: ralph-kill-orphans [--all]
+#   --all : Also kill processes by name pattern (fswatch, bun ui) even if not tracked
+ralph-kill-orphans() {
+  local kill_all=false
+  [[ "$1" == "--all" ]] && kill_all=true
+
+  echo ""
+  echo "${RALPH_COLOR_CYAN:-\033[0;36m}Ralph Orphan Process Cleanup${RALPH_COLOR_RESET:-\033[0m}"
+  echo ""
+
+  # First, kill tracked orphans
+  local orphans=$(_ralph_find_orphans)
+
+  if [[ -n "$orphans" ]]; then
+    echo "Tracked orphan processes:"
+    _ralph_kill_orphans
+    echo ""
+  else
+    echo "No tracked orphan processes found."
+  fi
+
+  # If --all flag, also look for Ralph-related processes by name
+  if [[ "$kill_all" == "true" ]]; then
+    echo ""
+    echo "Searching for untracked Ralph-related processes..."
+
+    # Look for common Ralph child processes
+    local untracked_count=0
+
+    # fswatch watching prd-json or stories
+    local fswatch_pids=$(pgrep -f "fswatch.*prd-json\|fswatch.*stories" 2>/dev/null)
+    if [[ -n "$fswatch_pids" ]]; then
+      for pid in $fswatch_pids; do
+        echo "  Killing untracked fswatch: PID $pid"
+        kill "$pid" 2>/dev/null
+        ((untracked_count++))
+      done
+    fi
+
+    # bun processes in ralph-ui directory
+    local bun_pids=$(pgrep -f "bun.*ralph-ui" 2>/dev/null)
+    if [[ -n "$bun_pids" ]]; then
+      for pid in $bun_pids; do
+        echo "  Killing untracked bun (ralph-ui): PID $pid"
+        kill "$pid" 2>/dev/null
+        ((untracked_count++))
+      done
+    fi
+
+    if [[ $untracked_count -eq 0 ]]; then
+      echo "  No untracked Ralph processes found."
+    else
+      echo "  Killed $untracked_count untracked process(es)."
+    fi
+  fi
+
+  # Clean up stale entries from tracking file
+  if [[ -f "$RALPH_PID_TRACKING_FILE" ]]; then
+    local stale_count=0
+    local tmp="${RALPH_PID_TRACKING_FILE}.tmp"
+    > "$tmp"
+
+    while read -r pid type timestamp parent_pid; do
+      [[ -z "$pid" ]] && continue
+      # Only keep entries for still-running processes
+      if kill -0 "$pid" 2>/dev/null; then
+        echo "$pid $type $timestamp $parent_pid" >> "$tmp"
+      else
+        ((stale_count++))
+      fi
+    done < "$RALPH_PID_TRACKING_FILE"
+
+    mv "$tmp" "$RALPH_PID_TRACKING_FILE"
+
+    if [[ $stale_count -gt 0 ]]; then
+      echo ""
+      echo "Cleaned up $stale_count stale tracking entries."
+    fi
+
+    # Remove file if empty
+    if [[ ! -s "$RALPH_PID_TRACKING_FILE" ]]; then
+      rm -f "$RALPH_PID_TRACKING_FILE"
+    fi
+  fi
+
+  echo ""
+  echo "${RALPH_COLOR_GREEN:-\033[0;32m}✓ Cleanup complete${RALPH_COLOR_RESET:-\033[0m}"
+  echo ""
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -3710,6 +4087,12 @@ function ralph() {
     echo "---" >> progress.txt
   fi
 
+  # Check for orphan processes from previous crashed Ralph sessions
+  _ralph_check_orphans_at_startup
+
+  # Show recent crash info if available
+  _ralph_show_recent_crash
+
   # Global variable for context file cleanup (accessible from trap)
   RALPH_CONTEXT_FILE="/tmp/ralph-context-$$.md"
 
@@ -3717,6 +4100,12 @@ function ralph() {
   cleanup_ralph() {
     # Stop file watcher if running
     _ralph_stop_watcher
+
+    # Stop polling loop if running
+    _ralph_stop_polling_loop
+
+    # Untrack all PIDs from this session (prevents orphan false positives)
+    _ralph_untrack_session
 
     rm -f "$RALPH_TMP"
     # Clean up temp 1Password environment files
@@ -4665,6 +5054,15 @@ After completing task, check PRD state:
           echo "  📝 Full error log: $error_log"
           # Update status file: error (US-106)
           _ralph_write_status "error" "Error persisted after $max_retries retries"
+
+          # Log crash for debugging (BUG-023)
+          local crash_criteria="unknown"
+          [[ -f "$PRD_JSON_DIR/stories/${current_story}.json" ]] && \
+            crash_criteria=$(jq -r '.acceptanceCriteria | map(select(.checked == false) | .text) | first // "unknown"' "$PRD_JSON_DIR/stories/${current_story}.json" 2>/dev/null)
+          local crash_error=$(tail -5 "$RALPH_TMP" 2>/dev/null | head -3 | tr '\n' ' ')
+          local crash_log=$(_ralph_log_crash "$i" "$current_story" "$crash_criteria" "$crash_error")
+          echo "  📋 Crash log: $crash_log"
+
           if $notify_enabled; then
             local error_stats
             if [[ "$use_json_mode" == "true" ]]; then
@@ -4959,6 +5357,11 @@ function ralph-help() {
   echo "    ${GRAY}--1password${NC}         Use 1Password injection (.env.template)"
   echo "    ${GRAY}--no-env${NC}            Skip copying .env files"
   echo "  ${BOLD}ralph-cleanup${NC}         Merge changes and remove worktree"
+  echo ""
+  echo "${GREEN}Maintenance:${NC}"
+  echo "  ${BOLD}ralph-kill-orphans${NC}    Kill orphan processes from crashed sessions"
+  echo "    ${GRAY}--all${NC}               Also kill untracked Ralph processes"
+  echo "  ${BOLD}ralph-logs [N]${NC}        Show N recent crash logs (default: 5)"
   echo ""
   echo "${GRAY}Flags:${NC}"
   echo "  ${BOLD}-QN${NC}                   Enable ntfy notifications"
