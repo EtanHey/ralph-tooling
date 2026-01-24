@@ -66,6 +66,14 @@
     {
       "text": "Commit: feat: [STORY-ID] description",
       "checked": false
+    },
+    {
+      "text": "Include AGENTS.md and context files in .worktree-sync.json defaults",
+      "checked": false
+    },
+    {
+      "text": "Sync prd-json/ directory to worktree if exists",
+      "checked": false
     }
   ],
   "dependencies": [],

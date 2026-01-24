@@ -1,0 +1,32 @@
+{
+  "id": "V-016",
+  "title": "Verify: ralph-start worktree sync completeness (TDD)",
+  "description": "Opus audit + TDD: Identify what needs syncing, create tests FIRST, then update US-086 criteria.",
+  "model": "opus",
+  "acceptanceCriteria": [
+    {"text": "=== EXPLORATION ===", "checked": true},
+    {"text": "Explore all config files projects typically need (.env*, tsconfig, etc)", "checked": false},
+    {"text": "Identify context/agent files that should sync (AGENTS.md, CLAUDE.md, contexts/)", "checked": false},
+    {"text": "Check what prd-json files are needed in worktrees", "checked": false},
+    {"text": "List MCP configs that might need worktree-specific setup", "checked": false},
+    {"text": "Review 1Password integration files (.env.template, op:// refs)", "checked": false},
+    
+    {"text": "=== TDD: CREATE TESTS FIRST ===", "checked": true},
+    {"text": "Add test: test_worktree_syncs_env_files() in tests/test-ralph.zsh", "checked": false},
+    {"text": "Add test: test_worktree_syncs_agent_files() for AGENTS.md, CLAUDE.md", "checked": false},
+    {"text": "Add test: test_worktree_syncs_context_files() for contexts/", "checked": false},
+    {"text": "Add test: test_worktree_syncs_prd_json() if prd-json exists", "checked": false},
+    {"text": "Add test: test_worktree_sync_config_file() for .worktree-sync.json", "checked": false},
+    {"text": "Tests should FAIL initially (TDD red phase)", "checked": false},
+    
+    {"text": "=== UPDATE US-086 ===", "checked": true},
+    {"text": "Document findings in docs.local/worktree-sync-audit.md", "checked": false},
+    {"text": "Update US-086 acceptanceCriteria with items to pass new tests", "checked": false},
+    {"text": "Commit: test: V-016 worktree sync TDD tests", "checked": false}
+  ],
+  "storyType": "V",
+  "priority": "high",
+  "dependencies": [],
+  "createdAt": "2026-01-24T05:30:00.000Z",
+  "passes": false
+}
