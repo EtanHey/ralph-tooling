@@ -421,3 +421,23 @@ Changes:
 - Using if/elif chain instead of case avoids shellcheck warnings about pattern ordering
 - git diff --name-only BASE...HEAD shows files changed between branches
 - Test plans should include both specific file tests AND general regression checks
+
+## Iteration 22
+Story: US-081 - Migrate golem-powers skill ENVs to 1Password
+Status: COMPLETED (opus)
+Changes:
+- Audited all skills for ENV requirements: context7 uses CONTEXT7_API_KEY, linear uses LINEAR_API_KEY
+- Created 1Password item "claude-golem" with context7 and linear sections
+- Created skills/.env.template with op:// references for CONTEXT7_API_KEY and LINEAR_API_KEY
+- Added "Skills Environment Variables" section to README.md with setup and usage instructions
+- Updated ralph-install validate.sh to check for claude-golem API keys in 1Password
+- Updated ralph-install SKILL.md with Required API Keys documentation
+- Tested op inject and op run with .env.template - both work correctly
+- Context7 skill works when CONTEXT7_API_KEY is injected via op run
+- All 46 tests pass
+
+### Learnings
+- 1Password item sections use format: `op item edit "item" "section.field[concealed]=value"`
+- op:// reference format: `op://vault/item/section/field` (not /password at end)
+- Linear skill already uses op read for 1Password - only context7 needed migration
+- op inject outputs resolved values to stdout, op run --env-file injects for single command

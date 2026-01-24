@@ -3,11 +3,11 @@
   "generatedAt": "2026-01-24T01:35:00Z",
   "stats": {
     "total": 46,
-    "completed": 20,
-    "pending": 19,
+    "completed": 21,
+    "pending": 18,
     "blocked": 8
   },
-  "nextStory": "US-081",
+  "nextStory": "US-082",
   "storyOrder": [
     "BUG-019",
     "MP-001",
@@ -57,7 +57,6 @@
     "US-099"
   ],
   "pending": [
-    "US-081",
     "US-082",
     "US-083",
     "US-084",
