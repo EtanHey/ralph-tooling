@@ -14,8 +14,8 @@
     {"text": "Replace in test files", "checked": true},
     {"text": "Verify no broken paths remain: grep -r 'config/ralph[^t]'", "checked": true},
     {"text": "Run CodeRabbit review", "checked": true},
-    {"text": "Commit: fix: BUG-027 update all paths to ~/.config/ralphtools/", "checked": false}
+    {"text": "Commit: fix: BUG-027 update all paths to ~/.config/ralphtools/", "checked": true}
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true
 }
