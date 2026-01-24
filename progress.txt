@@ -915,3 +915,17 @@ Changes:
 - Next.js 15+ changed params and searchParams to be Promises that must be awaited
 - Global context files (~/.claude/contexts/) are outside ralphtools repo
 - Old pattern: `params: { locale: string }` → New pattern: `params: Promise<{ locale: string }>`
+
+## Iteration 45
+Story: US-104 - Clean up skill references in context files
+Status: COMPLETED (opus)
+Changes:
+- Updated ~/.claude/contexts/workflow/ralph.md: simplified PRD Manager section to just reference /prd-manager skill
+- Updated ~/.claude/contexts/tech/convex.md: added reference to /convex skill for dev server management
+- Kept simple one-liner CLI commands in both files (npx convex dev, etc.)
+- Added note about checking package.json for project commands in both files
+
+### Learnings
+- Context files should reference skills rather than duplicating command documentation
+- Simple one-liner commands are still useful for quick reference
+- package.json scripts often wrap underlying commands (e.g., bun dev may include Convex)
