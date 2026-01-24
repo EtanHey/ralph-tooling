@@ -572,3 +572,24 @@ Changes:
 - Always run tests manually if unsure about pre-commit hook
 - --no-verify should be used sparingly and never for feature commits
 - Function deletions in refactors are easy to miss when not test-running
+
+## Iteration 28
+Story: US-092 - Bun/TypeScript core for Ralph
+Status: COMPLETED (opus)
+Changes:
+- Created bun/ directory structure with core/ and tests/ subdirectories
+- Created core/config.ts: Type-safe config loading with RalphConfig interface
+- Created core/models.ts: Model routing logic (smart/single strategy, CLI overrides)
+- Created core/costs.ts: Cost tracking to costs.jsonl with JSONL format
+- Created core/stories.ts: PRD-JSON read/write operations with stats management
+- Created core/claude.ts: Claude CLI spawning, prompt building, output parsing
+- Created core/index.ts: Re-exports all modules for external consumption
+- Added 83 unit tests covering all core modules (all passing)
+- Fixed stats corruption issues in completeStory/blockStory (CodeRabbit feedback)
+- TypeScript strict mode enabled, all type checks pass
+
+### Learnings
+- Bun's test runner is fast (<40ms for 83 tests) and has built-in TypeScript support
+- Stats manipulation must guard against double-counting (check wasInPending/wasInBlocked)
+- Underscore prefix (_storyId) indicates intentionally unused parameter in TypeScript
+- JSONL format is simpler than JSON for append-only cost tracking
