@@ -1058,3 +1058,23 @@ Changes:
 - Claude Code CLI can auto-discover vaults via /ide command
 - jq --arg handles shell variable escaping properly (quotes, spaces, backslashes)
 - Bash scripts need fallback patterns when jq isn't available
+
+## Iteration 52
+Story: AUDIT-002 - Quarterly AI tool format review
+Status: COMPLETED (opus)
+Changes:
+- Audited documentation for Claude Code, Cursor, CodeRabbit, and GitHub Copilot
+- Claude Code: No format changes, skills system stable, CLAUDE.md free-form markdown supported
+- Cursor: .cursorrules deprecated in favor of .cursor/rules/*.mdc files with YAML frontmatter
+- CodeRabbit: Added auto-detection of AI context files (CLAUDE.md, .cursorrules, copilot-instructions.md)
+- CodeRabbit: New issue enrichment and MCP integration features
+- GitHub Copilot: Path-specific .instructions.md with applyTo frontmatter, prompt files in preview
+- Created docs.local/learnings/ai-tool-formats.md with comprehensive findings
+- Set next review date: 2026-04-25 (3 months out)
+- No BUG/US stories needed - all tools compatible with our current setup
+
+### Learnings
+- CodeRabbit now auto-detects and learns from CLAUDE.md, .cursorrules, copilot-instructions.md
+- Cursor .mdc format uses YAML frontmatter with description, globs, alwaysApply fields
+- GitHub Copilot .instructions.md uses applyTo (glob) and excludeAgent frontmatter
+- Our @context syntax is a custom Ralph convention, not affected by any tool changes
