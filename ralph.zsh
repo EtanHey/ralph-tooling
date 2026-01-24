@@ -1215,6 +1215,8 @@ ralph-config() {
   # Ensure config directory exists
   mkdir -p "$RALPH_CONFIG_DIR"
 
+  local runtime="bash"
+  local max_iterations="100"
   local model_strategy=""
   local default_model=""
   local notifications_enabled=""
@@ -1229,6 +1231,23 @@ ralph-config() {
     # ═══════════════════════════════════════════════════════════
     # GUM-BASED INTERACTIVE PROMPTS
     # ═══════════════════════════════════════════════════════════
+
+    echo "🏃 Runtime Preference"
+    echo "   bash = Traditional zsh-based UI"
+    echo "   bun  = Modern React Ink UI (requires bun)"
+    echo ""
+    runtime=$(gum choose "bash" "bun")
+    echo "   Selected: $runtime"
+    echo ""
+
+    echo "🔢 Max Iterations"
+    echo "   How many iterations before Ralph pauses? (default: 100)"
+    echo ""
+    local max_iter_input=$(gum input --placeholder "100")
+    [[ -z "$max_iter_input" ]] && max_iter_input="100"
+    max_iterations="$max_iter_input"
+    echo "   Selected: $max_iterations"
+    echo ""
 
     echo "📊 Model Strategy"
     echo "   smart  = Different models for different task types"
@@ -1308,6 +1327,26 @@ ralph-config() {
     # FALLBACK: Simple read prompts
     # ═══════════════════════════════════════════════════════════
     echo "ℹ️  (Install gum for a better experience: brew install gum)"
+    echo ""
+
+    echo "🏃 Runtime Preference"
+    echo "   1) bash = Traditional zsh-based UI"
+    echo "   2) bun  = Modern React Ink UI (requires bun)"
+    echo -n "   Choose [1/2]: "
+    read runtime_choice
+    case "$runtime_choice" in
+      2|bun) runtime="bun" ;;
+      *)     runtime="bash" ;;
+    esac
+    echo "   Selected: $runtime"
+    echo ""
+
+    echo "🔢 Max Iterations"
+    echo -n "   How many iterations before Ralph pauses? [100]: "
+    read max_iter_input
+    [[ -z "$max_iter_input" ]] && max_iter_input="100"
+    max_iterations="$max_iter_input"
+    echo "   Selected: $max_iterations"
     echo ""
 
     echo "📊 Model Strategy"
@@ -1416,6 +1455,7 @@ ralph-config() {
 
   cat > "$config_file" << EOF
 {
+  "runtime": "$runtime",
   "modelStrategy": "$model_strategy",
   "defaultModel": "$default_model",
   "unknownTaskType": "$default_model",
@@ -1431,7 +1471,7 @@ ralph-config() {
     "ntfyTopic": "$ntfy_topic"
   },
   "defaults": {
-    "maxIterations": $RALPH_MAX_ITERATIONS,
+    "maxIterations": $max_iterations,
     "sleepSeconds": $RALPH_SLEEP_SECONDS
   },
   "errorHandling": {
@@ -1503,6 +1543,7 @@ _ralph_first_run_check() {
     mkdir -p "$RALPH_CONFIG_DIR"
     cat > "$RALPH_CONFIG_FILE" << 'EOF'
 {
+  "runtime": "bash",
   "modelStrategy": "smart",
   "defaultModel": "sonnet",
   "unknownTaskType": "sonnet",
@@ -1518,7 +1559,7 @@ _ralph_first_run_check() {
     "ntfyTopic": ""
   },
   "defaults": {
-    "maxIterations": 10,
+    "maxIterations": 100,
     "sleepSeconds": 2
   },
   "errorHandling": {
@@ -1550,6 +1591,7 @@ EOF
       mkdir -p "$RALPH_CONFIG_DIR"
       cat > "$RALPH_CONFIG_FILE" << 'EOF'
 {
+  "runtime": "bash",
   "modelStrategy": "smart",
   "defaultModel": "sonnet",
   "unknownTaskType": "sonnet",
@@ -1565,7 +1607,7 @@ EOF
     "ntfyTopic": ""
   },
   "defaults": {
-    "maxIterations": 10,
+    "maxIterations": 100,
     "sleepSeconds": 2
   },
   "errorHandling": {
@@ -1601,6 +1643,7 @@ EOF
         mkdir -p "$RALPH_CONFIG_DIR"
         cat > "$RALPH_CONFIG_FILE" << 'EOF'
 {
+  "runtime": "bash",
   "modelStrategy": "smart",
   "defaultModel": "sonnet",
   "unknownTaskType": "sonnet",
@@ -1616,7 +1659,7 @@ EOF
     "ntfyTopic": ""
   },
   "defaults": {
-    "maxIterations": 10,
+    "maxIterations": 100,
     "sleepSeconds": 2
   },
   "errorHandling": {
@@ -1644,6 +1687,9 @@ EOF
 _ralph_load_config() {
   if [[ -f "$RALPH_CONFIG_FILE" ]]; then
     # Export config values as environment variables for easy access
+    # Runtime: bash or bun (default: bash)
+    RALPH_RUNTIME=$(jq -r '.runtime // "bash"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+
     RALPH_MODEL_STRATEGY=$(jq -r '.modelStrategy // "single"' "$RALPH_CONFIG_FILE" 2>/dev/null)
     RALPH_DEFAULT_MODEL_CFG=$(jq -r '.defaultModel // "opus"' "$RALPH_CONFIG_FILE" 2>/dev/null)
     RALPH_UNKNOWN_TASK_MODEL=$(jq -r '.unknownTaskType // "sonnet"' "$RALPH_CONFIG_FILE" 2>/dev/null)
@@ -3403,6 +3449,11 @@ function ralph() {
     _ralph_first_run_check --skip-setup
   else
     _ralph_first_run_check
+  fi
+
+  # Set UI mode from config.runtime (unless --ui-ink was passed explicitly)
+  if [[ "$use_ink_ui" != "true" && "$RALPH_RUNTIME" == "bun" ]]; then
+    use_ink_ui=true
   fi
 
   # If app mode, handle branch switching

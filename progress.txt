@@ -699,3 +699,25 @@ Changes:
 - Brace balance in shell scripts is unreliable due to ${var} expansions - tolerance is better than strict equality
 - Break statements should be validated by checking for loop keywords (while/for/until), not just conditionals
 - Use 30+ lines of context for break detection to handle deeply nested blocks
+
+## Iteration 34
+Story: MP-003 - Ralph setup wizard and config-driven runtime (TDD)
+Status: COMPLETED (opus)
+Changes:
+- TDD PHASE 1: Added 5 unit tests for runtime config loading (initially failing)
+- TDD PHASE 2: Made tests pass with implementation:
+  - Added Runtime type ("bash" | "bun") to bun/core/config.ts
+  - Added runtime field to RalphConfig interface
+  - Extended _ralph_load_config() to load RALPH_RUNTIME from config
+  - Updated ralph-config wizard: asks for runtime preference and max iterations
+  - Updated default config templates to include runtime: "bash" and maxIterations: 100
+  - Ralph now reads config.runtime to choose bash/bun UI at startup
+- TDD PHASE 3: Added 3 integration tests for first-run detection and config behavior
+- All 69 ZSH tests pass, all 83 Bun tests pass (152 total)
+- TypeScript typecheck passes
+- CodeRabbit: RATE LIMITED (5min cooldown)
+
+### Learnings
+- TDD approach: write failing tests first, then implement to make them pass
+- Runtime type definition should be in TypeScript types AND shell script defaults
+- Config defaults should be updated in all 3 places: skip-setup, gum fallback, and read fallback

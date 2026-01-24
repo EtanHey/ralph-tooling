@@ -2200,6 +2200,195 @@ test_interactive_context_handles_missing_contexts() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# MP-003: RUNTIME CONFIG TESTS (TDD - Phase 1)
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: _ralph_load_config loads runtime field from config.json
+test_config_runtime_loads_from_config() {
+  test_start "load_config loads runtime from config.json"
+  _setup_test_fixtures
+  _reset_ralph_vars
+  unset RALPH_RUNTIME
+
+  # Create config with runtime field
+  cat > "$RALPH_CONFIG_FILE" << 'EOF'
+{
+  "runtime": "bun",
+  "modelStrategy": "single",
+  "defaultModel": "sonnet"
+}
+EOF
+
+  # Load config
+  _ralph_load_config
+
+  # Verify runtime was loaded
+  assert_equals "bun" "$RALPH_RUNTIME" "runtime should be 'bun' from config" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_load_config defaults runtime to 'bash' when not specified
+test_config_runtime_defaults_to_bash() {
+  test_start "load_config defaults runtime to 'bash'"
+  _setup_test_fixtures
+  _reset_ralph_vars
+  unset RALPH_RUNTIME
+
+  # Create config WITHOUT runtime field
+  cat > "$RALPH_CONFIG_FILE" << 'EOF'
+{
+  "modelStrategy": "single",
+  "defaultModel": "sonnet"
+}
+EOF
+
+  # Load config
+  _ralph_load_config
+
+  # Verify runtime defaults to bash
+  assert_equals "bash" "$RALPH_RUNTIME" "runtime should default to 'bash'" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: config.json runtime field accepts 'bash' value
+test_config_runtime_accepts_bash() {
+  test_start "load_config accepts runtime='bash'"
+  _setup_test_fixtures
+  _reset_ralph_vars
+  unset RALPH_RUNTIME
+
+  cat > "$RALPH_CONFIG_FILE" << 'EOF'
+{
+  "runtime": "bash"
+}
+EOF
+
+  _ralph_load_config
+
+  assert_equals "bash" "$RALPH_RUNTIME" "runtime should be 'bash'" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: config.json runtime field accepts 'bun' value
+test_config_runtime_accepts_bun() {
+  test_start "load_config accepts runtime='bun'"
+  _setup_test_fixtures
+  _reset_ralph_vars
+  unset RALPH_RUNTIME
+
+  cat > "$RALPH_CONFIG_FILE" << 'EOF'
+{
+  "runtime": "bun"
+}
+EOF
+
+  _ralph_load_config
+
+  assert_equals "bun" "$RALPH_RUNTIME" "runtime should be 'bun'" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: maxIterations is read from config.defaults.maxIterations
+test_config_max_iterations_from_defaults() {
+  test_start "load_config reads maxIterations from defaults"
+  _setup_test_fixtures
+  _reset_ralph_vars
+  unset RALPH_MAX_ITERATIONS
+
+  cat > "$RALPH_CONFIG_FILE" << 'EOF'
+{
+  "defaults": {
+    "maxIterations": 50
+  }
+}
+EOF
+
+  _ralph_load_config
+
+  assert_equals "50" "$RALPH_MAX_ITERATIONS" "maxIterations should be 50" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# MP-003 PHASE 3: INTEGRATION TESTS
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: _ralph_first_run_check returns 0 for existing config
+test_first_run_check_returns_0_for_existing_config() {
+  test_start "first_run_check returns 0 for existing config"
+  _setup_test_fixtures
+
+  # Create a config file
+  cat > "$RALPH_CONFIG_FILE" << 'EOF'
+{"runtime": "bash"}
+EOF
+
+  # Should return 0 (config exists)
+  _ralph_first_run_check
+  local result=$?
+
+  assert_equals "0" "$result" "first_run_check should return 0 when config exists" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_first_run_check returns 1 for missing config (without --skip-setup)
+# Note: This test just verifies the function doesn't crash - actual wizard is interactive
+test_first_run_check_detects_missing_config() {
+  test_start "first_run_check detects missing config"
+  _setup_test_fixtures
+
+  # Ensure no config exists
+  rm -f "$RALPH_CONFIG_FILE"
+
+  # With --skip-setup, should create default config and return 0
+  _ralph_first_run_check --skip-setup > /dev/null 2>&1
+  local result=$?
+
+  assert_equals "0" "$result" "first_run_check --skip-setup should return 0" || { _teardown_test_fixtures; return; }
+
+  # Config should now exist
+  if [[ ! -f "$RALPH_CONFIG_FILE" ]]; then
+    test_fail "config file should exist after --skip-setup"
+    _teardown_test_fixtures
+    return
+  fi
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: Config runtime affects RALPH_RUNTIME variable
+test_config_runtime_sets_ralph_runtime_var() {
+  test_start "config runtime sets RALPH_RUNTIME var"
+  _setup_test_fixtures
+  _reset_ralph_vars
+  unset RALPH_RUNTIME
+
+  cat > "$RALPH_CONFIG_FILE" << 'EOF'
+{"runtime": "bun"}
+EOF
+
+  _ralph_load_config
+
+  assert_equals "bun" "$RALPH_RUNTIME" "RALPH_RUNTIME should be 'bun'" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 

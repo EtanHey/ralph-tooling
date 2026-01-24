@@ -11,6 +11,7 @@ import { homedir } from "os";
 export type Model = "haiku" | "sonnet" | "opus" | "gemini-flash" | "gemini-pro" | "kiro" | string;
 export type TaskType = "US" | "V" | "TEST" | "BUG" | "AUDIT" | "MP" | string;
 export type ModelStrategy = "single" | "smart";
+export type Runtime = "bash" | "bun";
 export type NotificationEvent = "iteration_complete" | "story_complete" | "all_complete" | "blocked" | "all_blocked" | "error";
 
 // Pricing per million tokens
@@ -24,6 +25,7 @@ export interface RalphConfig {
   $schema?: string;
   schemaVersion?: string;
   lastRalphVersion?: string;
+  runtime?: Runtime;
   modelStrategy: ModelStrategy;
   defaultModel?: Model;
   unknownTaskType?: Model;
@@ -67,6 +69,7 @@ export interface RalphConfig {
 
 // Default config values
 export const DEFAULT_CONFIG: Partial<RalphConfig> = {
+  runtime: "bash",
   modelStrategy: "smart",
   defaultModel: "opus",
   unknownTaskType: "sonnet",
