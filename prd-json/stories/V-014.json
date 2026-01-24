@@ -41,12 +41,12 @@
     },
     {
       "text": "Commit: test: [STORY-ID] description",
-      "checked": false
+      "checked": true
     }
   ],
   "dependencies": [
     "US-070",
     "US-072"
   ],
-  "passes": false
+  "passes": true
 }
