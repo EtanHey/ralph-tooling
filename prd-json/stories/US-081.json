@@ -9,75 +9,75 @@
   "acceptanceCriteria": [
     {
       "text": "Audit all skills for ENV requirements:",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - coderabbit: None (uses CLI auth)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - context7: CONTEXT7_API_KEY",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - linear: LINEAR_API_KEY",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - github: gh auth (no ENV needed)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - 1password: op auth (no ENV needed)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create 1Password items for each key:",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - claude-golem/context7/API_KEY",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  - claude-golem/linear/API_KEY",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create skills/.env.template with op:// references:",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  CONTEXT7_API_KEY=op://Private/claude-golem/context7/API_KEY/password",
-      "checked": false
+      "checked": true
     },
     {
       "text": "  LINEAR_API_KEY=op://Private/claude-golem/linear/API_KEY/password",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Document in README: how to inject ENVs with op run",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update ralph-install skill to check for these keys during setup",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: op inject -i skills/.env.template works",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Skills work when ENVs are injected",
-      "checked": false
+      "checked": true
     },
     {
       "text": "⚠️ DO NOT delete any local .env files until 1Password items are verified working",
-      "checked": false
+      "checked": true
     },
     {
       "text": "⚠️ Keep local .env as backup until user confirms 1Password setup is complete",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit changes with message: feat/fix: [STORY-ID] description",

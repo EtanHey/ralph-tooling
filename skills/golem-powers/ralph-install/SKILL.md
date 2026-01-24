@@ -44,6 +44,23 @@ For a full installation, run through these workflows in order:
 | `jq` | JSON processing | `jq --version` |
 | `git` | Version control | `git --version` |
 
+## Required API Keys
+
+These keys are stored in 1Password under the `claude-golem` item:
+
+| Key | Purpose | 1Password Path |
+|-----|---------|----------------|
+| Context7 | Library documentation lookup | `op://Private/claude-golem/context7/API_KEY` |
+| Linear | Issue tracking integration | `op://Private/claude-golem/linear/API_KEY` |
+
+**Setup:**
+```bash
+# Create the claude-golem item with sections
+op item create --category "API Credential" --vault "Private" --title "claude-golem"
+op item edit "claude-golem" --vault "Private" "context7.API_KEY[concealed]=ctx7sk_your_key"
+op item edit "claude-golem" --vault "Private" "linear.API_KEY[concealed]=lin_api_your_key"
+```
+
 ---
 
 ## Configuration Paths

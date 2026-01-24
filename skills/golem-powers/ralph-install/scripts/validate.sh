@@ -101,7 +101,12 @@ fi
 echo "=== 1Password ==="
 check "op signed in" "op account list 2>/dev/null | grep -q ."
 check_warn "GitHub token accessible" "op read 'op://Private/github-token/credential' 2>/dev/null"
-check_warn "Linear API key accessible" "op read 'op://Private/linear/api-key' 2>/dev/null"
+echo ""
+
+# Section: Skills API Keys
+echo "=== Skills API Keys (claude-golem) ==="
+check_warn "Context7 API key" "op read 'op://Private/claude-golem/context7/API_KEY' 2>/dev/null | grep -q '^ctx7sk'"
+check_warn "Linear API key" "op read 'op://Private/claude-golem/linear/API_KEY' 2>/dev/null | grep -vq 'PLACEHOLDER'"
 echo ""
 
 # Section: Directories
@@ -113,12 +118,12 @@ echo ""
 
 # Section: Skills
 echo "=== Skill Symlinks ==="
-check "github skill" "test -e ~/.claude/commands/github.md"
-check "linear skill" "test -e ~/.claude/commands/linear"
-check "1password skill" "test -e ~/.claude/commands/1password"
-check "ralph-install skill" "test -e ~/.claude/commands/ralph-install"
-check "archive skill" "test -e ~/.claude/commands/archive"
-check "skills skill" "test -e ~/.claude/commands/skills.md"
+check "golem-powers directory" "test -d ~/.claude/commands/golem-powers"
+check "github skill" "test -e ~/.claude/commands/golem-powers/github/SKILL.md"
+check "linear skill" "test -e ~/.claude/commands/golem-powers/linear/SKILL.md"
+check "1password skill" "test -e ~/.claude/commands/golem-powers/1password/SKILL.md"
+check "context7 skill" "test -e ~/.claude/commands/golem-powers/context7/SKILL.md"
+check "coderabbit skill" "test -e ~/.claude/commands/golem-powers/coderabbit/SKILL.md"
 echo ""
 
 # Section: Ralph (optional)

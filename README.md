@@ -139,6 +139,43 @@ for skill in skills/*/; do
 done
 ```
 
+### Skills Environment Variables
+
+Some skills require API keys. These are managed via 1Password to avoid storing secrets in files.
+
+**Required Keys:**
+
+| Skill | Key | 1Password Path |
+|-------|-----|----------------|
+| `/context7` | `CONTEXT7_API_KEY` | `op://Private/claude-golem/context7/API_KEY` |
+| `/linear` | `LINEAR_API_KEY` | `op://Private/claude-golem/linear/API_KEY` |
+
+**Setup (one-time):**
+
+```bash
+# 1. Add your API keys to 1Password
+op item create --category "API Credential" --vault "Private" --title "claude-golem"
+op item edit "claude-golem" --vault "Private" "context7.API_KEY[concealed]=ctx7sk_your_key"
+op item edit "claude-golem" --vault "Private" "linear.API_KEY[concealed]=lin_api_your_key"
+
+# 2. Verify setup
+op read "op://Private/claude-golem/context7/API_KEY" | head -c 10
+```
+
+**Usage:**
+
+```bash
+# Option 1: op inject (creates .env file)
+op inject -i ~/.config/ralph/skills/.env.template -o ~/.config/ralph/skills/.env
+source ~/.config/ralph/skills/.env
+
+# Option 2: op run (inject for single command)
+op run --env-file=~/.config/ralph/skills/.env.template -- claude
+
+# Option 3: Shell alias (recommended)
+alias claude-with-keys='op run --env-file=~/.config/ralph/skills/.env.template -- claude'
+```
+
 ---
 
 ## Modular Context System
