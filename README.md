@@ -331,6 +331,18 @@ Detailed docs for AI agents in [`docs/`](docs/):
 
 ## Changelog
 
+### v1.5.0 (In Progress)
+- **golem-powers skills**: Unified skill namespace with executable pattern (SKILL.md + scripts/)
+- **React Ink UI**: Modern terminal dashboard (`--ui-ink` flag, US-085/US-093)
+- **Modular context system**: Layered CLAUDE.md with `@context:` directives (MP-002)
+- **Kiro model variants**: kiro-haiku, kiro-sonnet, kiro-opus routing
+- **prd-manager skill**: Atomic PRD operations (add-to-index, add-criterion, etc.)
+- **1Password vault organization**: development vault for global tools, project vaults
+- **Commit conventions**: Story-type based (feat/fix/test/refactor)
+- **TDD verification stories**: V-016/V-017 audit with failing tests first
+- Skills migrated: context7, coderabbit, linear, worktrees, github, 1password
+- Deprecated: update skill (replaced by prd-manager)
+
 ### v1.4.0
 - **Smart Model Routing**: AUDIT→opus, US→sonnet, V→haiku, story-level `"model"` override
 - **Live criteria sync**: fswatch file watching, ANSI cursor updates (no flash)
