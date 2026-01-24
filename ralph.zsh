@@ -38,7 +38,7 @@
 #   - Multiple can run simultaneously on different branches
 #
 # Prerequisites:
-# 1. Create prd-json/ with user stories (use /prd skill)
+# 1. Create prd-json/ with user stories (use /golem-powers:prd skill)
 # 2. Each story should be small (completable in one context window)
 # 3. Run `ralph` from project root
 #
@@ -3249,7 +3249,7 @@ function ralph() {
     echo "❌ No PRD.md or prd-json/ found in current directory"
     echo ""
     echo "Create one first:"
-    echo "  1. Run 'claude' and use '/prd' to generate a PRD"
+    echo "  1. Run 'claude' and use '/golem-powers:prd' to generate a PRD"
     echo "  2. Or manually create PRD.md with user stories"
     echo ""
     echo "PRD.md format:"
@@ -7502,10 +7502,10 @@ function _ralph_setup_migrate_secrets() {
       echo "${CYAN}To migrate MCP config secrets:${NC}"
       echo ""
       echo "  1. Scan for hardcoded secrets:"
-      echo "     ${YELLOW}bash ~/.claude/commands/1password/scripts/scan-mcp-secrets.sh${NC}"
+      echo "     ${YELLOW}bash ~/.claude/commands/golem-powers/1password/scripts/scan-mcp-secrets.sh${NC}"
       echo ""
       echo "  2. Or invoke the /1password skill in Claude:"
-      echo "     ${YELLOW}/1password${NC} → Select 'Migrate MCP config secrets'"
+      echo "     ${YELLOW}/golem-powers:1password${NC} → Select 'Migrate MCP config secrets'"
       echo ""
       ;;
     *)
