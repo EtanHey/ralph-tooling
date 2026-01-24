@@ -399,3 +399,25 @@ Changes:
 - gh pr view returns JSON with url, title, state fields when PR exists
 - git rev-parse --abbrev-ref HEAD gets current branch name
 - Branch name to title: sed to strip prefix, tr to convert dashes/underscores to spaces
+
+## Iteration 21
+Story: US-080 - golem-powers:test-plan - Adapt generate-test-plan skill from Union
+Status: COMPLETED (opus)
+Changes:
+- Created skills/golem-powers/test-plan/ directory structure
+- Created SKILL.md with frontmatter (name: test-plan, execute: scripts/generate.sh)
+- Created scripts/generate.sh with full argument parsing (--base defaults to main)
+- Runs git diff --name-only against base branch
+- Categorizes files by type: UI (tsx/jsx/vue/svelte), API (server/backend), DB (convex/prisma/migrations), Config (json/yaml/toml)
+- Outputs Markdown checklist with "- [ ] Test: **Feature** - Description" format
+- Groups tests by category (UI Components, API Endpoints, Database/Schema, Config, Other)
+- Includes regression test suggestions for each category
+- Includes General section with build/test/console error checks
+- Refactored case statement to if/elif chain to fix shellcheck pattern override warnings
+- All tests pass (46/46)
+
+### Learnings
+- Case statement patterns in bash are evaluated in order - specific patterns must come before generic ones
+- Using if/elif chain instead of case avoids shellcheck warnings about pattern ordering
+- git diff --name-only BASE...HEAD shows files changed between branches
+- Test plans should include both specific file tests AND general regression checks
