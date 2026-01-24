@@ -28,8 +28,9 @@
     },
     {
       "text": "Commit changes",
-      "checked": false
+      "checked": true
     }
   ],
-  "dependencies": []
+  "dependencies": [],
+  "passes": true
 }
