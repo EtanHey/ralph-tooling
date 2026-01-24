@@ -679,3 +679,23 @@ Changes:
 - Package manager detection: check for bun.lockb, pnpm-lock.yaml, yarn.lock
 - mkdir -p needed for nested paths when copying sync.files directories
 - Pre-commit hook brace check has false positives from ${var} syntax
+
+## Iteration 33
+Story: BUG-026 - Pre-commit hook has false positives blocking commits
+Status: COMPLETED (opus)
+Changes:
+- Fixed brace balance check: now tolerates small imbalances (up to 10) as warnings
+  since ${var} expansions, strings, and heredocs cause expected mismatches
+- Fixed break detection: now checks for while/for/until loop context (30 lines back)
+  instead of just if/else/case conditional context
+- Added 2 test cases:
+  - test_precommit_tolerates_minor_brace_imbalance (checks BRACE_DIFF threshold)
+  - test_precommit_break_inside_loop_check (checks for loop keywords)
+- All 61 ralph tests pass, 83 Bun tests pass
+- CodeRabbit: PASS (0 issues)
+- Note: Skills tests have pre-existing failures from US-078 namespace migration
+
+### Learnings
+- Brace balance in shell scripts is unreliable due to ${var} expansions - tolerance is better than strict equality
+- Break statements should be validated by checking for loop keywords (while/for/until), not just conditionals
+- Use 30+ lines of context for break detection to handle deeply nested blocks

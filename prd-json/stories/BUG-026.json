@@ -13,8 +13,8 @@
     {"text": "Add test case for break inside retry loop", "checked": true},
     {"text": "Verify ralph.zsh passes pre-commit without --no-verify", "checked": true},
     {"text": "Run CodeRabbit review", "checked": true},
-    {"text": "Commit: fix: BUG-026 reduce pre-commit hook false positives", "checked": false}
+    {"text": "Commit: fix: BUG-026 reduce pre-commit hook false positives", "checked": true}
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true
 }
