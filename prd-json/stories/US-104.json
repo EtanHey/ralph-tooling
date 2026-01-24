@@ -8,19 +8,19 @@
   "acceptanceCriteria": [
     {
       "text": "Update ralph.md to just reference /prd-manager skill",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update convex.md to reference /convex skill for dev server",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Keep simple one-liner CLI commands",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Add note about checking package.json for project commands",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit changes",
