@@ -1190,16 +1190,15 @@ EOF
   test_pass
 }
 
-# Test: cleanup resets index.json stats
+# Test: cleanup archives completed stories and updates arrays (US-106: stats are derived)
 test_archive_cleanup_resets_stats() {
-  test_start "cleanup resets index.json stats"
+  test_start "cleanup archives and updates arrays"
   _setup_test_fixtures
 
   # Create PRD structure with completed and pending stories
   mkdir -p "$TEST_TMP_DIR/prd-json/stories"
   cat > "$TEST_TMP_DIR/prd-json/index.json" << 'EOF'
 {
-  "stats": { "total": 3, "completed": 2, "pending": 1, "blocked": 0 },
   "storyOrder": ["US-001", "US-002", "US-003"],
   "pending": ["US-003"],
   "blocked": [],
@@ -1222,14 +1221,9 @@ EOF
   # Run archive with --clean
   ralph-archive --clean >/dev/null 2>&1
 
-  # Verify stats were reset
-  local completed=$(jq '.stats.completed' "$TEST_TMP_DIR/prd-json/index.json")
-  local total=$(jq '.stats.total' "$TEST_TMP_DIR/prd-json/index.json")
-  local pending=$(jq '.stats.pending' "$TEST_TMP_DIR/prd-json/index.json")
-
-  assert_equals "0" "$completed" "completed should be 0" || { cd -; _teardown_test_fixtures; return; }
-  assert_equals "1" "$total" "total should be 1 (only US-003 remains)" || { cd -; _teardown_test_fixtures; return; }
-  assert_equals "1" "$pending" "pending should be 1" || { cd -; _teardown_test_fixtures; return; }
+  # Verify pending array still has US-003 (US-106: stats derived from arrays/files)
+  local pending_count=$(jq '.pending | length' "$TEST_TMP_DIR/prd-json/index.json")
+  assert_equals "1" "$pending_count" "pending array should have 1 item" || { cd -; _teardown_test_fixtures; return; }
 
   # Verify nextStory is set to remaining story
   local next_story=$(jq -r '.nextStory' "$TEST_TMP_DIR/prd-json/index.json")
@@ -2385,6 +2379,191 @@ EOF
   assert_equals "bun" "$RALPH_RUNTIME" "RALPH_RUNTIME should be 'bun'" || { _teardown_test_fixtures; return; }
 
   _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# DERIVED STATS TESTS (US-106)
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: _ralph_derive_stats returns correct format
+test_derive_stats_returns_four_numbers() {
+  test_start "_ralph_derive_stats returns four numbers"
+  _setup_test_fixtures
+
+  # Create minimal PRD structure
+  local prd_dir="$TEST_TMP_DIR/prd-json"
+  mkdir -p "$prd_dir/stories"
+  echo '{"pending": ["US-001", "US-002"], "blocked": ["BUG-001"]}' > "$prd_dir/index.json"
+  echo '{"id": "US-001", "passes": false}' > "$prd_dir/stories/US-001.json"
+  echo '{"id": "US-002", "passes": false}' > "$prd_dir/stories/US-002.json"
+  echo '{"id": "BUG-001", "passes": false}' > "$prd_dir/stories/BUG-001.json"
+  echo '{"id": "US-003", "passes": true}' > "$prd_dir/stories/US-003.json"
+
+  local result=$(_ralph_derive_stats "$prd_dir")
+  local word_count=$(echo "$result" | wc -w | tr -d ' ')
+
+  assert_equals "4" "$word_count" "derive_stats should return 4 space-separated numbers" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_derive_stats counts correctly
+test_derive_stats_counts_correctly() {
+  test_start "_ralph_derive_stats counts correctly"
+  _setup_test_fixtures
+
+  # Create PRD structure with known counts
+  local prd_dir="$TEST_TMP_DIR/prd-json"
+  mkdir -p "$prd_dir/stories"
+  echo '{"pending": ["US-001", "US-002"], "blocked": ["BUG-001"]}' > "$prd_dir/index.json"
+  echo '{"id": "US-001", "passes": false}' > "$prd_dir/stories/US-001.json"
+  echo '{"id": "US-002", "passes": false}' > "$prd_dir/stories/US-002.json"
+  echo '{"id": "BUG-001", "passes": false}' > "$prd_dir/stories/BUG-001.json"
+  echo '{"id": "US-003", "passes": true}' > "$prd_dir/stories/US-003.json"
+
+  local result=$(_ralph_derive_stats "$prd_dir")
+  local pending=$(echo "$result" | awk '{print $1}')
+  local blocked=$(echo "$result" | awk '{print $2}')
+  local completed=$(echo "$result" | awk '{print $3}')
+  local total=$(echo "$result" | awk '{print $4}')
+
+  assert_equals "2" "$pending" "pending should be 2" || { _teardown_test_fixtures; return; }
+  assert_equals "1" "$blocked" "blocked should be 1" || { _teardown_test_fixtures; return; }
+  assert_equals "1" "$completed" "completed should be 1" || { _teardown_test_fixtures; return; }
+  assert_equals "4" "$total" "total should be 4" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# Test: _ralph_derive_stats handles empty PRD
+test_derive_stats_handles_empty_prd() {
+  test_start "_ralph_derive_stats handles empty PRD"
+  _setup_test_fixtures
+
+  # Create minimal PRD structure with no stories
+  local prd_dir="$TEST_TMP_DIR/prd-json"
+  mkdir -p "$prd_dir/stories"
+  echo '{"pending": [], "blocked": []}' > "$prd_dir/index.json"
+
+  local result=$(_ralph_derive_stats "$prd_dir")
+
+  assert_equals "0 0 0 0" "$result" "empty PRD should return 0 0 0 0" || { _teardown_test_fixtures; return; }
+
+  _teardown_test_fixtures
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# STATUS FILE TESTS (US-106)
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: _ralph_write_status creates file
+test_status_file_created() {
+  test_start "_ralph_write_status creates file"
+
+  # Use a unique status file for testing
+  local test_status_file="/tmp/ralph-status-test-$$.json"
+  RALPH_STATUS_FILE="$test_status_file"
+
+  _ralph_write_status "running"
+
+  if [[ ! -f "$test_status_file" ]]; then
+    rm -f "$test_status_file"
+    test_fail "status file should exist after _ralph_write_status"
+    return
+  fi
+
+  rm -f "$test_status_file"
+  test_pass
+}
+
+# Test: _ralph_write_status writes correct JSON
+test_status_file_has_correct_fields() {
+  test_start "_ralph_write_status has correct JSON fields"
+
+  local test_status_file="/tmp/ralph-status-test-$$.json"
+  RALPH_STATUS_FILE="$test_status_file"
+
+  _ralph_write_status "running"
+
+  # Check JSON fields
+  local state=$(jq -r '.state' "$test_status_file" 2>/dev/null)
+  local has_lastActivity=$(jq 'has("lastActivity")' "$test_status_file" 2>/dev/null)
+  local has_error=$(jq 'has("error")' "$test_status_file" 2>/dev/null)
+  local has_retryIn=$(jq 'has("retryIn")' "$test_status_file" 2>/dev/null)
+
+  assert_equals "running" "$state" "state should be 'running'" || { rm -f "$test_status_file"; return; }
+  assert_equals "true" "$has_lastActivity" "should have lastActivity field" || { rm -f "$test_status_file"; return; }
+  assert_equals "true" "$has_error" "should have error field" || { rm -f "$test_status_file"; return; }
+  assert_equals "true" "$has_retryIn" "should have retryIn field" || { rm -f "$test_status_file"; return; }
+
+  rm -f "$test_status_file"
+  test_pass
+}
+
+# Test: _ralph_write_status handles error state
+test_status_file_error_state() {
+  test_start "_ralph_write_status handles error state"
+
+  local test_status_file="/tmp/ralph-status-test-$$.json"
+  RALPH_STATUS_FILE="$test_status_file"
+
+  _ralph_write_status "error" "Test error message"
+
+  local state=$(jq -r '.state' "$test_status_file" 2>/dev/null)
+  local error=$(jq -r '.error' "$test_status_file" 2>/dev/null)
+
+  assert_equals "error" "$state" "state should be 'error'" || { rm -f "$test_status_file"; return; }
+  assert_equals "Test error message" "$error" "error message should be set" || { rm -f "$test_status_file"; return; }
+
+  rm -f "$test_status_file"
+  test_pass
+}
+
+# Test: _ralph_write_status handles retry state
+test_status_file_retry_state() {
+  test_start "_ralph_write_status handles retry state"
+
+  local test_status_file="/tmp/ralph-status-test-$$.json"
+  RALPH_STATUS_FILE="$test_status_file"
+
+  _ralph_write_status "retry" "null" "30"
+
+  local state=$(jq -r '.state' "$test_status_file" 2>/dev/null)
+  local retryIn=$(jq -r '.retryIn' "$test_status_file" 2>/dev/null)
+
+  assert_equals "retry" "$state" "state should be 'retry'" || { rm -f "$test_status_file"; return; }
+  assert_equals "30" "$retryIn" "retryIn should be 30" || { rm -f "$test_status_file"; return; }
+
+  rm -f "$test_status_file"
+  test_pass
+}
+
+# Test: _ralph_cleanup_status_file removes file
+test_status_file_cleanup() {
+  test_start "_ralph_cleanup_status_file removes file"
+
+  local test_status_file="/tmp/ralph-status-test-$$.json"
+  RALPH_STATUS_FILE="$test_status_file"
+
+  _ralph_write_status "running"
+
+  if [[ ! -f "$test_status_file" ]]; then
+    test_fail "status file should exist before cleanup"
+    return
+  fi
+
+  _ralph_cleanup_status_file
+
+  if [[ -f "$test_status_file" ]]; then
+    rm -f "$test_status_file"
+    test_fail "status file should not exist after cleanup"
+    return
+  fi
+
   test_pass
 }
 

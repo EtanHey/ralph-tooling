@@ -396,6 +396,79 @@ _ralph_get_total_criteria() {
   echo "$checked $total"
 }
 
+# Derive stats on-the-fly from index.json arrays and story files (US-106)
+# Usage: _ralph_derive_stats "/path/to/prd-json"
+# Returns: "pending blocked completed total" space-separated
+# Counts: pending array length, blocked array length, stories with passes:true
+_ralph_derive_stats() {
+  setopt localoptions noxtrace  # Prevent debug output leaking to terminal
+  local json_dir="$1"
+  local index_file="$json_dir/index.json"
+  local stories_dir="$json_dir/stories"
+
+  if [[ ! -f "$index_file" ]]; then
+    echo "0 0 0 0"
+    return
+  fi
+
+  # Get pending and blocked from arrays
+  local pending=$(jq -r '.pending | length' "$index_file" 2>/dev/null || echo 0)
+  local blocked=$(jq -r '.blocked | length' "$index_file" 2>/dev/null || echo 0)
+
+  # Count completed stories (passes: true)
+  local completed=0
+  local total=0
+
+  if [[ -d "$stories_dir" ]]; then
+    for story_file in "$stories_dir"/*.json(N); do
+      [[ -f "$story_file" ]] || continue
+      total=$((total + 1))
+      local passes=$(jq -r '.passes // false' "$story_file" 2>/dev/null)
+      [[ "$passes" == "true" ]] && completed=$((completed + 1))
+    done
+  fi
+
+  echo "$pending $blocked $completed $total"
+}
+
+# Write status file for UI tools to watch (US-106)
+# Usage: _ralph_write_status "state" ["error_message"] ["retry_seconds"]
+# States: running, cr_review, error, retry
+# Status file: /tmp/ralph-status-$$.json
+_ralph_write_status() {
+  setopt localoptions noxtrace  # Prevent debug output leaking to terminal
+  local state="${1:-running}"
+  local error_msg="${2:-null}"
+  local retry_seconds="${3:-0}"
+
+  # Create status file path with PID
+  RALPH_STATUS_FILE="${RALPH_STATUS_FILE:-/tmp/ralph-status-$$.json}"
+
+  local timestamp=$(date +%s)
+
+  # Build JSON with proper escaping
+  if [[ "$error_msg" != "null" ]]; then
+    error_msg="\"$(echo "$error_msg" | sed 's/"/\\"/g')\""
+  fi
+
+  cat > "$RALPH_STATUS_FILE" << EOF
+{
+  "state": "$state",
+  "lastActivity": $timestamp,
+  "error": $error_msg,
+  "retryIn": $retry_seconds,
+  "pid": $$
+}
+EOF
+}
+
+# Clean up status file (called from cleanup_ralph trap)
+_ralph_cleanup_status_file() {
+  if [[ -n "$RALPH_STATUS_FILE" && -f "$RALPH_STATUS_FILE" ]]; then
+    rm -f "$RALPH_STATUS_FILE"
+  fi
+}
+
 # Verify actual pending count before trusting Claude's COMPLETE signal (BUG-014)
 # Usage: _ralph_verify_pending_count "/path/to/prd-json" "/path/to/PRD.md" "true|false"
 # Args:
@@ -498,6 +571,9 @@ _ralph_coderabbit_review() {
   local NC='\033[0m'
 
   echo "${CYAN}🐰 Running CodeRabbit pre-commit review...${NC}"
+
+  # Update status file: cr_review (US-106)
+  _ralph_write_status "cr_review"
 
   # Run cr review with --prompt-only for AI-parseable output
   # --type uncommitted reviews staged and unstaged changes
@@ -783,9 +859,10 @@ _ralph_update_stories_display_at_row() {
 
   [[ "$row" -le 0 ]] && return 1
 
-  # Get updated story counts
-  local story_completed=$(jq -r '.stats.completed // 0' "$json_dir/index.json" 2>/dev/null)
-  local story_total=$(jq -r '.stats.total // 0' "$json_dir/index.json" 2>/dev/null)
+  # Derive stats on-the-fly (US-106)
+  local derived_stats=$(_ralph_derive_stats "$json_dir")
+  local story_completed=$(echo "$derived_stats" | awk '{print $3}')
+  local story_total=$(echo "$derived_stats" | awk '{print $4}')
 
   [[ "$story_total" -le 0 ]] && return 0
 
@@ -1070,15 +1147,11 @@ _ralph_show_iteration_status() {
   local elapsed=$((now - start_time))
   local elapsed_str=$(_ralph_format_elapsed $elapsed)
 
-  # Get stats with sanity check (completed should never exceed total)
-  local completed=$(jq -r '.stats.completed // 0' "$json_dir/index.json" 2>/dev/null)
-  local total=$(jq -r '.stats.total // 0' "$json_dir/index.json" 2>/dev/null)
-  local pending=$(jq -r '.stats.pending // 0' "$json_dir/index.json" 2>/dev/null)
-  # Sanity check: cap completed at total (handles 49/47 → 100% case)
-  (( completed > total )) && {
-    echo "[WARN] Stats inconsistent: completed ($completed) > total ($total)" >> "${RALPH_LOG_FILE:-/tmp/ralph.log}"
-    completed=$total
-  }
+  # Derive stats on-the-fly (US-106)
+  local derived_stats=$(_ralph_derive_stats "$json_dir")
+  local pending=$(echo "$derived_stats" | awk '{print $1}')
+  local completed=$(echo "$derived_stats" | awk '{print $3}')
+  local total=$(echo "$derived_stats" | awk '{print $4}')
   local percent=0
   [[ "$total" -gt 0 ]] && percent=$((completed * 100 / total))
   # Cap percentage at 100% (defensive guard)
@@ -2970,9 +3043,9 @@ _ralph_json_complete_story() {
   jq --arg ts "$completed_at" '.acceptanceCriteria = [.acceptanceCriteria[] | .checked = true] | .passes = true | .completedAt = $ts' "$story_file" > "$tmp_file"
   mv "$tmp_file" "$story_file"
 
-  # Update index.json - remove from pending
+  # Update index.json - remove from pending (stats are derived, US-106)
   if [[ -f "$index_file" ]]; then
-    jq --arg id "$story_id" '.pending = [.pending[] | select(. != $id)] | .stats.completed += 1 | .stats.pending -= 1 | .nextStory = (.pending[0] // "COMPLETE")' "$index_file" > "$tmp_file"
+    jq --arg id "$story_id" '.pending = [.pending[] | select(. != $id)] | .nextStory = (.pending[0] // "COMPLETE")' "$index_file" > "$tmp_file"
     mv "$tmp_file" "$index_file"
   fi
 }
@@ -3143,36 +3216,10 @@ _ralph_apply_update_queue() {
     update_stories_count=$(jq '.updateStories | length' "$update_file" 2>/dev/null || echo 0)
   fi
 
-  # 3. Recalculate stats after any changes
+  # 3. Update nextStory after any changes (stats are derived on-the-fly, US-106)
   if [[ $new_stories_count -gt 0 ]] || [[ $update_stories_count -gt 0 ]]; then
-    # Count pending stories
-    local pending_count=$(jq '.pending | length' "$index_file")
-
-    # Count completed stories (those with passes=true in their files)
-    local completed_count=0
-    local total_count=0
-    for story_file in "$stories_dir"/*.json(N); do
-      [[ -f "$story_file" ]] || continue
-      total_count=$((total_count + 1))
-      if [[ "$(jq -r '.passes // false' "$story_file")" == "true" ]]; then
-        completed_count=$((completed_count + 1))
-      fi
-    done
-
-    # Count blocked stories
-    local blocked_count=$(jq '.blocked | length' "$index_file" 2>/dev/null || echo 0)
-
-    # Update stats and nextStory in index.json
-    jq --argjson total "$total_count" \
-       --argjson completed "$completed_count" \
-       --argjson pending "$pending_count" \
-       --argjson blocked "$blocked_count" '
-      .stats.total = $total |
-      .stats.completed = $completed |
-      .stats.pending = $pending |
-      .stats.blocked = $blocked |
-      .nextStory = (.pending[0] // null)
-    ' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
+    # Update nextStory in index.json
+    jq '.nextStory = (.pending[0] // null)' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
 
     # Clear newStories from index.json (they've been processed)
     jq '.newStories = []' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
@@ -3221,12 +3268,10 @@ _ralph_auto_unblock() {
         # Unblock: remove blockedBy from story
         jq 'del(.blockedBy)' "$story_file" > "${story_file}.tmp" && mv "${story_file}.tmp" "$story_file"
 
-        # Move from blocked to pending in index
+        # Move from blocked to pending in index (stats are derived, US-106)
         jq --arg id "$story_id" '
           .blocked = [.blocked[] | select(. != $id)] |
-          .pending = (.pending + [$id]) |
-          .stats.blocked = (.blocked | length) |
-          .stats.pending = (.pending | length)
+          .pending = (.pending + [$id])
         ' "$index_file" > "${index_file}.tmp" && mv "${index_file}.tmp" "$index_file"
 
         echo "  🔓 Auto-unblocked $story_id (blocker $blocker_id is complete)"
@@ -3246,7 +3291,8 @@ _ralph_json_remaining_count() {
     return
   fi
 
-  local stories=$(jq -r '.stats.pending // 0' "$index_file")
+  # Derive pending count from array (US-106)
+  local stories=$(jq -r '.pending | length' "$index_file")
 
   # Count total unchecked criteria across all pending stories using while read
   local criteria=0
@@ -3272,7 +3318,8 @@ _ralph_json_remaining_stats() {
     return
   fi
 
-  local stories=$(jq -r '.stats.pending // 0' "$index_file")
+  # Derive pending count from array (US-106)
+  local stories=$(jq -r '.pending | length' "$index_file")
 
   # Count total unchecked criteria across all pending stories using while read
   local criteria=0
@@ -3675,6 +3722,8 @@ function ralph() {
       fi
       rm -f "$RALPH_CONTEXT_FILE"
     fi
+    # Clean up status file (US-106)
+    _ralph_cleanup_status_file
     if [[ -n "$app_mode" && -n "$original_branch" ]]; then
       echo ""
       echo "🔙 Returning to original branch: $original_branch"
@@ -3705,8 +3754,10 @@ function ralph() {
   if [[ "$use_ink_ui" != "true" && "$compact_mode" == "true" ]]; then
     # Compact mode: single-line startup
     local project_name=$(basename "$(pwd)")
-    local pending=$(jq -r '.stats.pending // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null || echo "?")
-    local completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null || echo "?")
+    # Derive stats on-the-fly (US-106)
+    local derived_stats=$(_ralph_derive_stats "$PRD_JSON_DIR")
+    local pending=$(echo "$derived_stats" | awk '{print $1}')
+    local completed=$(echo "$derived_stats" | awk '{print $3}')
     local criteria_stats=$(_ralph_get_total_criteria "$PRD_JSON_DIR")
     local crit_done=$(echo "$criteria_stats" | cut -d' ' -f1)
     local crit_total=$(echo "$criteria_stats" | cut -d' ' -f2)
@@ -3747,9 +3798,11 @@ function ralph() {
     local BOX_INNER_WIDTH=61
     echo "┌───────────────────────────────────────────────────────────────┐"
     if [[ "$use_json_mode" == "true" ]]; then
-      local pending=$(jq -r '.stats.pending // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
-      local completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
-      local blocked=$(jq -r '.stats.blocked // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
+      # Derive stats on-the-fly (US-106)
+      local derived_stats=$(_ralph_derive_stats "$PRD_JSON_DIR")
+      local pending=$(echo "$derived_stats" | awk '{print $1}')
+      local blocked=$(echo "$derived_stats" | awk '{print $2}')
+      local completed=$(echo "$derived_stats" | awk '{print $3}')
       local status_str="📋 Stories: $pending pending │ $completed completed │ $blocked blocked"
       local status_width=$(_ralph_display_width "$status_str")
       local status_padding=$((BOX_INNER_WIDTH - status_width))
@@ -3874,7 +3927,9 @@ function ralph() {
           fi
 
           # PRD is complete - pending=0 AND blocked=0
-          local total_stories=$(jq -r '.stats.total // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
+          # Derive stats on-the-fly (US-106)
+          local derived_stats=$(_ralph_derive_stats "$PRD_JSON_DIR")
+          local total_stories=$(echo "$derived_stats" | awk '{print $4}')
 
           if [[ "$compact_mode" == "true" ]]; then
             echo ""
@@ -3979,8 +4034,10 @@ function ralph() {
       echo -e "║  🧠 Model: ${colored_model}$(printf '%*s' $model_padding '')║"
       # Show story progress (JSON mode only)
       if [[ "$use_json_mode" == "true" ]]; then
-        local story_completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
-        local story_total=$(jq -r '.stats.total // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
+        # Derive stats on-the-fly (US-106)
+        local derived_stats=$(_ralph_derive_stats "$PRD_JSON_DIR")
+        local story_completed=$(echo "$derived_stats" | awk '{print $3}')
+        local story_total=$(echo "$derived_stats" | awk '{print $4}')
         local story_bar=$(_ralph_story_progress "$story_completed" "$story_total")
         local stories_str="📚 Stories:  ${story_bar}"
         local stories_width=$(_ralph_display_width "$stories_str")
@@ -4250,6 +4307,9 @@ At the START of any iteration that needs browser verification:
         _ralph_start_polling_loop "$current_story" "$PRD_JSON_DIR" "$RALPH_CRITERIA_ROW" "$RALPH_STORIES_ROW"
       fi
 
+      # Update status file: running (US-106)
+      _ralph_write_status "running"
+
       # Run CLI with output capture (tee for checking promises)
       # Note: Claude uses -p flag, Kiro uses positional argument (${prompt_flag:+...} expands only if non-empty)
       # NODE_OPTIONS: Force unhandled promise rejections to become exceptions (properly captured by pipe)
@@ -4448,6 +4508,8 @@ After completing task, check PRD state:
           echo "  📝 Error log: $no_msg_error_log"
           echo "  🔄 Generating fresh session ID for retry..."
           echo "  ⏳ Waiting ${no_msg_cooldown} seconds (API cooldown)..."
+          # Update status file: retry (US-106)
+          _ralph_write_status "retry" "null" "$no_msg_cooldown"
           sleep "$no_msg_cooldown"
           # Fresh session ID will be generated at the start of the next loop iteration
           continue
@@ -4457,6 +4519,9 @@ After completing task, check PRD state:
           echo -e "  ❌ $(_ralph_error "'No messages returned' persisted") after $no_messages_max_retries retries."
           echo "  📝 Full error log: $no_msg_error_log"
           echo -e "  ⏭️  $(_ralph_warning "Skipping story") '$current_story' and continuing to next..."
+
+          # Update status file: error (US-106)
+          _ralph_write_status "error" "No messages returned after $no_messages_max_retries retries"
 
           # Send ntfy notification for persistent failure
           if $notify_enabled; then
@@ -4508,12 +4573,16 @@ After completing task, check PRD state:
           echo "  📝 Error log: $error_log"
           [[ -f "$RALPH_TMP" ]] && tail -3 "$RALPH_TMP" 2>/dev/null | head -2
           echo "  ⏳ Waiting ${general_cooldown} seconds before retry..."
+          # Update status file: retry (US-106)
+          _ralph_write_status "retry" "null" "$general_cooldown"
           sleep "$general_cooldown"
           continue
         else
           echo ""
           echo -e "  ❌ $(_ralph_error "Error persisted") after $max_retries retries. $(_ralph_warning "Skipping iteration.")"
           echo "  📝 Full error log: $error_log"
+          # Update status file: error (US-106)
+          _ralph_write_status "error" "Error persisted after $max_retries retries"
           if $notify_enabled; then
             local error_stats
             if [[ "$use_json_mode" == "true" ]]; then
@@ -4727,10 +4796,10 @@ After completing task, check PRD state:
     echo -e "${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}  ${remaining_str}$(printf '%*s' $remaining_padding '')${RALPH_COLOR_YELLOW}║${RALPH_COLOR_RESET}"
     # Show story progress bar (JSON mode only)
     if [[ "$use_json_mode" == "true" ]]; then
-      local final_completed=$(jq -r '.stats.completed // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
-      local final_total=$(jq -r '.stats.total // 0' "$PRD_JSON_DIR/index.json" 2>/dev/null)
-      # Sanity check: cap completed at total
-      (( final_completed > final_total )) && final_completed=$final_total
+      # Derive stats on-the-fly (US-106)
+      local final_derived_stats=$(_ralph_derive_stats "$PRD_JSON_DIR")
+      local final_completed=$(echo "$final_derived_stats" | awk '{print $3}')
+      local final_total=$(echo "$final_derived_stats" | awk '{print $4}')
       local final_story_bar=$(_ralph_story_progress "$final_completed" "$final_total")
       local story_str="📚 Stories:  ${final_story_bar}"
       local story_width=$(_ralph_display_width "$story_str")
@@ -5759,21 +5828,15 @@ _ralph_archive_cleanup() {
     next_story="\"${pending_stories[1]}\""  # zsh arrays are 1-indexed
   fi
 
-  # Update index.json
+  # Update index.json (stats are derived on-the-fly, US-106)
   jq --argjson pending "$pending_json" \
      --argjson blocked "$blocked_json" \
      --argjson order "$story_order_json" \
-     --argjson total "$total_count" \
-     --argjson pcount "$pending_count" \
-     --argjson bcount "$blocked_count" \
      --argjson next "$next_story" '
     .storyOrder = $order |
     .pending = $pending |
     .blocked = $blocked |
-    .stats.total = $total |
-    .stats.pending = $pcount |
-    .stats.blocked = $bcount |
-    .stats.completed = 0 |
+    del(.stats) |
     .nextStory = $next
   ' "$index_file" > "${index_file}.tmp" && mv "${index_file}.tmp" "$index_file"
 
@@ -6227,18 +6290,13 @@ _ralph_show_prd_json() {
 
   [[ ! -f "$index_file" ]] && return
 
-  # Read stats from index.json
-  local total=$(jq -r '.stats.total // 0' "$index_file" 2>/dev/null)
-  local done=$(jq -r '.stats.completed // 0' "$index_file" 2>/dev/null)
-  local pending=$(jq -r '.stats.pending // 0' "$index_file" 2>/dev/null)
-  local blocked=$(jq -r '.stats.blocked // 0' "$index_file" 2>/dev/null)
+  # Derive stats on-the-fly (US-106)
+  local derived_stats=$(_ralph_derive_stats "$json_dir")
+  local pending=$(echo "$derived_stats" | awk '{print $1}')
+  local blocked=$(echo "$derived_stats" | awk '{print $2}')
+  local done=$(echo "$derived_stats" | awk '{print $3}')
+  local total=$(echo "$derived_stats" | awk '{print $4}')
   local next_story=$(jq -r '.nextStory // "none"' "$index_file" 2>/dev/null)
-
-  # Sanity check: cap completed at total (handles inconsistent stats)
-  (( done > total )) && {
-    echo "[WARN] Stats inconsistent: completed ($done) > total ($total)" >> "${RALPH_LOG_FILE:-/tmp/ralph.log}"
-    done=$total
-  }
   local percent=0
   [[ "$total" -gt 0 ]] && percent=$((done * 100 / total))
   # Cap percentage at 100% (defensive guard)

@@ -44,12 +44,10 @@ case "$ACTION" in
       exit 1
     fi
 
-    # Add to pending and storyOrder, update stats
+    # Add to pending and storyOrder (stats are derived, US-106)
     jq --arg s "$STORY" '
       .pending += [$s] |
-      .storyOrder += [$s] |
-      .stats.total += 1 |
-      .stats.pending += 1
+      .storyOrder += [$s]
     ' "$INDEX" > "$INDEX.tmp" && mv "$INDEX.tmp" "$INDEX"
 
     echo "✓ Added $STORY to index"
@@ -109,7 +107,85 @@ case "$ACTION" in
     ;;
 
   stats)
-    jq '.stats' "$INDEX"
+    # Derive stats on-the-fly (US-106)
+    pending_count=$(jq '.pending | length' "$INDEX")
+    blocked_count=$(jq '.blocked | length' "$INDEX")
+    completed_count=0
+    total_count=0
+    for f in "$PRD_DIR/stories"/*.json; do
+      [[ -f "$f" ]] || continue
+      ((total_count++))
+      if [[ "$(jq -r '.passes // false' "$f")" == "true" ]]; then
+        ((completed_count++))
+      fi
+    done
+    echo "{"
+    echo "  \"pending\": $pending_count,"
+    echo "  \"blocked\": $blocked_count,"
+    echo "  \"completed\": $completed_count,"
+    echo "  \"total\": $total_count"
+    echo "}"
+    ;;
+
+  check-progress)
+    # Show current PRD progress (US-106)
+    echo "=== PRD PROGRESS ==="
+    echo ""
+
+    # Get nextStory
+    next=$(jq -r '.nextStory // "none"' "$INDEX")
+    echo "Next Story: $next"
+
+    # Show current story progress if story file exists
+    if [[ -n "$next" && "$next" != "none" && "$next" != "COMPLETE" ]]; then
+      story_file="$PRD_DIR/stories/${next}.json"
+      if [[ -f "$story_file" ]]; then
+        title=$(jq -r '.title' "$story_file")
+        echo "Title: $title"
+        echo ""
+
+        echo "Criteria:"
+        jq -r '.acceptanceCriteria[] | if .checked then "  [x] " + .text else "  [ ] " + .text end' "$story_file"
+        echo ""
+
+        # Count checked/total
+        checked=$(jq '[.acceptanceCriteria[] | select(.checked)] | length' "$story_file")
+        total_c=$(jq '.acceptanceCriteria | length' "$story_file")
+        echo "Progress: $checked/$total_c checked"
+      fi
+    fi
+    echo ""
+
+    # Derive stats on-the-fly
+    pending_count=$(jq '.pending | length' "$INDEX")
+    blocked_count=$(jq '.blocked | length' "$INDEX")
+    completed_count=0
+    total_count=0
+    for f in "$PRD_DIR/stories"/*.json; do
+      [[ -f "$f" ]] || continue
+      ((total_count++))
+      if [[ "$(jq -r '.passes // false' "$f")" == "true" ]]; then
+        ((completed_count++))
+      fi
+    done
+    echo "=== STATS ==="
+    echo "Pending: $pending_count"
+    echo "Blocked: $blocked_count"
+    echo "Completed: $completed_count"
+    echo "Total: $total_count"
+
+    # Check for status file
+    status_file="/tmp/ralph-status-*.json"
+    # shellcheck disable=SC2086
+    if ls $status_file 1>/dev/null 2>&1; then
+      echo ""
+      echo "=== RALPH STATUS ==="
+      # Get most recent status file
+      latest=$(find /tmp -maxdepth 1 -name 'ralph-status-*.json' -exec stat -f '%m %N' {} \; 2>/dev/null | sort -rn | head -1 | awk '{print $2}')
+      if [[ -f "$latest" ]]; then
+        jq '.' "$latest"
+      fi
+    fi
     ;;
 
   *)
@@ -121,7 +197,8 @@ case "$ACTION" in
     echo "  --action=list --scope=pending       List stories"
     echo "  --action=show --story=ID            Show story details"
     echo "  --action=set-next --story=ID        Set next story"
-    echo "  --action=stats                      Show stats"
+    echo "  --action=stats                      Show stats (derived)"
+    echo "  --action=check-progress             Show full progress with status"
     echo ""
     echo "Scopes: pending, blocked, all"
     ;;

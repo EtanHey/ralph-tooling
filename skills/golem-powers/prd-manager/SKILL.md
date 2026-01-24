@@ -55,3 +55,9 @@ Manage PRD stories without manual jq commands.
 ```bash
 ./scripts/run.sh --action=stats
 ```
+
+### Show full progress (US-106)
+```bash
+# Shows: nextStory, criteria progress, derived stats, Ralph status
+./scripts/run.sh --action=check-progress
+```
