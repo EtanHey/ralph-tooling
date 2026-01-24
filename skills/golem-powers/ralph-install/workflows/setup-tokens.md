@@ -232,6 +232,25 @@ op signin
 
 ---
 
+## CodeRabbit CLI Authentication
+
+CodeRabbit uses browser-based authentication (not an API key):
+
+```bash
+cr auth login
+```
+
+This opens a browser to authenticate. After signing in, paste the token back to your CLI.
+
+**Verify:**
+```bash
+cr auth status
+```
+
+**Note:** Free tier = 1 review/hour, basic analysis. Paid = learnings + contextual analysis.
+
+---
+
 ## Next Steps
 
 After storing all tokens:

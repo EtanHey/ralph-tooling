@@ -1,0 +1,28 @@
+{
+  "id": "AUDIT-002",
+  "title": "Quarterly AI tool format review",
+  "description": "Review documentation for AI coding tools to check if their context file formats have changed. Update our context system if needed.\n\nTools to check:\n- Claude Code (CLAUDE.md, agents.md) - docs.anthropic.com\n- Cursor (.cursorrules) - cursor.com/docs\n- GitHub Copilot (.github/copilot-instructions.md) - docs.github.com\n- CodeRabbit (reads all above) - docs.coderabbit.ai\n- Windsurf (.windsurfrules) - if we start using it\n\nGoal: Ensure our CLAUDE.md format stays compatible and we're not missing new features.",
+  "type": "audit",
+  "priority": "low",
+  "storyPoints": 2,
+  "status": "pending",
+  "acceptanceCriteria": [
+    {"text": "=== CLAUDE CODE ===", "checked": false},
+    {"text": "Check Claude Code docs for CLAUDE.md format changes", "checked": false},
+    {"text": "Check if @context syntax or layering has updates", "checked": false},
+    {"text": "=== CURSOR ===", "checked": false},
+    {"text": "Check Cursor docs for .cursorrules format changes", "checked": false},
+    {"text": "Note any new features we might want", "checked": false},
+    {"text": "=== CODERABBIT ===", "checked": false},
+    {"text": "Check CR docs for new file patterns they support", "checked": false},
+    {"text": "Check if path_instructions or code_guidelines changed", "checked": false},
+    {"text": "=== GITHUB COPILOT ===", "checked": false},
+    {"text": "Check Copilot instructions format", "checked": false},
+    {"text": "=== DOCUMENT FINDINGS ===", "checked": false},
+    {"text": "Update docs.local/learnings/ai-tool-formats.md with findings", "checked": false},
+    {"text": "Create BUG/US stories if updates needed", "checked": false},
+    {"text": "Set next review date (3 months out)", "checked": false}
+  ],
+  "dependencies": [],
+  "recurrence": "quarterly"
+}

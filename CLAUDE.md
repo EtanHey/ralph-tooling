@@ -57,6 +57,38 @@ When running as interactive Claude (conversation with user):
 
 ---
 
+## 🐰 CodeRabbit Context
+
+CodeRabbit reads this file automatically. These are project-specific rules CR should follow:
+
+### Intentional Design Patterns
+
+- **ralph.zsh is a single file by design** - don't suggest splitting into modules
+- **Long functions are acceptable** - this is a CLI tool, not a library
+- **ZSH-specific syntax** - don't suggest POSIX compatibility changes
+
+### Project Conventions
+
+- **Test files use `test_` prefix** - pattern: `test_feature_name()`
+- **Skills use SKILL.md** - not README.md for skill documentation
+- **Contexts use @context tags** - layered markdown compilation
+
+### Known Patterns (Don't Flag)
+
+- `setopt localoptions` blocks for temporary shell options
+- `typeset -g` for global variables in functions
+- HEREDOC for multi-line strings in commits
+- `eval` only in safe, controlled contexts (prompt expansion)
+
+### When CR Finds Issues
+
+Ralph should:
+1. **Accept best practices** - fix them
+2. **If intentional** - add explanation here, proceed
+3. **If can't fix now** - create BUG story
+
+---
+
 ## Project-Specific
 
 ### Files
