@@ -1,0 +1,26 @@
+{
+  "id": "MP-005",
+  "title": "Layer AGENTS prompt by story type",
+  "description": "Extract the ~250 line embedded AGENTS prompt into modular files, layered by story type.\n\nCreate prompts/ directory in the ralph config folder with:\n- base.md - Universal rules (git, PRD format, completion signals)\n- US.md - Feature story rules (implementation, testing)\n- BUG.md - Bug fix rules (debugging, regression tests)\n- V.md - Verification story rules (TDD, audit)\n- AUDIT.md - Audit story rules (review, documentation)\n- TEST.md - Test story rules (e2e, playwright)\n\nLocation: ~/.config/ralphtools/prompts/ (central, easy maintenance)\n\nThe ralph() function builds the prompt dynamically:\n1. Always include base.md\n2. Detect story type from ID prefix (US-, BUG-, V-, etc.)\n3. Include only the relevant story-type file\n4. Inject via --append-system-prompt\n\nThis reduces prompt size and gives focused instructions per story type.",
+  "acceptanceCriteria": [
+    {"text": "Create ~/.config/ralphtools/prompts/ directory", "checked": false},
+    {"text": "Extract universal rules to prompts/base.md", "checked": false},
+    {"text": "Create prompts/US.md with feature-specific rules", "checked": false},
+    {"text": "Create prompts/BUG.md with debugging/fix rules", "checked": false},
+    {"text": "Create prompts/V.md with verification/TDD rules", "checked": false},
+    {"text": "Create prompts/AUDIT.md with audit/review rules", "checked": false},
+    {"text": "Create prompts/TEST.md with e2e testing rules", "checked": false},
+    {"text": "Add _ralph_build_story_prompt() function that layers prompts", "checked": false},
+    {"text": "Function detects story type from ID prefix", "checked": false},
+    {"text": "Remove embedded 250-line prompt from ralph()", "checked": false},
+    {"text": "Add test: verify prompt files exist and are valid markdown", "checked": false},
+    {"text": "Add test: verify _ralph_build_story_prompt returns content for each story type", "checked": false},
+    {"text": "Run ./tests/test-ralph.zsh - all tests pass", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: refactor: MP-005 layer AGENTS prompt by story type", "checked": false}
+  ],
+  "storyType": "MP",
+  "priority": "high",
+  "dependencies": ["MP-004"],
+  "createdAt": "2026-01-25T00:15:00Z"
+}
