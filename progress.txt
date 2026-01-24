@@ -593,3 +593,31 @@ Changes:
 - Stats manipulation must guard against double-counting (check wasInPending/wasInBlocked)
 - Underscore prefix (_storyId) indicates intentionally unused parameter in TypeScript
 - JSONL format is simpler than JSON for append-only cost tracking
+
+## Iteration 29
+Story: US-093 - React Ink UI components for Ralph
+Status: COMPLETED (opus)
+Changes:
+- Created ui/ directory with React Ink + Bun setup (package.json, tsconfig.json)
+- Created 10 components matching ralph.zsh visual output:
+  - Box.tsx: Unicode box drawing with color utilities (getModelColor, getStoryColor, etc.)
+  - ProgressBar.tsx: colored bars with percentage colors (green→yellow→red)
+  - StoryId.tsx: colored by type (US=blue, BUG=red, V=purple, AUDIT=magenta, MP=cyan)
+  - ModelBadge.tsx: colored by model (opus=yellow, sonnet=cyan, haiku=green)
+  - CostDisplay.tsx: colored by amount (low=green, med=yellow, high=red)
+  - IterationBox.tsx: full iteration status with all progress bars
+  - ModelRouting.tsx: shows all type→model mappings
+  - StartupBanner.tsx: Ralph version, path, stats, criteria count
+  - LiveOutput.tsx: streaming Claude output with auto-scroll
+  - Dashboard.tsx: main dashboard with mode and display support
+- Created hooks for file watching (fs.watch) with 500ms debounce
+- Created ANSI cursor positioning hooks for in-place updates
+- Support compact (single line) vs full (box) display modes
+- Added 41 unit tests covering color utils, routing, cursor, and types
+- Fixed CodeRabbit issues: unused variable, import.meta.main guard, model validation, safe padding
+
+### Learnings
+- React Ink v5 uses flexbox model similar to React Native
+- import.meta.main in Bun guards against code execution when imported as library
+- String.repeat with negative numbers throws RangeError - use Math.max(0, n)
+- Model validation should happen at CLI parsing time, not runtime
