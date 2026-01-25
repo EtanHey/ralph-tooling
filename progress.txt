@@ -71,3 +71,23 @@ Started: Sun Jan 25 05:24:03 IST 2026
 - CodeRabbit: Passed (clean review of V-019 story JSON changes)
 - All 205 tests pass
 - V-019 COMPLETE - Modular ralph.zsh system verified fully functional
+
+## Iteration 5 - AUDIT-002: Audit ralph.zsh before TypeScript migration
+- Model: opus
+- Comprehensive audit of ralph.zsh codebase before MP-006 TypeScript migration:
+  - Cataloged all 102 functions in ralph.zsh (10,333 lines)
+  - Cataloged all functions in 8 lib/*.zsh modules (7,534 lines total)
+  - Identified core iteration loop: lines 4791-5734 (~943 lines)
+  - Documented shell-specific features: trap, coproc, disown, pipestatus, setopt (103+ usages in ralph.zsh, 82+ in lib/)
+  - Documented what MUST stay in zsh: trap handlers, coproc for fswatch, disown, TTY access, env injection
+  - Documented what SHOULD move to TypeScript: iteration logic, context building, prompts, CodeRabbit, error detection
+  - Mapped inter-function dependencies and call graph for ralph()
+  - Identified 8 edge cases in iteration loop (empty PRD, all blocked, false COMPLETE, etc.)
+  - Documented retry logic: max 5 retries general, 3 for "No messages", cooldowns 15s/30s
+  - Listed 5 potential breaking changes (TTY, signals, exit codes, background processes, env vars)
+- Recommended migration order: Phase 1 (iteration.ts, errors.ts), Phase 2 (context, prompts), Phase 3 (integrations), Phase 4 (CLI), Phase 5 (UI)
+- Line count targets: zsh 17,867 → ~6,350 (65% reduction), TypeScript 1,524 → ~2,924 (92% increase)
+- Output: Created docs.local/audit-ralph-zsh.md with all findings
+- CodeRabbit: Passed (no issues found)
+- All 205 tests pass
+- AUDIT-002 COMPLETE - Ralph.zsh TypeScript migration audit complete

@@ -15,7 +15,7 @@
     {"text": "Pre-commit hook runs all tests successfully", "checked": true},
     {"text": "Document any gaps found in docs.local/modular-ralph-audit.md", "checked": true},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: test: V-019 verify modular ralph.zsh works", "checked": false}
+    {"text": "Commit: test: V-019 verify modular ralph.zsh works", "checked": true}
   ],
   "storyType": "V",
   "priority": "high",
