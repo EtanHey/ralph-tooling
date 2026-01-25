@@ -182,3 +182,22 @@ Started: Sun Jan 25 20:00:00 IST 2026
 - Tests: 205 zsh tests, 83 TypeScript tests, 20 context-audit tests - all passed
 - Learning: TDD approach allows us to now fix context-audit detection issues
   with confidence that tests will catch regressions.
+
+## Iteration 11 - US-121: Fix context-audit monorepo detection
+- Model: opus
+- Fixed monorepo detection in context-audit skill (audit.sh):
+  - Added helper function check_pkg_for_dep() for POSIX-safe dependency checking
+  - Now searches packages/*/package.json and apps/*/package.json for dependencies
+  - Uses `find` command with fallback for graceful handling of missing directories
+  - React Native/Expo detection uses POSIX-safe separate checks instead of grep alternation
+  - UI Components detection now checks packages/ui-web and packages/ui-native patterns
+- Tested on domica project: correctly detects:
+  - Next.js (found in apps/admin/package.json)
+  - React Native/Expo (found in packages/ui-native/package.json)
+  - Supabase (found supabase/)
+  - RTL (found Hebrew/Arabic patterns)
+  - UI Components (found packages/ui-web)
+- CodeRabbit: Found one issue (grep alternation not POSIX-safe) - fixed
+- Tests: 205 zsh tests, 20 context-audit tests - all passed
+- Learning: Monorepo detection requires checking nested package.json files,
+  not just root. The `find` command is more reliable than glob patterns for this.

@@ -59,25 +59,54 @@ echo -e "${CYAN}DETECTED TECH STACK:${NC}"
 
 NEEDED=("base" "skill-index")  # Always needed
 
-# Check for package.json
-if [ -f "package.json" ]; then
-    PKG=$(cat package.json)
-
-    # Next.js
-    if echo "$PKG" | grep -q '"next"'; then
-        echo -e "  ${GREEN}[x]${NC} Next.js (found in package.json)"
-        NEEDED+=("tech/nextjs")
-    else
-        echo -e "  ${YELLOW}[ ]${NC} Next.js"
+# Helper function to check for dependency in package.json
+check_pkg_for_dep() {
+    local pkg_file="$1"
+    local dep_pattern="$2"
+    if [ -f "$pkg_file" ] && grep -q "$dep_pattern" "$pkg_file" 2>/dev/null; then
+        return 0
     fi
+    return 1
+}
 
-    # React Native / Expo
-    if echo "$PKG" | grep -q '"react-native"\|"expo"'; then
-        echo -e "  ${GREEN}[x]${NC} React Native/Expo (found in package.json)"
-        NEEDED+=("tech/react-native")
-    else
-        echo -e "  ${YELLOW}[ ]${NC} React Native"
+# Collect all package.json files (root, packages/*, apps/*)
+PKG_FILES=()
+[ -f "package.json" ] && PKG_FILES+=("package.json")
+# Use find to handle missing directories gracefully
+while IFS= read -r f; do
+    [ -f "$f" ] && PKG_FILES+=("$f")
+done < <(find packages apps -maxdepth 2 -name "package.json" 2>/dev/null || true)
+
+# Next.js - check all package.json files
+NEXTJS_FOUND=""
+for pkg in "${PKG_FILES[@]}"; do
+    if check_pkg_for_dep "$pkg" '"next"'; then
+        NEXTJS_FOUND="$pkg"
+        break
     fi
+done
+
+if [ -n "$NEXTJS_FOUND" ]; then
+    echo -e "  ${GREEN}[x]${NC} Next.js (found in $NEXTJS_FOUND)"
+    NEEDED+=("tech/nextjs")
+else
+    echo -e "  ${YELLOW}[ ]${NC} Next.js"
+fi
+
+# React Native / Expo - check all package.json files (POSIX-safe separate checks)
+RN_FOUND=""
+for pkg in "${PKG_FILES[@]}"; do
+    if check_pkg_for_dep "$pkg" '"react-native"' || check_pkg_for_dep "$pkg" '"expo"'; then
+        RN_FOUND="$pkg"
+        break
+    fi
+done
+
+if [ -n "$RN_FOUND" ]; then
+    echo -e "  ${GREEN}[x]${NC} React Native/Expo (found in $RN_FOUND)"
+    NEEDED+=("tech/react-native")
+else
+    echo -e "  ${YELLOW}[ ]${NC} React Native"
 fi
 
 # Convex
@@ -105,9 +134,24 @@ else
     echo -e "  ${YELLOW}[ ]${NC} RTL"
 fi
 
-# UI Components
-if [ -d "src/components" ] || [ -d "components" ] || [ -d "packages/ui" ]; then
-    echo -e "  ${GREEN}[x]${NC} UI Components (found components dir)"
+# UI Components - check standard locations and monorepo patterns
+UI_FOUND=""
+if [ -d "src/components" ]; then
+    UI_FOUND="src/components"
+elif [ -d "components" ]; then
+    UI_FOUND="components"
+else
+    # Check monorepo patterns: packages/ui, packages/ui-web, packages/ui-native
+    for ui_dir in packages/ui packages/ui-web packages/ui-native; do
+        if [ -d "$ui_dir" ]; then
+            UI_FOUND="$ui_dir"
+            break
+        fi
+    done
+fi
+
+if [ -n "$UI_FOUND" ]; then
+    echo -e "  ${GREEN}[x]${NC} UI Components (found $UI_FOUND)"
     NEEDED+=("workflow/design-system")
 else
     echo -e "  ${YELLOW}[ ]${NC} UI Components"
