@@ -9,11 +9,11 @@
     },
     {
       "text": "Create: mcp-linear/API_TOKEN --tags 'union,mcp,linear'",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create: mcp-supabase/ACCESS_TOKEN --tags 'union,mcp,supabase'",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== DOMICA VAULT ===",
@@ -21,11 +21,11 @@
     },
     {
       "text": "Create: mcp-linear/API_TOKEN --tags 'domica,mcp,linear'",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create: mcp-supabase/ACCESS_TOKEN --tags 'domica,mcp,supabase'",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== DEVELOPMENT VAULT (shared) ===",
@@ -33,7 +33,7 @@
     },
     {
       "text": "Create: mcp-tempmail/API_KEY --tags 'mcp,dev-tools' (shared across projects)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== UPDATE FUNCTIONS ===",
@@ -41,23 +41,23 @@
     },
     {
       "text": "Update unionClaude to use: op read op://Cantaloupe/mcp-linear/API_TOKEN",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update unionClaude to use: op read op://Cantaloupe/mcp-supabase/ACCESS_TOKEN",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update domicaClaude to use: op read op://Domica/mcp-linear/API_TOKEN",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update domicaClaude to use: op read op://Domica/mcp-supabase/ACCESS_TOKEN",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update both to use: op read op://development/mcp-tempmail/API_KEY",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== VERIFICATION ===",
@@ -65,28 +65,30 @@
     },
     {
       "text": "Test: unionClaude -m works with 1Password secrets",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: domicaClaude -m works with 1Password secrets",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Remove hardcoded secrets from .zshrc",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: feat: US-101 migrate MCP secrets to 1Password",
-      "checked": false
+      "checked": true
     }
   ],
   "storyType": "US",
   "priority": "critical",
   "createdAt": "2026-01-24T05:15:00.000Z",
-  "passes": false,
+  "passes": true,
+  "completedAt": "2026-01-25T13:45:00.000Z",
+  "completedBy": "opus",
   "blockedBy": ""
 }

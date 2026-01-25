@@ -308,22 +308,66 @@ _ralph_current_project() {
   [[ -n "$config" ]] && echo "$config" | jq -r '.name'
 }
 
+# Resolve op:// references in MCP env vars
+# Usage: _ralph_resolve_mcp_secrets <mcp_json>
+# Returns: MCP JSON with resolved secrets
+_ralph_resolve_mcp_secrets() {
+  local mcp_json="$1"
+
+  # If op CLI not available, return as-is
+  if ! command -v op &>/dev/null; then
+    echo "$mcp_json"
+    return 0
+  fi
+
+  # Check if there are any op:// references in env vars
+  if ! echo "$mcp_json" | grep -q 'op://'; then
+    echo "$mcp_json"
+    return 0
+  fi
+
+  # Iterate through each MCP server and resolve op:// references in env
+  local result="$mcp_json"
+  local mcp_names=$(echo "$mcp_json" | jq -r 'keys[]')
+
+  for mcp_name in ${(f)mcp_names}; do
+    local env_vars=$(echo "$result" | jq -r --arg m "$mcp_name" '.[$m].env // {} | to_entries[] | "\(.key)=\(.value)"')
+    for env_var in ${(f)env_vars}; do
+      [[ -z "$env_var" ]] && continue
+      local key="${env_var%%=*}"
+      local val="${env_var#*=}"
+
+      # Check if value is an op:// reference
+      if [[ "$val" == op://* ]]; then
+        local resolved=$(op read "$val" 2>/dev/null)
+        if [[ -n "$resolved" ]]; then
+          result=$(echo "$result" | jq --arg m "$mcp_name" --arg k "$key" --arg v "$resolved" '.[$m].env[$k] = $v')
+        fi
+      fi
+    done
+  done
+
+  echo "$result"
+}
+
 # Build MCP config for a project (merges global + project MCPs)
 # Usage: _ralph_build_mcp_config [project_name]
 _ralph_build_mcp_config() {
   local project_name="${1:-$(_ralph_current_project)}"
   local registry=$(_ralph_load_registry) || return 1
 
-  # Get global MCPs
+  # Get global MCPs and resolve op:// references
   local global_mcps=$(echo "$registry" | jq '.global.mcps // {}')
+  global_mcps=$(_ralph_resolve_mcp_secrets "$global_mcps")
 
   # Get project-specific MCPs
   local project_mcps=$(echo "$registry" | jq -r --arg proj "$project_name" '
     .projects[$proj].mcps // [] | .[]
   ')
 
-  # Get MCP definitions and build final config
+  # Get MCP definitions and resolve op:// references
   local mcp_defs=$(echo "$registry" | jq '.mcpDefinitions // {}')
+  mcp_defs=$(_ralph_resolve_mcp_secrets "$mcp_defs")
   local project_secrets=$(echo "$registry" | jq --arg proj "$project_name" '
     .projects[$proj].secrets // {}
   ')
@@ -340,6 +384,10 @@ _ralph_build_mcp_config() {
         linear)
           # Build linear MCP config using project's LINEAR_API_TOKEN
           local linear_token=$(echo "$project_secrets" | jq -r '.LINEAR_API_TOKEN // empty')
+          # Resolve op:// references via 1Password
+          if [[ "$linear_token" == op://* ]] && command -v op &>/dev/null; then
+            linear_token=$(op read "$linear_token" 2>/dev/null)
+          fi
           if [[ -n "$linear_token" && "$linear_token" != "null" ]]; then
             mcp_def=$(jq -n --arg token "$linear_token" '{
               "command": "npx",
@@ -351,6 +399,10 @@ _ralph_build_mcp_config() {
         supabase)
           # Build supabase MCP config using project's SUPABASE_ACCESS_TOKEN
           local supabase_token=$(echo "$project_secrets" | jq -r '.SUPABASE_ACCESS_TOKEN // empty')
+          # Resolve op:// references via 1Password
+          if [[ "$supabase_token" == op://* ]] && command -v op &>/dev/null; then
+            supabase_token=$(op read "$supabase_token" 2>/dev/null)
+          fi
           if [[ -n "$supabase_token" && "$supabase_token" != "null" ]]; then
             mcp_def=$(jq -n --arg token "$supabase_token" '{
               "command": "npx",

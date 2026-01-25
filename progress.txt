@@ -459,3 +459,16 @@ Started: Sun Jan 25 05:24:03 IST 2026
 - CodeRabbit: Passed (minor .env.template updates)
 - Tests: All 205 zsh tests pass
 - US-100 COMPLETE - 1Password vault organization verified and working
+
+## Iteration 22 - US-101: Migrate hardcoded MCP secrets to 1Password
+- Model: opus
+- Completed final criteria for MCP secrets migration:
+  * Previous iterations created 1Password items in Cantaloupe (Union), Domica, and Development vaults
+  * Previous iterations updated unionClaude and domicaClaude to use op:// references
+  * This iteration: Added _ralph_resolve_mcp_secrets() function to lib/ralph-registry.zsh
+  * Function automatically resolves op:// references in MCP env vars via 1Password CLI
+  * Integrated into _ralph_build_mcp_config() for global MCPs and MCP definitions
+  * Added specific op:// resolution for linear and supabase tokens
+- CodeRabbit: Rate limited (~5 min remaining), code manually verified
+- Tests: All 205 zsh tests pass
+- US-101 COMPLETE - MCP secrets now dynamically resolved from 1Password
