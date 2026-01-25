@@ -15,7 +15,9 @@
     {"text": "Test: detects missing setup header", "checked": true},
     {"text": "Tests run: ./tests/test-context-audit.sh passes", "checked": true},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: test: US-120 context-audit test suite", "checked": false}
+    {"text": "Commit: test: US-120 context-audit test suite", "checked": true}
   ],
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-25T19:25:16Z",
+  "completedBy": "opus"
 }
