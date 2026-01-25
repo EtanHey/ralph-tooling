@@ -42,6 +42,10 @@
     {
       "text": "Commit: test: [STORY-ID] description",
       "checked": false
+    },
+    {
+      "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
+      "checked": false
     }
   ],
   "storyType": "V",

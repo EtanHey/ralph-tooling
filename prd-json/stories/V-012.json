@@ -39,6 +39,10 @@
     {
       "text": "Create docs.local/rename-complete.md confirming migration success",
       "checked": false
+    },
+    {
+      "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
+      "checked": false
     }
   ],
   "dependencies": [

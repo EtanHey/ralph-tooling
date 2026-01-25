@@ -7,30 +7,105 @@
   "storyPoints": 3,
   "status": "pending",
   "acceptanceCriteria": [
-    {"text": "=== CONFIG VALIDATION ON STARTUP ===", "checked": false},
-    {"text": "Create _ralph_validate_config() function", "checked": false},
-    {"text": "Test runtime setting: if bun, check command -v bun", "checked": false},
-    {"text": "Test gum availability for bash UI enhancements", "checked": false},
-    {"text": "Run validation on every ralph startup (fast, <100ms)", "checked": false},
-    {"text": "=== SELF-HEALING PROPOSALS ===", "checked": false},
-    {"text": "If runtime=bun but bun missing: propose switch to bash", "checked": false},
-    {"text": "If gum missing: note 'install gum for better UI'", "checked": false},
-    {"text": "Show Y/n prompt, default to safe option", "checked": false},
-    {"text": "Update config.json with user's choice", "checked": false},
-    {"text": "Don't ask again once saved (persist preference)", "checked": false},
-    {"text": "=== ENVIRONMENT DETECTION ===", "checked": false},
-    {"text": "Detect monorepo from package.json workspaces", "checked": false},
-    {"text": "Detect tech stack from dependencies", "checked": false},
-    {"text": "Check for RALPH_* vars in .zshrc to migrate", "checked": false},
-    {"text": "=== TIPS ===", "checked": false},
-    {"text": "After any change: 'Run ralph-config to change settings'", "checked": false},
-    {"text": "If auto-fixed: 'Config updated. Run ralph-config --reset to reconfigure'", "checked": false},
-    {"text": "=== TESTING ===", "checked": false},
-    {"text": "Test: Validation catches missing bun", "checked": false},
-    {"text": "Test: Proposal updates config correctly", "checked": false},
-    {"text": "Test: Saved preference persists across runs", "checked": false},
-    {"text": "Commit: feat: US-109 self-healing config validation", "checked": false}
+    {
+      "text": "=== CONFIG VALIDATION ON STARTUP ===",
+      "checked": false
+    },
+    {
+      "text": "Create _ralph_validate_config() function",
+      "checked": false
+    },
+    {
+      "text": "Test runtime setting: if bun, check command -v bun",
+      "checked": false
+    },
+    {
+      "text": "Test gum availability for bash UI enhancements",
+      "checked": false
+    },
+    {
+      "text": "Run validation on every ralph startup (fast, <100ms)",
+      "checked": false
+    },
+    {
+      "text": "=== SELF-HEALING PROPOSALS ===",
+      "checked": false
+    },
+    {
+      "text": "If runtime=bun but bun missing: propose switch to bash",
+      "checked": false
+    },
+    {
+      "text": "If gum missing: note 'install gum for better UI'",
+      "checked": false
+    },
+    {
+      "text": "Show Y/n prompt, default to safe option",
+      "checked": false
+    },
+    {
+      "text": "Update config.json with user's choice",
+      "checked": false
+    },
+    {
+      "text": "Don't ask again once saved (persist preference)",
+      "checked": false
+    },
+    {
+      "text": "=== ENVIRONMENT DETECTION ===",
+      "checked": false
+    },
+    {
+      "text": "Detect monorepo from package.json workspaces",
+      "checked": false
+    },
+    {
+      "text": "Detect tech stack from dependencies",
+      "checked": false
+    },
+    {
+      "text": "Check for RALPH_* vars in .zshrc to migrate",
+      "checked": false
+    },
+    {
+      "text": "=== TIPS ===",
+      "checked": false
+    },
+    {
+      "text": "After any change: 'Run ralph-config to change settings'",
+      "checked": false
+    },
+    {
+      "text": "If auto-fixed: 'Config updated. Run ralph-config --reset to reconfigure'",
+      "checked": false
+    },
+    {
+      "text": "=== TESTING ===",
+      "checked": false
+    },
+    {
+      "text": "Test: Validation catches missing bun",
+      "checked": false
+    },
+    {
+      "text": "Test: Proposal updates config correctly",
+      "checked": false
+    },
+    {
+      "text": "Test: Saved preference persists across runs",
+      "checked": false
+    },
+    {
+      "text": "Commit: feat: US-109 self-healing config validation",
+      "checked": false
+    },
+    {
+      "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
+      "checked": false
+    }
   ],
-  "dependencies": ["MP-003"],
+  "dependencies": [
+    "MP-003"
+  ],
   "passes": false
 }
