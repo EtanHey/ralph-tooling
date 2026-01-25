@@ -4,6 +4,23 @@
 
 ---
 
+## Maintaining CLAUDE.md
+
+**When you discover important files, patterns, or learnings:**
+
+1. **Update the file tree** in CLAUDE.md if new directories/files are created
+2. **Add learnings** to `docs.local/learnings/` (gitignored) or project CLAUDE.md
+3. **Update contexts** in `~/.claude/contexts/` if pattern applies across projects
+4. **Every subdirectory** with code should have a README.md explaining its contents
+
+**Key locations to keep updated:**
+- Project CLAUDE.md - file tree, project-specific rules
+- `contexts/base.md` - universal patterns (applies to all projects)
+- `contexts/workflow/*.md` - workflow-specific patterns
+- `contexts/tech/*.md` - technology-specific patterns
+
+---
+
 ## Scratchpad Usage
 
 - **File:** `claude.scratchpad.md` (git-ignored)
