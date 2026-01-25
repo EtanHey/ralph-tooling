@@ -33,3 +33,22 @@ After editing `ralph.zsh`, reload in current shell:
 ```bash
 source ~/.config/ralphtools/ralph.zsh
 ```
+
+---
+
+## JQ Escaping Bug Workaround
+
+Claude Code's Bash tool corrupts jq commands with `!=` and `|`. Use **double quotes** with escaped inner quotes:
+
+```bash
+# CORRECT:
+jq ".pending | map(select(. != \"FOO\"))" file.json
+
+# WRONG (breaks with \!= error):
+jq '.pending | map(select(. != "FOO"))' file.json
+```
+
+**User helper:** `jqf` writes filter to temp file, avoiding escaping entirely:
+```bash
+jqf '.pending | map(select(. != "FOO"))' file.json -i
+```

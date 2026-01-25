@@ -126,6 +126,25 @@ This section overrides all tendencies toward premature solutions. When presented
 
 ---
 
+## JQ Escaping Bug Workaround (Claude Code Bash Tool)
+
+Claude Code's Bash tool corrupts jq commands containing `!=` and `|`. **Always use double quotes with escaped inner quotes:**
+
+```bash
+# CORRECT:
+jq ".pending | map(select(. != \"FOO\"))" file.json
+
+# WRONG (breaks with \!= error):
+jq '.pending | map(select(. != "FOO"))' file.json
+```
+
+**User helper:** `jqf` (in lib/ralph-commands.zsh) writes filter to temp file:
+```bash
+jqf '.pending | map(select(. != "FOO"))' file.json -i
+```
+
+---
+
 ## TypeScript/JavaScript Type Safety
 
 **CRITICAL: NEVER USE NON-NULL ASSERTIONS WITHOUT VALIDATION**
