@@ -31,6 +31,14 @@ For a full installation, run through these workflows in order:
 | 4 | [setup-symlinks](workflows/setup-symlinks.md) | Create golem-powers symlink, remove old symlinks |
 | 5 | [validate](workflows/validate.md) | Verify installation works end-to-end |
 
+**After installation, to wire up a project:**
+
+| Step | Workflow | Purpose |
+|------|----------|---------|
+| 6 | [wire-project](workflows/wire-project.md) | Add project to registry with contexts and MCPs |
+
+See also: [SETUP.md](../../../SETUP.md#wiring-a-new-project) for the full wiring guide.
+
 ---
 
 ## Required Dependencies

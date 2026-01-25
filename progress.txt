@@ -215,3 +215,23 @@ Started: Sun Jan 25 20:00:00 IST 2026
 - Tests: 205 zsh tests, 17 skills tests, 83 TypeScript tests - all passed
 - Learning: The ASCII art diagrams help visualize how contexts propagate across projects
   and the self-improvement feedback loop. Important for onboarding new users.
+
+## Iteration 13 - US-123: Update SETUP.md and ralph-install quickguide
+- Model: opus
+- Updated SETUP.md with comprehensive documentation for wiring new projects:
+  - Step 3 now includes contexts setup (3a: skills symlink, 3b: contexts installation)
+  - Added new "Wiring a New Project" section with step-by-step guide
+  - Registry.json schema explained with required/optional fields
+  - Context selection table matching tech stack to recommended contexts
+  - Complete example for Next.js + Supabase project
+  - Updated Summary Checklist to include contexts and wiring
+- Updated ralph-install/SKILL.md Quick Start table to include wire-project workflow
+- Created new workflow: ralph-install/workflows/wire-project.md with:
+  - Context-audit integration for auto-detecting tech stack
+  - Detailed registry entry configuration
+  - MCP configuration with secrets using 1Password op:// references
+  - Troubleshooting section for common wiring issues
+- CodeRabbit: Rate limited, skipped (documentation-only story, tests pass)
+- Tests: 205 zsh tests passed
+- Learning: The wiring documentation now provides a complete path from install to
+  project-specific Claude sessions with appropriate contexts and MCPs.

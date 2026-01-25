@@ -79,20 +79,38 @@ echo '[[ -f ~/.config/claude-golem/ralph.zsh ]] && source ~/.config/claude-golem
 
 ---
 
-## Step 3: Install Skills
+## Step 3: Install Skills and Contexts
 
-Symlink Ralph skills to Claude Code commands directory.
+Set up skills and modular contexts for Claude.
+
+### 3a: Symlink Skills
 
 ```bash
 # Create commands directory if needed
 mkdir -p ~/.claude/commands
 
-# Symlink /prd command
-ln -sf ~/.config/claude-golem/skills/prd.md ~/.claude/commands/prd.md
-
-# Symlink /critique-waves command
-ln -sf ~/.config/claude-golem/skills/critique-waves.md ~/.claude/commands/critique-waves.md
+# Symlink golem-powers (all skills as a single symlink)
+ln -sf ~/.config/claude-golem/skills/golem-powers ~/.claude/commands/golem-powers
 ```
+
+### 3b: Install Contexts
+
+Contexts are modular CLAUDE.md snippets that get loaded into Claude sessions.
+
+```bash
+# Create contexts directory
+mkdir -p ~/.claude/contexts
+
+# Symlink contexts from the repo
+ln -sf ~/.config/claude-golem/contexts/* ~/.claude/contexts/
+```
+
+Available contexts:
+- `base.md` - Universal rules (scratchpad, AIDEV-NOTE, type safety)
+- `skill-index.md` - Available skills reference
+- `workflow/interactive.md` - Interactive Claude rules
+- `workflow/ralph.md` - Ralph autonomous execution
+- `tech/*.md` - Technology-specific contexts (nextjs, supabase, etc.)
 
 ---
 
@@ -145,6 +163,104 @@ rm -rf prd-json progress.txt
 
 ---
 
+## Wiring a New Project
+
+To add a new project to the Ralph ecosystem with launchers and contexts:
+
+### Step 1: Add to Registry
+
+Edit `~/.config/ralphtools/registry.json` and add your project:
+
+```json
+{
+  "projects": {
+    "myproject": {
+      "path": "/path/to/myproject",
+      "displayName": "MyProject Claude",
+      "mcps": ["Context7", "browser-tools"],
+      "mcpsLight": ["Context7"],
+      "contexts": ["base", "skill-index", "workflow/interactive"],
+      "secrets": {},
+      "created": "2026-01-25T00:00:00Z"
+    }
+  }
+}
+```
+
+**Required fields:**
+- `path`: Absolute path to the project directory
+- `mcps`: Array of MCP servers to enable (from `mcpDefinitions`)
+- `contexts`: Array of context files to load (without `.md` extension)
+
+**Optional fields:**
+- `displayName`: Human-readable name (for logs/notifications)
+- `mcpsLight`: Subset of MCPs for lighter sessions
+- `secrets`: Project-specific secrets (use `op://` references for 1Password)
+
+### Step 2: Choose Contexts
+
+Select contexts based on your project's tech stack:
+
+| If your project uses... | Add this context |
+|------------------------|------------------|
+| Universal (all projects) | `base`, `skill-index` |
+| Interactive Claude | `workflow/interactive` |
+| Ralph autonomous | `workflow/ralph` |
+| Next.js | `tech/nextjs` |
+| React Native/Expo | `tech/react-native` |
+| Supabase | `tech/supabase` |
+| Convex | `tech/convex` |
+| RTL layouts (Hebrew/Arabic) | `workflow/rtl` |
+
+Run `/context-audit` in your project to detect recommended contexts.
+
+### Step 3: Regenerate Launchers
+
+After updating `registry.json`, regenerate the launcher functions:
+
+```bash
+# In any terminal with Ralph loaded
+_ralph_generate_launchers_from_registry
+```
+
+This creates `run{Name}()`, `open{Name}()`, and `{name}Claude()` functions.
+
+### Step 4: Verify
+
+```bash
+# Source the new launchers
+source ~/.config/ralphtools/launchers.zsh
+
+# Test your launcher
+myprojectClaude
+```
+
+### Example: Complete Registry Entry
+
+For a Next.js project with Supabase:
+
+```json
+"myapp": {
+  "path": "/Users/me/projects/myapp",
+  "displayName": "MyApp Claude",
+  "mcps": ["Context7", "browser-tools", "supabase"],
+  "mcpsLight": ["Context7"],
+  "contexts": [
+    "base",
+    "skill-index",
+    "tech/nextjs",
+    "tech/supabase",
+    "workflow/interactive"
+  ],
+  "secrets": {
+    "SUPABASE_ACCESS_TOKEN": "op://MyVault/supabase/ACCESS_TOKEN"
+  },
+  "created": "2026-01-25T00:00:00Z"
+}
+```
+
+---
+
 ## Troubleshooting
 
 ### "ralph: command not found"
@@ -164,8 +280,10 @@ rm -rf prd-json progress.txt
 
 - [ ] `ralph-config.local` created with preferences
 - [ ] Shell integration added to `.zshrc` or `.bashrc`
-- [ ] Skills symlinked to `~/.claude/commands/`
+- [ ] Skills symlinked to `~/.claude/commands/golem-powers`
+- [ ] Contexts symlinked to `~/.claude/contexts/`
 - [ ] `ralph-help` works in new terminal
+- [ ] (Optional) Projects wired in `registry.json` with contexts
 - [ ] (Optional) Git hooks set up for contributors
 
 ---

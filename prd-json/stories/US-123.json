@@ -5,13 +5,15 @@
   "priority": "medium",
   "dependsOn": ["US-118"],
   "acceptanceCriteria": [
-    {"text": "Update SETUP.md 'Step 3: Install Skills' to include contexts setup", "checked": false},
-    {"text": "Add 'Wiring a New Project' section to SETUP.md with step-by-step guide", "checked": false},
-    {"text": "Steps include: add to registry.json, specify contexts, regenerate launchers", "checked": false},
-    {"text": "Update ralph-install/SKILL.md to reference new wiring guide", "checked": false},
-    {"text": "Add workflow: ralph-install/workflows/wire-project.md", "checked": false},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
-    {"text": "Commit: docs: US-123 unified setup and wiring docs", "checked": false}
+    {"text": "Update SETUP.md 'Step 3: Install Skills' to include contexts setup", "checked": true},
+    {"text": "Add 'Wiring a New Project' section to SETUP.md with step-by-step guide", "checked": true},
+    {"text": "Steps include: add to registry.json, specify contexts, regenerate launchers", "checked": true},
+    {"text": "Update ralph-install/SKILL.md to reference new wiring guide", "checked": true},
+    {"text": "Add workflow: ralph-install/workflows/wire-project.md", "checked": true},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
+    {"text": "Commit: docs: US-123 unified setup and wiring docs", "checked": true}
   ],
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-25T19:39:00Z",
+  "completedBy": "opus"
 }
