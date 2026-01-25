@@ -1,0 +1,17 @@
+{
+  "id": "US-123",
+  "title": "Update SETUP.md and ralph-install quickguide for wiring new projects",
+  "description": "Unify setup documentation: SETUP.md + ralph-install workflows should clearly explain how to wire up a new project with contexts, registry entry, and launcher.",
+  "priority": "medium",
+  "dependsOn": ["US-118"],
+  "acceptanceCriteria": [
+    {"text": "Update SETUP.md 'Step 3: Install Skills' to include contexts setup", "checked": false},
+    {"text": "Add 'Wiring a New Project' section to SETUP.md with step-by-step guide", "checked": false},
+    {"text": "Steps include: add to registry.json, specify contexts, regenerate launchers", "checked": false},
+    {"text": "Update ralph-install/SKILL.md to reference new wiring guide", "checked": false},
+    {"text": "Add workflow: ralph-install/workflows/wire-project.md", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: docs: US-123 unified setup and wiring docs", "checked": false}
+  ],
+  "passes": false
+}

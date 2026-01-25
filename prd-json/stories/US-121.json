@@ -1,0 +1,17 @@
+{
+  "id": "US-121",
+  "title": "Fix context-audit monorepo detection",
+  "description": "The context-audit skill fails to detect React Native and UI components in monorepos (packages/*/package.json pattern). Fix detection to handle monorepo structures.",
+  "priority": "medium",
+  "dependsOn": ["US-120"],
+  "acceptanceCriteria": [
+    {"text": "Update audit.sh to check packages/*/package.json for react-native/expo", "checked": false},
+    {"text": "Update audit.sh to check packages/ui, packages/ui-web, packages/ui-native patterns", "checked": false},
+    {"text": "Update audit.sh to check apps/*/package.json for monorepo apps", "checked": false},
+    {"text": "Test on domica: correctly detects React Native, Supabase, RTL, UI components", "checked": false},
+    {"text": "All tests in test-context-audit.sh pass", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: fix: US-121 monorepo detection in context-audit", "checked": false}
+  ],
+  "passes": false
+}

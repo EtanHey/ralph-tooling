@@ -1,0 +1,21 @@
+{
+  "id": "US-120",
+  "title": "TDD: Create test-context-audit.sh",
+  "description": "Write tests for the context-audit skill BEFORE fixing detection issues. Tests should cover: available contexts listing, tech stack detection, CLAUDE.md parsing, gap analysis, setup header check.",
+  "priority": "medium",
+  "acceptanceCriteria": [
+    {"text": "Create tests/test-context-audit.sh with test framework setup", "checked": false},
+    {"text": "Test: lists available contexts from ~/.claude/contexts/", "checked": false},
+    {"text": "Test: detects Next.js from package.json", "checked": false},
+    {"text": "Test: detects React Native from package.json (including monorepo packages/)", "checked": false},
+    {"text": "Test: detects Supabase from supabase/ directory", "checked": false},
+    {"text": "Test: detects UI components (including packages/ui pattern)", "checked": false},
+    {"text": "Test: parses @context: refs from CLAUDE.md", "checked": false},
+    {"text": "Test: correctly identifies missing contexts (gap analysis)", "checked": false},
+    {"text": "Test: detects missing setup header", "checked": false},
+    {"text": "Tests run: ./tests/test-context-audit.sh passes", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: test: US-120 context-audit test suite", "checked": false}
+  ],
+  "passes": false
+}

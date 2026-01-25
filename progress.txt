@@ -1,7 +1,22 @@
-# Ralph Progress - Fresh Start
-Started: Sun Jan 25 17:21:18 IST 2026
+# Ralph Progress - Self-Improvement Dogfooding PRD
+Started: Sun Jan 25 20:00:00 IST 2026
 
-(Previous progress archived to docs.local/prd-archive/)
+## New PRD: 11 stories
+- US-116: Setup header + @context: refs to claude-golem CLAUDE.md
+- US-118: Registry contexts field + launchers auto-load
+- US-119: Ralph loads project contexts
+- V-116: Verify dogfooding works
+- US-120: TDD: test-context-audit.sh
+- US-121: Fix monorepo detection
+- US-122: Update contexts/README.md
+- US-123: Update SETUP.md + ralph-install quickguide
+- US-124: TDD: test-prd-manager.sh
+- US-125: Implement --action=summary
+- US-126: AI-friendly README
+
+---
+
+## Previous PRD (completed)
 
 ## Iteration 1 - BUG-013: Ralph UI doesn't exit properly and ignores keyboard input
 - Model: opus

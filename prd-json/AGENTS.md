@@ -1,91 +1,88 @@
-# AI Agent Instructions for ralphtools PRD
+# AI Agent Instructions for PRD: Self-Improvement Dogfooding
 
-## Project Context
+## Overview
 
-This PRD implements ralphtools v1.4+ features:
-- **Phase 1**: Interactive setup CLI with `gum`
-- **Phase 3**: Enhanced version tracking
-- **Phase 5**: Parallel verification for V-* stories
-- **Phase 6**: Project launchers (runX, openX, XClaude)
-- **Phase 7**: 1Password integration
+This PRD makes claude-golem eat its own dogfood:
+- Use its own context system
+- Make the repo's purpose obvious to AI
+- Auto-load contexts via registry
+- Test and improve the context-audit skill
 
-## Key Files
+## Relevant Skills
 
-- `ralph.zsh` - Main source file, all functions go here
-- `~/.config/ralphtools/config.json` - User config
-- `~/.config/ralphtools/projects.json` - Project registry
-- `~/.config/ralphtools/launchers.zsh` - Generated launcher functions
+| Skill | When to Use |
+|-------|-------------|
+| `/golem-powers:ralph-commit` | For "Commit:" criteria - atomic commit + criterion check |
+| `/golem-powers:coderabbit` | Code review before commits - iterate until clean |
+| `/golem-powers:context-audit` | Diagnose missing contexts in a project |
+| `/golem-powers:prd-manager` | Manage PRD stories - list, show, stats |
+| `/golem-powers:context7` | Look up library docs when unsure about APIs |
+| `/golem-powers:catchup` | Recover context after long breaks |
 
-## Conventions
+## Project Contexts (Load These)
 
-- All functions use `_ralph_` prefix for internal, `ralph-` for user-facing
-- Use `local` for all variables inside functions
-- Check `zsh -n ralph.zsh` after every change (typecheck)
-- Colors: CYAN for headers, GREEN for success, YELLOW for warnings, RED for errors
+This project should load these contexts at startup:
+- `base` - Universal rules
+- `skill-index` - Available skills list
+- `workflow/interactive` - CLAUDE_COUNTER, git safety
 
-## ⚠️ NEVER EDIT index.json DIRECTLY
+## Key Files for This PRD
 
-To add/modify stories, use `update.json`:
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | Add @context: refs and setup header here |
+| `contexts/` | Shared context files |
+| `lib/ralph-registry.zsh` | Update repoGolem for auto-loading |
+| `~/.config/ralphtools/registry.json` | Add contexts field to projects |
+| `skills/golem-powers/context-audit/` | Fix and test this skill |
+| `skills/golem-powers/prd-manager/` | Add summary action |
 
+## CodeRabbit Iteration Rule
+
+For "Run CodeRabbit review" criteria:
+1. Run: `cr review --prompt-only --type uncommitted`
+2. If issues found → Fix them
+3. Run CR again
+4. Repeat until clean or only intentional patterns remain
+
+## NEVER Edit index.json Directly
+
+Use `update.json` instead:
 1. Create story files in `stories/`
-2. Write changes to `update.json` (not index.json!)
-3. Ralph merges automatically on next run
+2. Write changes to `update.json`
+3. Ralph merges automatically
 
-## Session Isolation (Worktree Mode)
+## Story Dependencies
 
-Ralph can run in an isolated git worktree to prevent polluting the main project's Claude `/resume` history.
-
-### Why Use Worktrees?
-- Each worktree gets its own Claude session history (stored per-directory)
-- `/resume` in main project stays clean for human work
-- Ralph iterations don't crowd out your conversation history
-
-### Workflow
-```bash
-# 1. From main project, create isolated session
-ralph-start 50 -S        # Creates worktree + outputs command
-
-# 2. Copy the command and run it:
-cd ~/worktrees/<repo>/ralph-session && source ~/.config/ralphtools/ralph.zsh && ralph 50 -S
-
-# 3. When done, merge back and cleanup:
-ralph-cleanup            # Syncs changes, removes worktree
 ```
+US-116 (dogfood CLAUDE.md)
+   └── US-118 (registry contexts)
+          └── US-119 (Ralph contexts)
+          └── V-116 (verify dogfooding)
+          └── US-123 (setup docs)
 
-### How It Works
-1. `ralph-start` creates worktree at `~/worktrees/<repo>/ralph-session`
-2. Copies `prd-json/` and `progress.txt` to worktree
-3. Claude sees this as a separate directory → separate session
-4. `ralph-cleanup` merges commits and removes the worktree
+US-120 (TDD context-audit)
+   └── US-121 (fix monorepo detection)
+
+US-122 (contexts README) ← US-116
+
+US-124 (TDD prd-manager)
+   └── US-125 (summary action)
+
+US-126 (AI-friendly README) - independent
+```
 
 ## Testing (CRITICAL)
 
-**Test file:** `tests/test-ralph.zsh`
+- **Test file for context-audit:** `tests/test-context-audit.sh`
+- **Test file for prd-manager:** `tests/test-prd-manager.sh`
+- TDD: Write tests FIRST, then implement
 
-### Rules
-- **New code = new tests.** Every new function needs test coverage.
-- **Updated code = updated tests.** If you change a function, update its tests.
-- **Run tests before completing any story:** `zsh tests/test-ralph.zsh`
+## Self-Improvement Loop
 
-### Verification Checklist
-1. `zsh -n ralph.zsh` passes (syntax check)
-2. `zsh -n tests/test-ralph.zsh` passes (test syntax)
-3. `zsh tests/test-ralph.zsh` passes (all tests green)
-4. `source ralph.zsh` works without errors
-5. New commands/functions are callable
+When you find something broken or missing:
+1. **Ask the user** - "I found X is missing, should I create a story?"
+2. **Create a PRD story** - Use /golem-powers:prd-manager
+3. **Ralph fixes it** - The system improves itself
 
-### Adding Tests
-```zsh
-test_my_new_function() {
-  test_start "my_new_function works"
-
-  # Arrange
-  local input="test"
-
-  # Act
-  local result=$(_ralph_my_function "$input")
-
-  # Assert
-  assert_equals "$result" "expected" "should return expected"
-}
-```
+This is the core purpose of this repo.

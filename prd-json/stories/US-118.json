@@ -1,0 +1,18 @@
+{
+  "id": "US-118",
+  "title": "Registry contexts field + launchers auto-load contexts",
+  "description": "Add 'contexts' field to registry.json schema. MCPs, secrets, and skills are already wired via symlinks - only contexts are missing. Update repoGolem/launchers to auto-load project contexts via --append-system-prompt.",
+  "priority": "high",
+  "dependsOn": ["US-116"],
+  "acceptanceCriteria": [
+    {"text": "Add 'contexts' array field to registry.json projects schema", "checked": false},
+    {"text": "Update golem entry in registry.json: contexts: ['base', 'skill-index', 'workflow/interactive']", "checked": false},
+    {"text": "Update domica entry: contexts: ['base', 'skill-index', 'tech/supabase', 'workflow/rtl', 'workflow/interactive']", "checked": false},
+    {"text": "Update repoGolem function in ralph-registry.zsh to read contexts from registry", "checked": false},
+    {"text": "Launcher appends each context file via --append-system-prompt", "checked": false},
+    {"text": "Test: golemClaude loads all 3 contexts at startup", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: US-118 registry contexts auto-loading", "checked": false}
+  ],
+  "passes": false
+}
