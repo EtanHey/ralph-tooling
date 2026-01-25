@@ -14,6 +14,9 @@
 # List of available MCPs for multi-select (fallback if registry not available)
 RALPH_AVAILABLE_MCPS=("figma" "linear" "supabase" "browser-tools" "context7")
 
+# User preferences file
+RALPH_USER_PREFS_FILE="${RALPH_CONFIG_DIR:-$HOME/.config/ralphtools}/user-prefs.json"
+
 # Get available MCPs from registry mcpDefinitions
 function _ralph_get_available_mcps() {
   if [[ -f "$RALPH_REGISTRY_FILE" ]]; then
@@ -38,10 +41,15 @@ function ralph-setup() {
 
   # Parse flags
   local skip_context_migration=false
+  local run_configure=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --skip-context-migration)
         skip_context_migration=true
+        shift
+        ;;
+      --configure|-c)
+        run_configure=true
         shift
         ;;
       *)
@@ -49,6 +57,12 @@ function ralph-setup() {
         ;;
     esac
   done
+
+  # If --configure flag is passed, run the user preferences wizard directly
+  if $run_configure; then
+    _ralph_setup_user_preferences
+    return $?
+  fi
 
   # Check if 1Password CLI is available and environments are configured
   local has_1password=false
@@ -92,6 +106,7 @@ function ralph-setup() {
     if [[ $RALPH_HAS_GUM -eq 0 ]]; then
       # GUM mode - beautiful interactive menu
       choice=$(gum choose \
+        "⚙️  Configure user preferences" \
         "📂 Add new project" \
         "🔧 Configure MCPs for a project" \
         "➕ Manage MCP definitions" \
@@ -106,34 +121,39 @@ function ralph-setup() {
       # Fallback mode - numbered menu
       echo "What would you like to do?"
       echo ""
-      echo "  1) 📂 Add new project"
-      echo "  2) 🔧 Configure MCPs for a project"
-      echo "  3) ➕ Manage MCP definitions"
-      echo "  4) 🔐 Configure 1Password Environments"
-      echo "  5) 🔑 Migrate secrets to 1Password"
-      echo "  6) 🐰 Configure CodeRabbit"
-      echo "  7) 📓 Configure Obsidian MCP"
-      echo "  8) 📜 Migrate CLAUDE.md contexts"
-      echo "  9) 📋 View current configuration"
-      echo " 10) 🚪 Exit setup"
+      echo "  1) ⚙️  Configure user preferences"
+      echo "  2) 📂 Add new project"
+      echo "  3) 🔧 Configure MCPs for a project"
+      echo "  4) ➕ Manage MCP definitions"
+      echo "  5) 🔐 Configure 1Password Environments"
+      echo "  6) 🔑 Migrate secrets to 1Password"
+      echo "  7) 🐰 Configure CodeRabbit"
+      echo "  8) 📓 Configure Obsidian MCP"
+      echo "  9) 📜 Migrate CLAUDE.md contexts"
+      echo " 10) 📋 View current configuration"
+      echo " 11) 🚪 Exit setup"
       echo ""
-      echo -n "Choose [1-10]: "
+      echo -n "Choose [1-11]: "
       read menu_choice
       case "$menu_choice" in
-        1) choice="📂 Add new project" ;;
-        2) choice="🔧 Configure MCPs for a project" ;;
-        3) choice="➕ Manage MCP definitions" ;;
-        4) choice="🔐 Configure 1Password Environments" ;;
-        5) choice="🔑 Migrate secrets to 1Password" ;;
-        6) choice="🐰 Configure CodeRabbit" ;;
-        7) choice="📓 Configure Obsidian MCP" ;;
-        8) choice="📜 Migrate CLAUDE.md contexts" ;;
-        9) choice="📋 View current configuration" ;;
-        10|*) choice="🚪 Exit setup" ;;
+        1) choice="⚙️  Configure user preferences" ;;
+        2) choice="📂 Add new project" ;;
+        3) choice="🔧 Configure MCPs for a project" ;;
+        4) choice="➕ Manage MCP definitions" ;;
+        5) choice="🔐 Configure 1Password Environments" ;;
+        6) choice="🔑 Migrate secrets to 1Password" ;;
+        7) choice="🐰 Configure CodeRabbit" ;;
+        8) choice="📓 Configure Obsidian MCP" ;;
+        9) choice="📜 Migrate CLAUDE.md contexts" ;;
+        10) choice="📋 View current configuration" ;;
+        11|*) choice="🚪 Exit setup" ;;
       esac
     fi
 
     case "$choice" in
+      *"Configure user preferences"*)
+        _ralph_setup_user_preferences
+        ;;
       *"Add new project"*)
         _ralph_setup_add_project
         ;;
@@ -1619,4 +1639,237 @@ function _ralph_setup_view_config() {
     echo "  Notifications: $notifications"
     echo ""
   fi
+
+  # Show user preferences if configured
+  if [[ -f "$RALPH_USER_PREFS_FILE" ]]; then
+    echo "${CYAN}User Preferences: $RALPH_USER_PREFS_FILE${NC}"
+    echo ""
+    local ui_mode=$(jq -r '.uiMode // "live"' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+    local pref_model=$(jq -r '.defaultModel // "opus"' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+    local ntfy=$(jq -r '.ntfyTopic // "(not set)"' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+    [[ "$ntfy" == "null" || -z "$ntfy" ]] && ntfy="(not set)"
+
+    echo "  UI Mode: $ui_mode"
+    echo "  Default Model: $pref_model"
+    echo "  Ntfy Topic: $ntfy"
+    echo ""
+  fi
 }
+
+# ═══════════════════════════════════════════════════════════════════
+# Helper: Configure user preferences wizard
+# ═══════════════════════════════════════════════════════════════════
+function _ralph_setup_user_preferences() {
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[0;33m'
+  local CYAN='\033[0;36m'
+  local RED='\033[0;31m'
+  local NC='\033[0m'
+  local BOLD='\033[1m'
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  ⚙️  Configure User Preferences                              │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+  echo "This wizard sets your default Ralph preferences."
+  echo "These can be overridden with command-line flags."
+  echo ""
+
+  # Load existing preferences if any
+  local current_ui_mode="live"
+  local current_model="opus"
+  local current_ntfy=""
+
+  if [[ -f "$RALPH_USER_PREFS_FILE" ]]; then
+    current_ui_mode=$(jq -r '.uiMode // "live"' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+    current_model=$(jq -r '.defaultModel // "opus"' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+    current_ntfy=$(jq -r '.ntfyTopic // ""' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+    [[ "$current_ntfy" == "null" ]] && current_ntfy=""
+    echo "${CYAN}Current preferences loaded from:${NC} $RALPH_USER_PREFS_FILE"
+    echo ""
+  fi
+
+  # ═══════════════════════════════════════════════════════════════
+  # 1. UI Mode selection
+  # ═══════════════════════════════════════════════════════════════
+  echo "${BOLD}1. Default UI Mode${NC}"
+  echo ""
+  echo "  ${CYAN}live${NC}      - Live dashboard with real-time progress (default)"
+  echo "  ${CYAN}iteration${NC} - Show progress at each iteration boundary"
+  echo "  ${CYAN}startup${NC}   - Show PRD summary then exit"
+  echo ""
+
+  local ui_mode=""
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    ui_mode=$(gum choose --header "Select default UI mode:" \
+      "live (recommended)" \
+      "iteration" \
+      "startup")
+    # Extract just the mode name
+    ui_mode="${ui_mode%% *}"
+  else
+    echo "Current: ${YELLOW}$current_ui_mode${NC}"
+    echo ""
+    echo "  1) live (recommended)"
+    echo "  2) iteration"
+    echo "  3) startup"
+    echo ""
+    echo -n "Choose UI mode [1-3, default=1]: "
+    read ui_choice
+    case "$ui_choice" in
+      2) ui_mode="iteration" ;;
+      3) ui_mode="startup" ;;
+      *) ui_mode="live" ;;
+    esac
+  fi
+  [[ -z "$ui_mode" ]] && ui_mode="$current_ui_mode"
+
+  echo ""
+  echo "${GREEN}✓ UI Mode:${NC} $ui_mode"
+  echo ""
+
+  # ═══════════════════════════════════════════════════════════════
+  # 2. Default Model selection
+  # ═══════════════════════════════════════════════════════════════
+  echo "${BOLD}2. Default Model${NC}"
+  echo ""
+  echo "  ${CYAN}opus${NC}   - Most capable, best for complex tasks (default)"
+  echo "  ${CYAN}sonnet${NC} - Balanced speed and capability"
+  echo "  ${CYAN}haiku${NC}  - Fastest, best for simple tasks"
+  echo ""
+
+  local default_model=""
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    default_model=$(gum choose --header "Select default model:" \
+      "opus (recommended)" \
+      "sonnet" \
+      "haiku")
+    # Extract just the model name
+    default_model="${default_model%% *}"
+  else
+    echo "Current: ${YELLOW}$current_model${NC}"
+    echo ""
+    echo "  1) opus (recommended)"
+    echo "  2) sonnet"
+    echo "  3) haiku"
+    echo ""
+    echo -n "Choose model [1-3, default=1]: "
+    read model_choice
+    case "$model_choice" in
+      2) default_model="sonnet" ;;
+      3) default_model="haiku" ;;
+      *) default_model="opus" ;;
+    esac
+  fi
+  [[ -z "$default_model" ]] && default_model="$current_model"
+
+  echo ""
+  echo "${GREEN}✓ Default Model:${NC} $default_model"
+  echo ""
+
+  # ═══════════════════════════════════════════════════════════════
+  # 3. Ntfy Topic (optional)
+  # ═══════════════════════════════════════════════════════════════
+  echo "${BOLD}3. Ntfy Notifications (optional)${NC}"
+  echo ""
+  echo "  Ntfy.sh is a free push notification service."
+  echo "  If configured, Ralph will send notifications when iterations complete."
+  echo "  Leave blank to disable notifications."
+  echo ""
+
+  local ntfy_topic=""
+  if [[ $RALPH_HAS_GUM -eq 0 ]]; then
+    local ntfy_placeholder="your-topic-name (or leave empty)"
+    [[ -n "$current_ntfy" ]] && ntfy_placeholder="$current_ntfy"
+    ntfy_topic=$(gum input --placeholder "$ntfy_placeholder" --value "$current_ntfy" --header "Ntfy topic (optional):")
+  else
+    [[ -n "$current_ntfy" ]] && echo "Current: ${YELLOW}$current_ntfy${NC}"
+    echo ""
+    echo -n "Ntfy topic (leave blank to disable): "
+    read ntfy_topic
+    [[ -z "$ntfy_topic" ]] && ntfy_topic="$current_ntfy"
+  fi
+
+  echo ""
+  if [[ -n "$ntfy_topic" ]]; then
+    echo "${GREEN}✓ Ntfy Topic:${NC} $ntfy_topic"
+  else
+    echo "${YELLOW}✓ Ntfy:${NC} disabled"
+  fi
+  echo ""
+
+  # ═══════════════════════════════════════════════════════════════
+  # Save preferences
+  # ═══════════════════════════════════════════════════════════════
+  echo "${BOLD}Saving preferences...${NC}"
+  echo ""
+
+  # Ensure config directory exists
+  mkdir -p "$(dirname "$RALPH_USER_PREFS_FILE")"
+
+  # Build JSON object
+  local prefs_json
+  if [[ -n "$ntfy_topic" ]]; then
+    prefs_json=$(jq -n \
+      --arg uiMode "$ui_mode" \
+      --arg defaultModel "$default_model" \
+      --arg ntfyTopic "$ntfy_topic" \
+      '{
+        uiMode: $uiMode,
+        defaultModel: $defaultModel,
+        ntfyTopic: $ntfyTopic,
+        updatedAt: (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
+      }')
+  else
+    prefs_json=$(jq -n \
+      --arg uiMode "$ui_mode" \
+      --arg defaultModel "$default_model" \
+      '{
+        uiMode: $uiMode,
+        defaultModel: $defaultModel,
+        updatedAt: (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
+      }')
+  fi
+
+  # Write to file
+  echo "$prefs_json" > "$RALPH_USER_PREFS_FILE"
+
+  echo "${GREEN}✓ Preferences saved to:${NC} $RALPH_USER_PREFS_FILE"
+  echo ""
+  echo "Your preferences:"
+  echo "  UI Mode: $ui_mode"
+  echo "  Default Model: $default_model"
+  if [[ -n "$ntfy_topic" ]]; then
+    echo "  Ntfy Topic: $ntfy_topic"
+  else
+    echo "  Ntfy: disabled"
+  fi
+  echo ""
+  echo "To change these settings later, run:"
+  echo "  ${CYAN}ralph-setup --configure${NC}"
+  echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# Helper: Load user preferences and apply defaults
+# ═══════════════════════════════════════════════════════════════════
+# Call this at startup to read user-prefs.json and set environment vars
+function _ralph_load_user_preferences() {
+  if [[ ! -f "$RALPH_USER_PREFS_FILE" ]]; then
+    return 0
+  fi
+
+  # Read preferences
+  local ui_mode=$(jq -r '.uiMode // empty' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+  local default_model=$(jq -r '.defaultModel // empty' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+  local ntfy_topic=$(jq -r '.ntfyTopic // empty' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+
+  # Apply defaults (only if not already set)
+  [[ -n "$ui_mode" && -z "$RALPH_UI_MODE" ]] && export RALPH_UI_MODE="$ui_mode"
+  [[ -n "$default_model" && -z "$RALPH_DEFAULT_MODEL" ]] && export RALPH_DEFAULT_MODEL="$default_model"
+  [[ -n "$ntfy_topic" && "$ntfy_topic" != "null" && -z "$RALPH_NTFY_TOPIC" ]] && export RALPH_NTFY_TOPIC="$ntfy_topic"
+}
+
+# Load user preferences when this file is sourced
+_ralph_load_user_preferences

@@ -39,9 +39,19 @@ fi
 # CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════
 RALPH_CONFIG_DIR="${RALPH_CONFIG_DIR:-$HOME/.config/ralphtools}"
+RALPH_USER_PREFS_FILE="${RALPH_USER_PREFS_FILE:-$RALPH_CONFIG_DIR/user-prefs.json}"
 [[ -f "$RALPH_CONFIG_DIR/ralph-config.local" ]] && source "$RALPH_CONFIG_DIR/ralph-config.local"
 
-# Defaults
+# Load user preferences from JSON file (sets RALPH_DEFAULT_MODEL, RALPH_UI_MODE, RALPH_NTFY_TOPIC)
+if [[ -f "$RALPH_USER_PREFS_FILE" ]]; then
+  _ralph_prefs_model=$(jq -r '.defaultModel // empty' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+  _ralph_prefs_ntfy=$(jq -r '.ntfyTopic // empty' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
+  [[ -n "$_ralph_prefs_model" ]] && RALPH_DEFAULT_MODEL="${RALPH_DEFAULT_MODEL:-$_ralph_prefs_model}"
+  [[ -n "$_ralph_prefs_ntfy" && "$_ralph_prefs_ntfy" != "null" ]] && RALPH_NTFY_TOPIC="${RALPH_NTFY_TOPIC:-$_ralph_prefs_ntfy}"
+  unset _ralph_prefs_model _ralph_prefs_ntfy
+fi
+
+# Defaults (applied after user prefs)
 RALPH_NTFY_PREFIX="${RALPH_NTFY_PREFIX:-etanheys-ralph}"
 RALPH_DEFAULT_MODEL="${RALPH_DEFAULT_MODEL:-opus}"
 RALPH_MAX_ITERATIONS="${RALPH_MAX_ITERATIONS:-100}"
@@ -158,9 +168,9 @@ function ralph() {
     return 1
   fi
 
-  # Set ntfy topic
+  # Set ntfy topic (use user-configured topic or construct from prefix)
   local project_name=$(basename "$(pwd)")
-  local ntfy_topic="${RALPH_NTFY_PREFIX}-${project_name}-notify"
+  local ntfy_topic="${RALPH_NTFY_TOPIC:-${RALPH_NTFY_PREFIX}-${project_name}-notify}"
 
   # Export environment for TypeScript runner
   export RALPH_MODEL="$model"
