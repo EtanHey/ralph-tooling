@@ -7,31 +7,33 @@
   "acceptanceCriteria": [
     {
       "text": "Review V-020 line count criterion: 'Total zsh <3,000 lines' fails at 6,327",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Clarify that lib modules (setup, 1password, worktrees) are independent functionality not in scope of iteration loop migration",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Decide: Fix criterion to accurately reflect design OR move lib modules to TypeScript",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update V-020 acceptance criteria to reflect correct expectations",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: fix: BUG-031 clarify V-020 line count expectations",
-      "checked": false
+      "checked": true
     }
   ],
   "dependencies": [
     "V-020"
   ],
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-25T13:54:00Z",
+  "completedBy": "opus"
 }
