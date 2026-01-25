@@ -1237,3 +1237,22 @@ Changes:
 - Documentation should focus on config-driven approach rather than CLI flags
 - Changelog should highlight architectural changes (modular codebase, layered prompts)
 - Story-type prompts enable targeted guidance without bloating the base prompt
+
+## Iteration 61
+Story: US-098 - LSP integration for Ralph code intelligence
+Status: COMPLETED (opus)
+Changes:
+- Added LSP Code Intelligence section to workflow/ralph.md context
+- Added LSP usage examples to story-type prompts (MP.md, US.md, BUG.md)
+- Created golem-powers:lsp skill with quick reference and workflows
+- Documented LSP vs grep/glob decision tree
+- Included common LSP servers and configuration guidance
+- All 156 tests pass
+- CodeRabbit: PASS (0 issues)
+
+### Learnings
+- Claude Code LSP supports 9 operations: goToDefinition, findReferences, hover, documentSymbol, workspaceSymbol, goToImplementation, prepareCallHierarchy, incomingCalls, outgoingCalls
+- LSP is significantly faster than grep (~50ms vs ~45s for finding function call sites)
+- LSP requires ENABLE_LSP_TOOLS=1 environment variable and configured language servers
+- Use findReferences before any symbol rename to ensure all usages are covered
+- LSP plugins available via /plugin marketplace (boostvolt/claude-code-lsps)
