@@ -115,3 +115,25 @@ Started: Sun Jan 25 05:24:03 IST 2026
   - All 205 existing tests pass
 - CodeRabbit: Passed (fixed ntfy test to have meaningful assertions)
 - TEST-004 COMPLETE - Integration tests ready to catch regressions during MP-006 migration
+
+## Iteration 7 - MP-006: Move iteration loop from zsh to TypeScript (Part 1)
+- Model: opus
+- Started major refactoring of Ralph iteration loop from zsh to TypeScript
+- Completed PRE-REQ phase:
+  - Read docs.local/audit-ralph-zsh.md thoroughly
+  - Understood what stays zsh (trap, coproc, TTY) vs moves to TS (iteration logic, error detection)
+  - Identified risks: TTY inheritance, signal handling, exit code propagation
+- Completed DESIGN phase:
+  - Created docs.local/mp-006-design.md with full architecture diagrams
+  - Documented current vs target architecture
+  - Defined state machine for runner (INIT -> LOAD_STORY -> EXECUTING -> SUCCESS/ERROR/RETRY)
+  - Specified CLI interface with --run, --iterations, --gap, --model flags
+  - Ran /critique-waves: 3 agents reviewed design, all PASSED with avg 4.8/5.0 scores
+  - Agent recommendations documented in tracker.md
+- Completed TDD phase:
+  - Created ralph-ui/tests/runner.test.ts (14 tests - config, state machine, status)
+  - Created ralph-ui/tests/claude.test.ts (20 tests - CLI args, error detection, retry logic)
+  - Created ralph-ui/tests/prd.test.ts (17 tests - read/write index, stories, criteria)
+  - All 53 new tests pass with bun test ralph-ui/tests/
+- All 205 existing zsh tests still pass
+- MP-006 Phase 1-4 remaining for next iteration(s)
