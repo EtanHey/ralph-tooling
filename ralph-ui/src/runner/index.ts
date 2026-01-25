@@ -38,6 +38,7 @@ import {
   hasCompletePromise,
   hasAllBlockedPromise,
 } from "./errors";
+import { buildIterationContext } from "./context";
 
 // AIDEV-NOTE: This is the main iteration loop that replaces the 943-line loop in ralph.zsh
 // The state machine follows the design in docs.local/mp-006-design.md
@@ -161,14 +162,20 @@ export async function runSingleIteration(
     };
   }
 
-  // Build prompt for Claude
+  // Build context and prompt for Claude
   const progress = getCriteriaProgress(story);
-  const prompt = buildIterationPrompt(story.id, iteration);
+  const { systemContext, storyPrompt } = buildIterationContext(
+    story.id,
+    config.model,
+    config.prdJsonDir,
+    config.workingDir
+  );
 
-  // Spawn Claude
+  // Spawn Claude with full context
   const spawnOptions: SpawnOptions = {
     model: config.model,
-    prompt,
+    prompt: storyPrompt,
+    contextFile: systemContext, // Pass system context directly (not a file path)
     workingDir: config.workingDir,
     timeout: DEFAULT_TIMEOUT_MS,
   };
@@ -228,10 +235,7 @@ export async function runSingleIteration(
   };
 }
 
-// Build the prompt for an iteration
-function buildIterationPrompt(storyId: string, iteration: number): string {
-  return `Continue working on story ${storyId}. This is iteration ${iteration}.`;
-}
+// AIDEV-NOTE: Prompt building moved to context.ts - buildIterationContext()
 
 // Main iteration loop as async generator
 export async function* runIterations(

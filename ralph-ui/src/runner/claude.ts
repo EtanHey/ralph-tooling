@@ -15,13 +15,13 @@ import { detectError, hasCompletionSignal, hasBlockedSignal } from "./errors";
 export function buildCliArgs(options: SpawnOptions): string[] {
   const args: string[] = [];
 
-  // Prompt (required)
-  args.push("-p", options.prompt);
+  // Core options (--print for pipe-friendly output, --dangerously-skip-permissions for autonomy)
+  args.push("--print", "--dangerously-skip-permissions");
 
   // Model
   args.push("--model", options.model);
 
-  // Context file (system prompt append)
+  // Context content (system prompt append) - passed as content, not file path
   if (options.contextFile) {
     args.push("--append-system-prompt", options.contextFile);
   }
@@ -31,8 +31,8 @@ export function buildCliArgs(options: SpawnOptions): string[] {
     args.push("--max-turns", options.maxTurns.toString());
   }
 
-  // Output format for parsing
-  args.push("--output-format", "json");
+  // Prompt (required) - use -p flag
+  args.push("-p", options.prompt);
 
   return args;
 }
