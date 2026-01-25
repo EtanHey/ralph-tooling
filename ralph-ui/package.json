@@ -13,6 +13,7 @@
     "react": "^18.2.0"
   },
   "devDependencies": {
+    "@types/bun": "^1.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
     "typescript": "^5.0.0"

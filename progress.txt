@@ -137,3 +137,21 @@ Started: Sun Jan 25 05:24:03 IST 2026
   - All 53 new tests pass with bun test ralph-ui/tests/
 - All 205 existing zsh tests still pass
 - MP-006 Phase 1-4 remaining for next iteration(s)
+
+## Iteration 8 - MP-006: Move iteration loop from zsh to TypeScript (Part 2)
+- Model: opus
+- Completed CATCHUP phase:
+  - Reviewed docs.local/mp-006-design.md for architecture decisions
+  - Reviewed ralph-ui/tests/*.test.ts to understand expected behavior
+- Completed PHASE 1: Core Runner implementation:
+  - Created ralph-ui/src/runner/types.ts (~95 lines) - Core types for runner, status, errors
+  - Created ralph-ui/src/runner/status.ts (~95 lines) - Status file management for UI communication
+  - Created ralph-ui/src/runner/prd.ts (~250 lines) - PRD JSON file operations
+  - Created ralph-ui/src/runner/errors.ts (~95 lines) - Error detection and retry logic
+  - Created ralph-ui/src/runner/claude.ts (~175 lines) - Claude CLI spawning via Bun subprocess
+  - Created ralph-ui/src/runner/index.ts (~245 lines) - Main iteration runner with state machine
+  - Added @types/bun dependency for Bun subprocess types
+- All 53 ralph-ui tests pass (bun test ralph-ui/tests/)
+- All 205 zsh tests still pass (./tests/test-ralph.zsh)
+- TypeScript typecheck passes (bun run typecheck)
+- Phase 2-4 remaining for next iteration(s)

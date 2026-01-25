@@ -1,0 +1,333 @@
+/**
+ * Main Iteration Runner - Core iteration loop for Ralph
+ * Part of MP-006: Move iteration loop from zsh to TypeScript
+ */
+
+import type {
+  RunnerConfig,
+  IterationResult,
+  RunnerState,
+  Model,
+  SpawnOptions,
+} from "./types";
+import { DEFAULT_TIMEOUT_MS } from "./types";
+import {
+  readIndex,
+  getNextStory,
+  applyUpdateQueue,
+  isComplete,
+  isAllBlocked,
+  getCriteriaProgress,
+} from "./prd";
+import { spawnClaude, analyzeResult } from "./claude";
+import {
+  writeStatus,
+  cleanupStatus,
+  setRunning,
+  setComplete,
+  setError,
+  setRetry,
+  setInterrupted,
+  setTerminated,
+} from "./status";
+import {
+  detectError,
+  shouldRetry,
+  getCooldownMs,
+  getErrorDescription,
+  hasCompletePromise,
+  hasAllBlockedPromise,
+} from "./errors";
+
+// AIDEV-NOTE: This is the main iteration loop that replaces the 943-line loop in ralph.zsh
+// The state machine follows the design in docs.local/mp-006-design.md
+
+// Default configuration values
+export const DEFAULT_CONFIG: Partial<RunnerConfig> = {
+  iterations: 100,
+  gapSeconds: 5,
+  model: "sonnet" as Model,
+  notify: false,
+  quiet: false,
+  verbose: false,
+};
+
+// Create a full config from partial options
+export function createConfig(options: Partial<RunnerConfig>): RunnerConfig {
+  if (!options.prdJsonDir) {
+    throw new Error("prdJsonDir is required");
+  }
+  if (!options.workingDir) {
+    throw new Error("workingDir is required");
+  }
+
+  return {
+    prdJsonDir: options.prdJsonDir,
+    workingDir: options.workingDir,
+    iterations: options.iterations ?? DEFAULT_CONFIG.iterations!,
+    gapSeconds: options.gapSeconds ?? DEFAULT_CONFIG.gapSeconds!,
+    model: options.model ?? DEFAULT_CONFIG.model!,
+    notify: options.notify ?? DEFAULT_CONFIG.notify!,
+    quiet: options.quiet ?? DEFAULT_CONFIG.quiet!,
+    verbose: options.verbose ?? DEFAULT_CONFIG.verbose!,
+  };
+}
+
+// Sleep utility
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Log utility (respects quiet mode)
+function log(config: RunnerConfig, message: string): void {
+  if (!config.quiet) {
+    console.log(message);
+  }
+}
+
+// Verbose log utility
+function verbose(config: RunnerConfig, message: string): void {
+  if (config.verbose && !config.quiet) {
+    console.log(`[verbose] ${message}`);
+  }
+}
+
+// Single iteration execution
+export async function runSingleIteration(
+  config: RunnerConfig,
+  iteration: number
+): Promise<IterationResult> {
+  const startTime = Date.now();
+
+  // Check for update queue
+  const updateResult = applyUpdateQueue(config.prdJsonDir);
+  if (updateResult.applied) {
+    verbose(config, `Applied update queue: ${updateResult.changes.join(", ")}`);
+  }
+
+  // Get next story
+  const story = getNextStory(config.prdJsonDir);
+
+  if (!story) {
+    // Check if complete or all blocked
+    if (isComplete(config.prdJsonDir)) {
+      return {
+        iteration,
+        storyId: "",
+        success: true,
+        hasComplete: true,
+        hasBlocked: false,
+        durationMs: Date.now() - startTime,
+      };
+    }
+
+    if (isAllBlocked(config.prdJsonDir)) {
+      return {
+        iteration,
+        storyId: "",
+        success: false,
+        hasComplete: false,
+        hasBlocked: true,
+        durationMs: Date.now() - startTime,
+      };
+    }
+
+    // No story available but not complete
+    return {
+      iteration,
+      storyId: "",
+      success: false,
+      hasComplete: false,
+      hasBlocked: false,
+      durationMs: Date.now() - startTime,
+      error: "No story available",
+    };
+  }
+
+  // Update status
+  setRunning(iteration, story.id);
+
+  // Check if story is blocked
+  if (story.blockedBy) {
+    verbose(config, `Story ${story.id} is blocked: ${story.blockedBy}`);
+    return {
+      iteration,
+      storyId: story.id,
+      success: false,
+      hasComplete: false,
+      hasBlocked: true,
+      durationMs: Date.now() - startTime,
+      error: `Blocked: ${story.blockedBy}`,
+    };
+  }
+
+  // Build prompt for Claude
+  const progress = getCriteriaProgress(story);
+  const prompt = buildIterationPrompt(story.id, iteration);
+
+  // Spawn Claude
+  const spawnOptions: SpawnOptions = {
+    model: config.model,
+    prompt,
+    workingDir: config.workingDir,
+    timeout: DEFAULT_TIMEOUT_MS,
+  };
+
+  verbose(config, `Spawning Claude with model ${config.model}`);
+
+  const spawnResult = await spawnClaude(spawnOptions);
+  const outcome = analyzeResult(spawnResult);
+
+  const durationMs = Date.now() - startTime;
+
+  // Check for completion signals in output
+  if (hasCompletePromise(spawnResult.stdout)) {
+    return {
+      iteration,
+      storyId: story.id,
+      success: true,
+      hasComplete: true,
+      hasBlocked: false,
+      durationMs,
+    };
+  }
+
+  if (hasAllBlockedPromise(spawnResult.stdout)) {
+    return {
+      iteration,
+      storyId: story.id,
+      success: false,
+      hasComplete: false,
+      hasBlocked: true,
+      durationMs,
+    };
+  }
+
+  // Handle errors
+  if (!spawnResult.success && outcome.errorType) {
+    const errorDesc = getErrorDescription(outcome.errorType);
+    return {
+      iteration,
+      storyId: story.id,
+      success: false,
+      hasComplete: false,
+      hasBlocked: false,
+      durationMs,
+      error: errorDesc,
+    };
+  }
+
+  return {
+    iteration,
+    storyId: story.id,
+    success: spawnResult.success,
+    hasComplete: outcome.hasComplete,
+    hasBlocked: outcome.hasAllBlocked,
+    durationMs,
+    error: spawnResult.success ? undefined : spawnResult.stderr,
+  };
+}
+
+// Build the prompt for an iteration
+function buildIterationPrompt(storyId: string, iteration: number): string {
+  return `Continue working on story ${storyId}. This is iteration ${iteration}.`;
+}
+
+// Main iteration loop as async generator
+export async function* runIterations(
+  config: RunnerConfig
+): AsyncGenerator<IterationResult> {
+  let iteration = 1;
+  let retryCount = 0;
+
+  // Set up signal handlers
+  let interrupted = false;
+  const handleSignal = () => {
+    interrupted = true;
+  };
+
+  process.on("SIGINT", handleSignal);
+  process.on("SIGTERM", handleSignal);
+
+  try {
+    while (iteration <= config.iterations && !interrupted) {
+      log(config, `\n=== Iteration ${iteration} ===`);
+
+      const result = await runSingleIteration(config, iteration);
+
+      // Yield result to caller
+      yield result;
+
+      // Handle completion
+      if (result.hasComplete) {
+        log(config, "All stories complete!");
+        setComplete();
+        break;
+      }
+
+      // Handle all blocked
+      if (result.hasBlocked && !result.storyId) {
+        log(config, "All remaining stories are blocked");
+        setError("All stories blocked");
+        break;
+      }
+
+      // Handle errors with retry
+      if (!result.success && result.error) {
+        const errorType = detectError(result.error);
+
+        if (errorType && shouldRetry(errorType, retryCount)) {
+          retryCount++;
+          const cooldown = getCooldownMs(errorType);
+          const cooldownSecs = Math.ceil(cooldown / 1000);
+
+          log(config, `Retry ${retryCount}: ${result.error}`);
+          setRetry(cooldownSecs);
+
+          await sleep(cooldown);
+          continue; // Don't increment iteration for retry
+        }
+
+        // Max retries exceeded or non-retryable error
+        log(config, `Error: ${result.error}`);
+      }
+
+      // Reset retry count on success
+      if (result.success) {
+        retryCount = 0;
+      }
+
+      // Gap between iterations
+      if (iteration < config.iterations && config.gapSeconds > 0) {
+        verbose(config, `Waiting ${config.gapSeconds}s before next iteration`);
+        await sleep(config.gapSeconds * 1000);
+      }
+
+      iteration++;
+    }
+  } finally {
+    // Clean up signal handlers
+    process.off("SIGINT", handleSignal);
+    process.off("SIGTERM", handleSignal);
+
+    if (interrupted) {
+      setInterrupted();
+    }
+  }
+}
+
+// Convenience function to run all iterations and collect results
+export async function runAllIterations(
+  config: RunnerConfig
+): Promise<IterationResult[]> {
+  const results: IterationResult[] = [];
+
+  for await (const result of runIterations(config)) {
+    results.push(result);
+  }
+
+  return results;
+}
+
+// Export types
+export type { RunnerConfig, IterationResult, RunnerState, Model };
