@@ -225,39 +225,9 @@ function ralph-stop() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
-# repoGolem - Generate launchers for registered projects
+# repoGolem - Uses full implementation from lib/ralph-registry.zsh
+# which supports -QN notifications, MCP setup, and all flags
 # ═══════════════════════════════════════════════════════════════════
-function repoGolem() {
-  local name="$1"
-  local path="$2"
-  local project_key="${3:-$name}"
-
-  # Validate inputs
-  if [[ -z "$name" || -z "$path" ]]; then
-    echo "Usage: repoGolem <name> <path> [project_key]"
-    return 1
-  fi
-
-  # Generate function names using zsh parameter expansion
-  local first_char="${name:0:1}"
-  local capitalized_name="${(U)first_char}${name:1}"
-  local lowercase_name="${(L)name}"
-
-  # Create run function
-  eval "function run${capitalized_name}() {
-    cd \"$path\" && ralph \"\$@\"
-  }"
-
-  # Create open function
-  eval "function open${capitalized_name}() {
-    cd \"$path\" && code .
-  }"
-
-  # Create Claude function
-  eval "function ${lowercase_name}Claude() {
-    cd \"$path\" && claude \"\$@\"
-  }"
-}
 
 # Generate launchers from registry if it exists
 if [[ -f "$RALPH_CONFIG_DIR/config.json" ]]; then
