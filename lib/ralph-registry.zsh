@@ -709,6 +709,13 @@ function repoGolem() {
     fi
 
     _ralph_setup_mcps '$mcps_json'
+
+    # Load interactive context (CLAUDE_COUNTER, git safety rules)
+    local interactive_ctx=\"\$HOME/.claude/contexts/workflow/interactive.md\"
+    if [[ -f \"\$interactive_ctx\" ]]; then
+      claude_args+=(\"--append-system-prompt\" \"\$(cat \"\$interactive_ctx\")\")
+    fi
+
     claude \"\${claude_args[@]}\"
   }"
 }
