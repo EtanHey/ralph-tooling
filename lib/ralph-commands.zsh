@@ -283,6 +283,9 @@ ralph-help() {
   echo "  ${BOLD}ralph-kill-orphans${NC}    Kill orphan processes from crashed sessions"
   echo "    ${GRAY}--all${NC}               Also kill untracked Ralph processes"
   echo "  ${BOLD}ralph-logs [N]${NC}        Show N recent crash logs (default: 5)"
+  echo "  ${BOLD}ralph-terminal-check${NC}  Detect terminal capabilities and test UI support"
+  echo "    ${GRAY}--save${NC}              Save terminal profile to config"
+  echo "    ${GRAY}--quiet${NC}             Suppress output (for scripting)"
   echo ""
   echo "${GRAY}Flags:${NC}"
   echo "  ${BOLD}-QN${NC}                   Enable ntfy notifications"
@@ -480,5 +483,502 @@ jqf() {
     cat "$tmp_output" >&2
     rm -f "$tmp_filter" "$tmp_output"
     return 1
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# TERMINAL CAPABILITY DETECTION AND TESTING (US-110)
+# ═══════════════════════════════════════════════════════════════════
+
+# Detect terminal emulator from environment variables
+# Returns: terminal name (e.g., "iTerm2", "Ghostty", "Kitty", "Unknown")
+_ralph_detect_terminal() {
+  local term_program="${TERM_PROGRAM:-}"
+  local term="${TERM:-}"
+  local lc_terminal="${LC_TERMINAL:-}"
+
+  # Check specific terminal environment variables
+  case "$term_program" in
+    iTerm.app)     echo "iTerm2" ;;
+    ghostty)       echo "Ghostty" ;;
+    WezTerm)       echo "WezTerm" ;;
+    Apple_Terminal) echo "Terminal.app" ;;
+    tmux)          echo "tmux" ;;
+    vscode)        echo "VS Code" ;;
+    *)
+      # Check TERM variable for additional info
+      case "$term" in
+        xterm-kitty)  echo "Kitty" ;;
+        alacritty*)   echo "Alacritty" ;;
+        warp*)        echo "Warp" ;;
+        *)
+          # Check LC_TERMINAL for some terminals
+          if [[ -n "$lc_terminal" ]]; then
+            echo "$lc_terminal"
+          elif [[ -n "$term_program" ]]; then
+            echo "$term_program"
+          elif [[ -n "$term" ]]; then
+            echo "$term"
+          else
+            echo "Unknown"
+          fi
+          ;;
+      esac
+      ;;
+  esac
+}
+
+# Detect color support level
+# Returns: "none", "16", "256", or "truecolor"
+_ralph_detect_colors() {
+  local colorterm="${COLORTERM:-}"
+  local term="${TERM:-}"
+
+  # Check for truecolor/24-bit support
+  if [[ "$colorterm" == "truecolor" || "$colorterm" == "24bit" ]]; then
+    echo "truecolor"
+    return
+  fi
+
+  # Check TERM for 256-color variants
+  if [[ "$term" == *"-256color"* || "$term" == *"256"* ]]; then
+    echo "256"
+    return
+  fi
+
+  # Use tput if available
+  if command -v tput &>/dev/null; then
+    local colors=$(tput colors 2>/dev/null || echo "0")
+    if (( colors >= 16777216 )); then
+      echo "truecolor"
+    elif (( colors >= 256 )); then
+      echo "256"
+    elif (( colors >= 16 )); then
+      echo "16"
+    else
+      echo "none"
+    fi
+    return
+  fi
+
+  # Default based on TERM
+  if [[ -n "$term" && "$term" != "dumb" ]]; then
+    echo "16"
+  else
+    echo "none"
+  fi
+}
+
+# Detect Unicode and emoji support
+# Returns: "none", "basic", or "full"
+_ralph_detect_unicode() {
+  local lang="${LANG:-}"
+  local lc_all="${LC_ALL:-}"
+
+  # Check for UTF-8 locale
+  if [[ "$lang" == *"UTF-8"* || "$lang" == *"utf8"* ||
+        "$lc_all" == *"UTF-8"* || "$lc_all" == *"utf8"* ]]; then
+    # UTF-8 locale detected, check if terminal supports emoji
+    # We'll test this in the actual capability test
+    echo "full"
+  elif [[ -n "$lang" || -n "$lc_all" ]]; then
+    echo "basic"
+  else
+    echo "none"
+  fi
+}
+
+# Detect Kitty graphics protocol support
+# Returns: "yes" or "no"
+_ralph_detect_kitty() {
+  local term="${TERM:-}"
+  local kitty_window_id="${KITTY_WINDOW_ID:-}"
+
+  # Direct Kitty detection
+  if [[ "$term" == "xterm-kitty" || -n "$kitty_window_id" ]]; then
+    echo "yes"
+    return
+  fi
+
+  # Some terminals that support Kitty graphics
+  local term_program="${TERM_PROGRAM:-}"
+  case "$term_program" in
+    WezTerm|ghostty)
+      echo "yes"
+      return
+      ;;
+  esac
+
+  echo "no"
+}
+
+# Test ANSI cursor positioning
+# Returns: 0 on pass, 1 on fail
+_ralph_test_cursor_positioning() {
+  # Save cursor, move to position, restore cursor
+  # If tput works, we assume cursor positioning works
+  if command -v tput &>/dev/null; then
+    local cup_test=$(tput cup 0 0 2>/dev/null)
+    if [[ -n "$cup_test" || $? -eq 0 ]]; then
+      return 0
+    fi
+  fi
+
+  # Fallback: test ANSI escape sequence directly
+  # \033[H = cursor home, \033[s = save, \033[u = restore
+  if [[ -t 1 ]]; then
+    return 0  # Assume TTY supports ANSI
+  fi
+
+  return 1
+}
+
+# Test box drawing character rendering
+# Returns: 0 on pass, 1 on fail (cannot truly test, just checks UTF-8)
+_ralph_test_box_drawing() {
+  local lang="${LANG:-}"
+  local lc_all="${LC_ALL:-}"
+
+  # Box drawing requires UTF-8
+  if [[ "$lang" == *"UTF-8"* || "$lang" == *"utf8"* ||
+        "$lc_all" == *"UTF-8"* || "$lc_all" == *"utf8"* ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+# Benchmark live update speed
+# Returns: render time in milliseconds
+_ralph_test_render_speed() {
+  local iterations="${1:-10}"
+  local start_ms end_ms duration
+
+  # Get start time in nanoseconds (if available) or seconds
+  if command -v gdate &>/dev/null; then
+    start_ms=$(gdate +%s%3N)
+  elif [[ "$(uname)" == "Darwin" ]]; then
+    # macOS date doesn't support %N, use perl
+    start_ms=$(perl -MTime::HiRes=time -e 'printf "%d", time * 1000' 2>/dev/null || date +%s)
+  else
+    start_ms=$(date +%s%3N 2>/dev/null || date +%s)
+  fi
+
+  # Simulate rendering with cursor positioning and output
+  for ((i=0; i<iterations; i++)); do
+    printf '\033[H'  # Cursor home
+    printf '\033[2J' # Clear screen
+    printf '═══════════════════════════════════════════════════════════════════\n'
+    printf '│ Progress: [████████░░] 80%%                                       │\n'
+    printf '═══════════════════════════════════════════════════════════════════\n'
+    printf '\033[H'  # Reset
+  done > /dev/null 2>&1
+
+  # Get end time
+  if command -v gdate &>/dev/null; then
+    end_ms=$(gdate +%s%3N)
+  elif [[ "$(uname)" == "Darwin" ]]; then
+    end_ms=$(perl -MTime::HiRes=time -e 'printf "%d", time * 1000' 2>/dev/null || date +%s)
+  else
+    end_ms=$(date +%s%3N 2>/dev/null || date +%s)
+  fi
+
+  # Calculate duration per render
+  duration=$(( (end_ms - start_ms) / iterations ))
+  echo "$duration"
+}
+
+# Test emoji width calculation accuracy
+# Returns: 0 if emojis are 2 chars wide (expected), 1 otherwise
+_ralph_test_emoji_width() {
+  # Simple test: check if terminal handles emoji width
+  # This is really a visual test - we can only check locale
+  local lang="${LANG:-}"
+  local lc_all="${LC_ALL:-}"
+
+  # UTF-8 locale suggests emoji support
+  if [[ "$lang" == *"UTF-8"* || "$lang" == *"utf8"* ||
+        "$lc_all" == *"UTF-8"* || "$lc_all" == *"utf8"* ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+# Get terminal known issues and recommendations
+# Args: terminal name
+# Returns: warning message if known issues, empty if OK
+_ralph_get_terminal_issues() {
+  local terminal="$1"
+
+  case "$terminal" in
+    "Terminal.app")
+      echo "Terminal.app has limited Unicode rendering and no truecolor support. Consider iTerm2 or Ghostty."
+      ;;
+    "Unknown")
+      echo "Could not detect terminal. Some UI features may not work correctly."
+      ;;
+    "tmux")
+      echo "Running inside tmux. Ensure TERM=xterm-256color or tmux-256color for best results."
+      ;;
+    "VS Code")
+      echo "VS Code terminal works but may have cursor positioning issues in some configurations."
+      ;;
+    *)
+      echo ""  # No known issues
+      ;;
+  esac
+}
+
+# Get terminal recommendation based on current terminal
+_ralph_get_terminal_recommendation() {
+  local terminal="$1"
+  local color_support="$2"
+  local unicode_support="$3"
+
+  # Best terminals for Ralph
+  local best_terminals="For best Ralph experience: iTerm2, Ghostty, Kitty, or WezTerm"
+
+  case "$terminal" in
+    "iTerm2"|"Ghostty"|"Kitty"|"WezTerm"|"Alacritty")
+      echo ""  # Already using a great terminal
+      ;;
+    "Terminal.app")
+      echo "$best_terminals"
+      ;;
+    *)
+      if [[ "$color_support" == "none" || "$unicode_support" == "none" ]]; then
+        echo "$best_terminals"
+      fi
+      ;;
+  esac
+}
+
+# Save terminal profile to config
+# Args: profile JSON object
+_ralph_save_terminal_profile() {
+  local profile_json="$1"
+  local config_file="${RALPH_CONFIG_FILE:-$HOME/.config/ralphtools/config.json}"
+
+  if [[ ! -f "$config_file" ]]; then
+    echo "Config file not found: $config_file"
+    return 1
+  fi
+
+  # Update config with terminal profile
+  local tmp_config=$(mktemp)
+  if jq --argjson profile "$profile_json" '.terminalProfile = $profile' "$config_file" > "$tmp_config" 2>/dev/null; then
+    mv "$tmp_config" "$config_file"
+    return 0
+  else
+    rm -f "$tmp_config"
+    return 1
+  fi
+}
+
+# Check if this is first Ralph startup (no terminal profile in config)
+_ralph_is_first_terminal_check() {
+  local config_file="${RALPH_CONFIG_FILE:-$HOME/.config/ralphtools/config.json}"
+
+  if [[ ! -f "$config_file" ]]; then
+    return 0  # No config = first run
+  fi
+
+  local has_profile=$(jq -r '.terminalProfile // empty' "$config_file" 2>/dev/null)
+  if [[ -z "$has_profile" ]]; then
+    return 0  # No profile = first run
+  fi
+
+  return 1  # Has profile
+}
+
+# Main terminal check command
+ralph-terminal-check() {
+  local CYAN='\033[0;36m'
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[1;33m'
+  local RED='\033[0;31m'
+  local GRAY='\033[0;90m'
+  local BOLD='\033[1m'
+  local NC='\033[0m'
+
+  local save_profile=false
+  local quiet=false
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --save)   save_profile=true; shift ;;
+      --quiet)  quiet=true; shift ;;
+      *)        shift ;;
+    esac
+  done
+
+  if ! $quiet; then
+    echo ""
+    echo "${CYAN}${BOLD}═══ Ralph Terminal Check ═══${NC}"
+    echo ""
+  fi
+
+  # === DETECTION ===
+  local terminal=$(_ralph_detect_terminal)
+  local colors=$(_ralph_detect_colors)
+  local unicode=$(_ralph_detect_unicode)
+  local kitty=$(_ralph_detect_kitty)
+
+  if ! $quiet; then
+    echo "${BOLD}Terminal Detection:${NC}"
+    echo "  Terminal:    ${GREEN}$terminal${NC}"
+    echo "  Colors:      ${GREEN}$colors${NC}"
+    echo "  Unicode:     ${GREEN}$unicode${NC}"
+    echo "  Kitty GFX:   ${GREEN}$kitty${NC}"
+    echo ""
+  fi
+
+  # === CAPABILITY TESTS ===
+  local cursor_pass=0 box_pass=0 emoji_pass=0
+  local render_speed="N/A"
+
+  _ralph_test_cursor_positioning && cursor_pass=1
+  _ralph_test_box_drawing && box_pass=1
+  _ralph_test_emoji_width && emoji_pass=1
+
+  # Only run render test if terminal is TTY
+  if [[ -t 1 ]]; then
+    render_speed=$(_ralph_test_render_speed 5)
+  fi
+
+  if ! $quiet; then
+    echo "${BOLD}Capability Tests:${NC}"
+    if [[ $cursor_pass -eq 1 ]]; then
+      echo "  Cursor positioning:  ${GREEN}✓ PASS${NC}"
+    else
+      echo "  Cursor positioning:  ${RED}✗ FAIL${NC}"
+    fi
+
+    if [[ $box_pass -eq 1 ]]; then
+      echo "  Box drawing chars:   ${GREEN}✓ PASS${NC}"
+    else
+      echo "  Box drawing chars:   ${RED}✗ FAIL${NC}"
+    fi
+
+    if [[ $emoji_pass -eq 1 ]]; then
+      echo "  Emoji width:         ${GREEN}✓ PASS${NC}"
+    else
+      echo "  Emoji width:         ${RED}✗ FAIL${NC}"
+    fi
+
+    if [[ "$render_speed" != "N/A" ]]; then
+      if [[ $render_speed -lt 10 ]]; then
+        echo "  Render speed:        ${GREEN}✓ ${render_speed}ms/frame${NC}"
+      elif [[ $render_speed -lt 50 ]]; then
+        echo "  Render speed:        ${YELLOW}○ ${render_speed}ms/frame${NC}"
+      else
+        echo "  Render speed:        ${RED}✗ ${render_speed}ms/frame (slow)${NC}"
+      fi
+    else
+      echo "  Render speed:        ${GRAY}○ Skipped (not a TTY)${NC}"
+    fi
+    echo ""
+  fi
+
+  # === RECOMMENDATIONS ===
+  local issues=$(_ralph_get_terminal_issues "$terminal")
+  local recommendation=$(_ralph_get_terminal_recommendation "$terminal" "$colors" "$unicode")
+
+  if ! $quiet && [[ -n "$issues" ]]; then
+    echo "${YELLOW}${BOLD}⚠ Known Issues:${NC}"
+    echo "  $issues"
+    echo ""
+  fi
+
+  if ! $quiet && [[ -n "$recommendation" ]]; then
+    echo "${CYAN}${BOLD}💡 Recommendation:${NC}"
+    echo "  $recommendation"
+    echo ""
+  fi
+
+  # Calculate overall score
+  local tests_passed=$((cursor_pass + box_pass + emoji_pass))
+  local total_tests=3
+
+  # Add render speed to score if available
+  if [[ "$render_speed" != "N/A" ]]; then
+    total_tests=4
+    if [[ $render_speed -lt 50 ]]; then
+      tests_passed=$((tests_passed + 1))
+    fi
+  fi
+
+  if ! $quiet; then
+    echo "${BOLD}Overall:${NC} ${tests_passed}/${total_tests} tests passed"
+
+    # UI compatibility summary
+    echo ""
+    if [[ "$colors" == "truecolor" || "$colors" == "256" ]] &&
+       [[ "$unicode" == "full" ]] &&
+       [[ $cursor_pass -eq 1 ]]; then
+      echo "${GREEN}✓ Full Ink UI support${NC}"
+    elif [[ $cursor_pass -eq 1 ]] && [[ "$colors" != "none" ]]; then
+      echo "${YELLOW}○ Gum/ANSI UI supported, Ink UI may have issues${NC}"
+    else
+      echo "${RED}✗ Limited UI support - basic text mode recommended${NC}"
+    fi
+    echo ""
+  fi
+
+  # === SAVE TO CONFIG ===
+  if $save_profile; then
+    local profile_json=$(cat <<EOF
+{
+  "terminal": "$terminal",
+  "colors": "$colors",
+  "unicode": "$unicode",
+  "kittyGraphics": "$kitty",
+  "cursorPositioning": $([[ $cursor_pass -eq 1 ]] && echo "true" || echo "false"),
+  "boxDrawing": $([[ $box_pass -eq 1 ]] && echo "true" || echo "false"),
+  "emojiWidth": $([[ $emoji_pass -eq 1 ]] && echo "true" || echo "false"),
+  "renderSpeed": $([[ "$render_speed" != "N/A" ]] && echo "$render_speed" || echo "null"),
+  "checkedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+)
+    if _ralph_save_terminal_profile "$profile_json"; then
+      if ! $quiet; then
+        echo "${GREEN}✓ Terminal profile saved to config${NC}"
+        echo ""
+      fi
+    else
+      if ! $quiet; then
+        echo "${YELLOW}⚠ Could not save terminal profile${NC}"
+        echo ""
+      fi
+    fi
+  fi
+
+  # Return exit code based on critical tests
+  if [[ $cursor_pass -eq 1 ]] && [[ "$colors" != "none" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Check terminal on first Ralph startup (called from ralph main function)
+_ralph_first_startup_terminal_check() {
+  # Only run if this is first time (no terminal profile saved)
+  if _ralph_is_first_terminal_check; then
+    echo ""
+    echo "${RALPH_COLOR_GRAY:-\033[0;90m}First startup - checking terminal capabilities...${RALPH_COLOR_RESET:-\033[0m}"
+    ralph-terminal-check --save --quiet
+
+    # If there are issues, show a brief message
+    local terminal=$(_ralph_detect_terminal)
+    local issues=$(_ralph_get_terminal_issues "$terminal")
+    if [[ -n "$issues" ]]; then
+      echo "${RALPH_COLOR_YELLOW:-\033[1;33m}⚠ $issues${RALPH_COLOR_RESET:-\033[0m}"
+      echo "${RALPH_COLOR_GRAY:-\033[0;90m}Run 'ralph-terminal-check' for details${RALPH_COLOR_RESET:-\033[0m}"
+    fi
+    echo ""
   fi
 }

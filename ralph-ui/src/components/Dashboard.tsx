@@ -70,10 +70,10 @@ export function Dashboard({
     }
   }, [isLiveMode, handleExit]);
 
-  // Poll for file changes ONLY in live mode (fs.watch unreliable on macOS)
+  // Poll for file changes in live and iteration modes (fs.watch unreliable on macOS)
   const liveStats = useFileWatch({
     prdPath,
-    enabled: isLiveMode, // Only poll in live mode
+    enabled: isLiveMode || mode === 'iteration', // Poll in both live and iteration modes
     intervalMs: 1000,
   });
 

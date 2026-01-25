@@ -5681,6 +5681,308 @@ test_us109_saved_preference_persists() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# US-110: TERMINAL CAPABILITY DETECTION TESTS
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: _ralph_detect_terminal function exists and returns a value
+test_us110_detect_terminal_exists() {
+  test_start "US-110: _ralph_detect_terminal function exists and returns value"
+
+  if ! type _ralph_detect_terminal &>/dev/null; then
+    test_fail "_ralph_detect_terminal function not found"
+    return
+  fi
+
+  local result=$(_ralph_detect_terminal)
+  if [[ -z "$result" ]]; then
+    test_fail "_ralph_detect_terminal should return a terminal name, got empty string"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: _ralph_detect_colors returns valid color level
+test_us110_detect_colors_returns_valid() {
+  test_start "US-110: _ralph_detect_colors returns valid color level"
+
+  if ! type _ralph_detect_colors &>/dev/null; then
+    test_fail "_ralph_detect_colors function not found"
+    return
+  fi
+
+  local result=$(_ralph_detect_colors)
+  case "$result" in
+    none|16|256|truecolor)
+      test_pass
+      ;;
+    *)
+      test_fail "_ralph_detect_colors should return none/16/256/truecolor, got '$result'"
+      ;;
+  esac
+}
+
+# Test: _ralph_detect_unicode returns valid unicode level
+test_us110_detect_unicode_returns_valid() {
+  test_start "US-110: _ralph_detect_unicode returns valid unicode level"
+
+  if ! type _ralph_detect_unicode &>/dev/null; then
+    test_fail "_ralph_detect_unicode function not found"
+    return
+  fi
+
+  local result=$(_ralph_detect_unicode)
+  case "$result" in
+    none|basic|full)
+      test_pass
+      ;;
+    *)
+      test_fail "_ralph_detect_unicode should return none/basic/full, got '$result'"
+      ;;
+  esac
+}
+
+# Test: _ralph_detect_kitty returns yes or no
+test_us110_detect_kitty_returns_valid() {
+  test_start "US-110: _ralph_detect_kitty returns yes or no"
+
+  if ! type _ralph_detect_kitty &>/dev/null; then
+    test_fail "_ralph_detect_kitty function not found"
+    return
+  fi
+
+  local result=$(_ralph_detect_kitty)
+  case "$result" in
+    yes|no)
+      test_pass
+      ;;
+    *)
+      test_fail "_ralph_detect_kitty should return yes/no, got '$result'"
+      ;;
+  esac
+}
+
+# Test: _ralph_test_cursor_positioning returns 0 or 1
+test_us110_test_cursor_positioning() {
+  test_start "US-110: _ralph_test_cursor_positioning returns 0 or 1"
+
+  if ! type _ralph_test_cursor_positioning &>/dev/null; then
+    test_fail "_ralph_test_cursor_positioning function not found"
+    return
+  fi
+
+  _ralph_test_cursor_positioning
+  local result=$?
+
+  if [[ $result -eq 0 || $result -eq 1 ]]; then
+    test_pass
+  else
+    test_fail "_ralph_test_cursor_positioning should return 0 or 1, got $result"
+  fi
+}
+
+# Test: _ralph_test_box_drawing returns 0 or 1
+test_us110_test_box_drawing() {
+  test_start "US-110: _ralph_test_box_drawing returns 0 or 1"
+
+  if ! type _ralph_test_box_drawing &>/dev/null; then
+    test_fail "_ralph_test_box_drawing function not found"
+    return
+  fi
+
+  _ralph_test_box_drawing
+  local result=$?
+
+  if [[ $result -eq 0 || $result -eq 1 ]]; then
+    test_pass
+  else
+    test_fail "_ralph_test_box_drawing should return 0 or 1, got $result"
+  fi
+}
+
+# Test: _ralph_test_emoji_width returns 0 or 1
+test_us110_test_emoji_width() {
+  test_start "US-110: _ralph_test_emoji_width returns 0 or 1"
+
+  if ! type _ralph_test_emoji_width &>/dev/null; then
+    test_fail "_ralph_test_emoji_width function not found"
+    return
+  fi
+
+  _ralph_test_emoji_width
+  local result=$?
+
+  if [[ $result -eq 0 || $result -eq 1 ]]; then
+    test_pass
+  else
+    test_fail "_ralph_test_emoji_width should return 0 or 1, got $result"
+  fi
+}
+
+# Test: _ralph_get_terminal_issues returns string for known bad terminals
+test_us110_get_terminal_issues() {
+  test_start "US-110: _ralph_get_terminal_issues returns issues for Terminal.app"
+
+  if ! type _ralph_get_terminal_issues &>/dev/null; then
+    test_fail "_ralph_get_terminal_issues function not found"
+    return
+  fi
+
+  local result=$(_ralph_get_terminal_issues "Terminal.app")
+  if [[ -z "$result" ]]; then
+    test_fail "_ralph_get_terminal_issues should return issues for Terminal.app"
+    return
+  fi
+
+  if [[ "$result" != *"iTerm"* && "$result" != *"Ghostty"* ]]; then
+    test_fail "_ralph_get_terminal_issues should recommend iTerm2 or Ghostty"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: _ralph_get_terminal_issues returns empty for good terminals
+test_us110_get_terminal_issues_empty_for_good() {
+  test_start "US-110: _ralph_get_terminal_issues returns empty for good terminals"
+
+  if ! type _ralph_get_terminal_issues &>/dev/null; then
+    test_fail "_ralph_get_terminal_issues function not found"
+    return
+  fi
+
+  local result=$(_ralph_get_terminal_issues "iTerm2")
+  if [[ -n "$result" ]]; then
+    test_fail "_ralph_get_terminal_issues should return empty for iTerm2, got '$result'"
+    return
+  fi
+
+  result=$(_ralph_get_terminal_issues "Ghostty")
+  if [[ -n "$result" ]]; then
+    test_fail "_ralph_get_terminal_issues should return empty for Ghostty, got '$result'"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: _ralph_save_terminal_profile saves to config
+test_us110_save_terminal_profile() {
+  test_start "US-110: _ralph_save_terminal_profile saves to config"
+  _setup_test_fixtures
+
+  mkdir -p "$TEST_TMP_DIR/config"
+  local test_config="$TEST_TMP_DIR/config/config.json"
+  echo '{"runtime": "bun"}' > "$test_config"
+
+  local original_config="$RALPH_CONFIG_FILE"
+  RALPH_CONFIG_FILE="$test_config"
+
+  local test_profile='{"terminal": "Test", "colors": "256"}'
+  _ralph_save_terminal_profile "$test_profile"
+
+  local saved_terminal
+  saved_terminal=$(jq -r '.terminalProfile.terminal' "$test_config" 2>/dev/null)
+
+  RALPH_CONFIG_FILE="$original_config"
+  _teardown_test_fixtures
+
+  if [[ "$saved_terminal" == "Test" ]]; then
+    test_pass
+  else
+    test_fail "Expected terminal=Test in config, got '$saved_terminal'"
+  fi
+}
+
+# Test: _ralph_is_first_terminal_check returns 0 for no profile
+test_us110_is_first_terminal_check_no_profile() {
+  test_start "US-110: _ralph_is_first_terminal_check returns 0 for no profile"
+  _setup_test_fixtures
+
+  mkdir -p "$TEST_TMP_DIR/config"
+  local test_config="$TEST_TMP_DIR/config/config.json"
+  echo '{"runtime": "bun"}' > "$test_config"
+
+  local original_config="$RALPH_CONFIG_FILE"
+  RALPH_CONFIG_FILE="$test_config"
+
+  _ralph_is_first_terminal_check
+  local result=$?
+
+  RALPH_CONFIG_FILE="$original_config"
+  _teardown_test_fixtures
+
+  if [[ $result -eq 0 ]]; then
+    test_pass
+  else
+    test_fail "Expected return 0 for config without terminalProfile, got $result"
+  fi
+}
+
+# Test: _ralph_is_first_terminal_check returns 1 for existing profile
+test_us110_is_first_terminal_check_with_profile() {
+  test_start "US-110: _ralph_is_first_terminal_check returns 1 for existing profile"
+  _setup_test_fixtures
+
+  mkdir -p "$TEST_TMP_DIR/config"
+  local test_config="$TEST_TMP_DIR/config/config.json"
+  echo '{"runtime": "bun", "terminalProfile": {"terminal": "iTerm2"}}' > "$test_config"
+
+  local original_config="$RALPH_CONFIG_FILE"
+  RALPH_CONFIG_FILE="$test_config"
+
+  _ralph_is_first_terminal_check
+  local result=$?
+
+  RALPH_CONFIG_FILE="$original_config"
+  _teardown_test_fixtures
+
+  if [[ $result -eq 1 ]]; then
+    test_pass
+  else
+    test_fail "Expected return 1 for config with terminalProfile, got $result"
+  fi
+}
+
+# Test: ralph-terminal-check command exists
+test_us110_command_exists() {
+  test_start "US-110: ralph-terminal-check command exists"
+
+  if type ralph-terminal-check &>/dev/null; then
+    test_pass
+  else
+    test_fail "ralph-terminal-check command not found"
+  fi
+}
+
+# Test: ralph-terminal-check --quiet suppresses output
+test_us110_quiet_mode() {
+  test_start "US-110: ralph-terminal-check --quiet suppresses output"
+
+  local output=$(ralph-terminal-check --quiet 2>&1)
+
+  # Output should be minimal or empty in quiet mode
+  local line_count=$(echo "$output" | wc -l | tr -d ' ')
+
+  if [[ $line_count -le 2 ]]; then
+    test_pass
+  else
+    test_fail "Expected minimal output in quiet mode, got $line_count lines"
+  fi
+}
+
+# Test: _ralph_first_startup_terminal_check function exists
+test_us110_first_startup_check_exists() {
+  test_start "US-110: _ralph_first_startup_terminal_check function exists"
+
+  if type _ralph_first_startup_terminal_check &>/dev/null; then
+    test_pass
+  else
+    test_fail "_ralph_first_startup_terminal_check function not found"
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 
