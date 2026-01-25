@@ -1215,3 +1215,25 @@ Changes:
 - Tests are auto-discovered by run_all_tests() scanning for test_* functions
 - Pre-commit hook already runs test-ralph.zsh in section 7
 - Context tests verify both repo files (contexts/) and runtime functions
+
+## Iteration 60
+Story: US-096 - Comprehensive README update for v2.0.0
+Status: COMPLETED (opus)
+Changes:
+- Updated version to 2.0.0 in README.md header and VERSION file
+- Simplified Quick Start with ralph-setup wizard approach
+- Added Configuration section documenting config-driven approach
+- Added Runtime Mode section explaining bun (default) vs bash modes
+- Added Smart Model Routing table including MP story type
+- Added Story-Type Prompts (AGENTS.md) section explaining layered prompts
+- Documented AGENTS.md auto-update feature
+- Documented CodeRabbit → BUG story integration pattern
+- Updated changelog with v2.0.0 and v1.5.0 features
+- Removed outdated flag documentation (consolidated into Configuration section)
+- All 156 tests pass
+- CodeRabbit: PASS (0 issues)
+
+### Learnings
+- Documentation should focus on config-driven approach rather than CLI flags
+- Changelog should highlight architectural changes (modular codebase, layered prompts)
+- Story-type prompts enable targeted guidance without bloating the base prompt

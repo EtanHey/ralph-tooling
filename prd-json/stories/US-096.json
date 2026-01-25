@@ -73,11 +73,11 @@
     },
     {
       "text": "Commit: feat: [STORY-ID] description",
-      "checked": false
+      "checked": true
     }
   ],
   "dependencies": [
     "US-095"
   ],
-  "passes": false
+  "passes": true
 }
