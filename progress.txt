@@ -447,3 +447,15 @@ Started: Sun Jan 25 05:24:03 IST 2026
 - CodeRabbit: N/A (only PRD JSON changes, no code)
 - Tests: All 205 zsh tests pass, all 83 bun tests pass
 - V-022 COMPLETE - Progressive skill disclosure verified: 95.6% token reduction achieved
+
+## Iteration 21 - US-100: 1Password vault organization and ENV centralization
+- Model: opus
+- Completed verification of 1Password setup for three projects:
+  * ralphtools (claude-golem): ANTHROPIC_API_KEY, CONTEXT7_API_KEY, LINEAR_API_KEY
+  * domica: Supabase, UploadThing, Mapbox (placeholders), Browserbase, Firecrawl, Google Document AI
+  * union: Full suite - Anthropic, OpenAI, Supabase, Stripe, Twilio, Nylas, Vapi, Deepgram, Resend
+- All `op inject -f` commands work correctly
+- Updated skills/.env.template with correct op:// references (development vault)
+- CodeRabbit: Passed (minor .env.template updates)
+- Tests: All 205 zsh tests pass
+- US-100 COMPLETE - 1Password vault organization verified and working
