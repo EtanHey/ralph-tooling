@@ -520,3 +520,29 @@ Started: Sun Jan 25 05:24:03 IST 2026
 - All 83 bun tests pass
 - CodeRabbit: Rate limited (~8 min remaining), changes manually reviewed
 - BUG-032 COMPLETE - Pre-push hook now runs without errors
+
+## Iteration 26 - BUG-033: PTY spawning fails silently - Claude never starts
+- Model: opus
+- Root cause: TWO separate issues discovered:
+  1. spawn-helper binary missing +x permissions on some systems
+     - node-pty prebuilt binaries have spawn-helper without executable permission
+     - Error: "posix_spawnp failed"
+  2. node-pty incompatible with Bun runtime
+     - Bun's tty.ReadStream implementation doesn't accept file descriptors same as Node.js
+     - Error: "Expected file path string or file descriptor"
+- Fixes applied:
+  * Added postinstall script to chmod +x spawn-helper for all platforms
+  * Added ensureSpawnHelperExecutable() runtime check with auto-fix
+  * Added Bun detection (globalThis.Bun) and isPTYSupported() function
+  * Auto-disable PTY mode when running under Bun
+  * Enhanced error messages for posix_spawnp and Bun compatibility issues
+  * Changed process.nextTick to setImmediate for reliable handler registration
+  * Emit exit code 1 on spawn error so callers don't hang silently
+  * Show warning when --pty explicitly requested but not supported
+- Testing verified:
+  * Node.js: PTY mode works correctly
+  * Bun: PTY automatically disabled, falls back to non-PTY mode
+  * 188 TypeScript tests pass
+  * 205 zsh tests pass
+- CodeRabbit: Rate limited, code manually reviewed
+- BUG-033 COMPLETE - PTY spawning fixed with Bun auto-fallback
