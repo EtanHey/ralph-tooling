@@ -266,3 +266,39 @@ Started: Sun Jan 25 05:24:03 IST 2026
 - All 53 TypeScript tests pass
 - CodeRabbit: Rate limited (docs-only audit, no code changes to review)
 - AUDIT-003 COMPLETE - Node-pty architecture fully documented for MP-007
+
+## Iteration 14 - TEST-005: Integration tests for node-pty runner
+- Model: opus
+- Created comprehensive TDD test suite for MP-007 node-pty integration:
+  * ralph-ui/tests/runner/pty-wrapper.test.ts - 22 tests
+    - Process spawning (mock), dimensions, PID, env vars
+    - Data handling: onData callbacks, multiple handlers, large chunks, ANSI codes
+    - Exit handling: exit codes, multiple handlers
+    - Error handling: spawn failures, permission denied
+    - Process control: kill(), kill(signal), resize()
+    - Input handling: write(), control characters
+  * ralph-ui/tests/runner/dual-output.test.ts - 27 tests
+    - ANSI stripping: colors, styles, cursor movement, 256-color, RGB, hyperlinks
+    - Display stream: preserves ANSI, passes through unchanged
+    - File stream: strips ANSI, all formatting removed
+    - Stream synchronization: same content, ordering, empty input
+    - Stream independence: independent consumption, no blocking
+  * ralph-ui/tests/runner/event-emitter.test.ts - 27 tests
+    - Event format: type, timestamp (ISO-8601), data
+    - Data events: ansi flag detection
+    - Exit events: exitCode, optional final output
+    - Error events: message preservation
+    - ANSI detection: colors, styles, cursor, mixed content
+    - Event ordering, multiple listeners, JSON serialization
+  * ralph-ui/tests/runner/signal-handling.test.ts - 15 tests
+    - SIGINT propagation: exit code 130, graceful detection
+    - Graceful shutdown: stream closing, timeout waiting, force kill
+    - SIGTERM/SIGKILL handling
+    - Edge cases: multiple signals, already exited, already closed streams
+- All tests use mocked node-pty for predictable testing
+- 123 new tests pass (bun test ralph-ui/tests/runner/)
+- 176 total TypeScript tests pass
+- 205 zsh tests pass
+- TypeScript typecheck passes
+- CodeRabbit: Rate limited (~15min remaining), test-only changes
+- TEST-005 COMPLETE - TDD tests ready for MP-007 implementation
