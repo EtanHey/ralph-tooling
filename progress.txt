@@ -1256,3 +1256,23 @@ Changes:
 - LSP requires ENABLE_LSP_TOOLS=1 environment variable and configured language servers
 - Use findReferences before any symbol rename to ensure all usages are covered
 - LSP plugins available via /plugin marketplace (boostvolt/claude-code-lsps)
+
+## Iteration 62
+Story: US-108 - Improve bash/Gum UI as graceful fallback
+Status: COMPLETED (opus)
+Changes:
+- Implemented ~500 lines of live bash dashboard code in lib/ralph-ui.zsh
+- Added _ralph_has_gum() and _ralph_init_gum() for Gum availability detection
+- Added live dashboard with polling loop and ANSI cursor positioning
+- Implemented all status indicators (normal, hanging, error, CodeRabbit, retry)
+- Added feature parity with Ink UI (PRD status, story box, notification box, progress bars)
+- Pure ANSI fallback when Gum not installed (still live)
+- Added 18 unit tests for all new functions
+- All 174 tests pass
+- CodeRabbit: RATE LIMITED (code already committed, no new uncommitted changes)
+
+### Learnings
+- Gum availability should be cached in RALPH_HAS_GUM global var for performance
+- ANSI cursor positioning: \033[H (home), \033[2J (clear), \033[K (clear line)
+- Polling loop at 1s interval is reliable for /tmp/ralph-status-$$.json
+- Pure ANSI progress bars use Unicode blocks: ▓ (filled) and ░ (empty)
