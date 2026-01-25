@@ -1299,3 +1299,34 @@ Changes:
 - Non-interactive mode (! -t 0) should use default option without prompting
 - Tech stack detection should set global var (RALPH_DETECTED_STACK) for validation output
 - jq --arg handles shell variable escaping properly for config updates
+
+## Iteration 64
+Story: US-110 - Terminal capability detection and testing
+Status: COMPLETED (opus)
+Changes:
+- Created _ralph_detect_terminal() to detect terminal from $TERM_PROGRAM, $TERM, $LC_TERMINAL
+- Created _ralph_detect_colors() to detect color support (none/16/256/truecolor)
+- Created _ralph_detect_unicode() to detect Unicode support level (none/basic/full)
+- Created _ralph_detect_kitty() to detect Kitty graphics protocol support
+- Created _ralph_test_cursor_positioning() using tput cup test
+- Created _ralph_test_box_drawing() checking UTF-8 locale
+- Created _ralph_test_render_speed() with benchmark loop
+- Created _ralph_test_emoji_width() checking emoji rendering support
+- Created ralph-terminal-check command with full output formatting
+- Added --save flag to save terminal profile to config.json
+- Added --quiet flag for scripting usage
+- Created _ralph_get_terminal_issues() with known issues for Terminal.app, tmux, VS Code
+- Created _ralph_get_terminal_recommendation() for upgrade suggestions
+- Created _ralph_save_terminal_profile() to persist profile in config
+- Created _ralph_is_first_terminal_check() to detect first startup
+- Created _ralph_first_startup_terminal_check() for auto-run on first startup
+- Added ralph-terminal-check to ralph-help Maintenance section
+- Added 16 unit tests for all terminal functions
+- All 199 tests pass (previous 183 + 16 new)
+- CodeRabbit: No uncommitted changes to review (code already committed)
+
+### Learnings
+- Terminal detection uses multiple env vars: TERM_PROGRAM, TERM, LC_TERMINAL, COLORTERM
+- macOS date doesn't support %N for nanoseconds - use perl Time::HiRes or gdate
+- Kitty graphics protocol is supported by Kitty, WezTerm, and Ghostty
+- Terminal.app has limited Unicode rendering and no truecolor support

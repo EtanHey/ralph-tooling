@@ -85,13 +85,15 @@
     },
     {
       "text": "Commit: feat: US-110 terminal capability detection",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     }
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-25T02:35:00Z",
+  "completedBy": "opus"
 }
