@@ -237,3 +237,32 @@ Started: Sun Jan 25 05:24:03 IST 2026
 - TypeScript typecheck passes
 - CodeRabbit: Rate limited (~18 mins remaining), code manually verified
 - BUG-030 COMPLETE - UI flickering eliminated, dynamic data reads from status file
+
+## Iteration 13 - AUDIT-003: Audit node-pty architecture before UI integration
+- Model: opus
+- Comprehensive audit of node-pty integration research for MP-007:
+  * Read round-3-agent-9-synthesis.md - Full architecture recommendation
+  * Read tracker.md - 3 waves x 3 agents = 9 research reports summary
+  * Read round-1-agent-1.md - node-pty deep dive (Microsoft, 20M weekly downloads)
+- Components cataloged for MP-007:
+  * PTYProcess interface: onData, onExit, onError, write, resize, kill
+  * Dual output pipeline: PassThrough (display) + StripANSI (file)
+  * Event format: {type, timestamp, data, ansi, exitCode}
+- File structure mapped:
+  * New: ralph-ui/src/runner/pty/ directory with pty-wrapper.ts, dual-output.ts, ansi-stripper.ts, event-types.ts
+  * Modify: claude.ts (replace bun.spawn with PTY wrapper)
+  * Modify: types.ts (add PTYSpawnOptions)
+- Existing code analyzed:
+  * claude.ts uses bun.spawn() with piped stdout/stderr - needs PTY replacement
+  * runner/index.ts handles signals (SIGINT/SIGTERM) - needs PTY forwarding
+  * Dashboard.tsx may need output display in Phase 2
+- Risks documented:
+  * Native compilation (mitigate: pre-built binaries, fallback to child_process)
+  * TTY detection edge cases (mitigate: check isTTY, --no-pty flag)
+  * Breaking changes (mitigate: feature flag, keep spawnClaudeSimple)
+- Implementation order: Phase 1 (PTY foundation 3-4d), Phase 2 (Claude integration 2-3d), Phase 3 (UI integration 2-3d)
+- Output: Created docs.local/audit-node-pty.md with all findings
+- All 205 zsh tests pass
+- All 53 TypeScript tests pass
+- CodeRabbit: Rate limited (docs-only audit, no code changes to review)
+- AUDIT-003 COMPLETE - Node-pty architecture fully documented for MP-007
