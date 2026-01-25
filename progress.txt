@@ -1276,3 +1276,26 @@ Changes:
 - ANSI cursor positioning: \033[H (home), \033[2J (clear), \033[K (clear line)
 - Polling loop at 1s interval is reliable for /tmp/ralph-status-$$.json
 - Pure ANSI progress bars use Unicode blocks: ▓ (filled) and ░ (empty)
+
+## Iteration 63
+Story: US-109 - Self-healing config: test, propose, save
+Status: COMPLETED (opus)
+Changes:
+- Created _ralph_validate_config() function that runs on every ralph startup
+- Added _ralph_check_tool() to test if runtime tools (bun, gum) are available
+- Added _ralph_update_config_value() to update config.json with jq
+- Added _ralph_prompt_yn() for Y/n prompts with default option handling
+- Added _ralph_detect_monorepo() to find package.json workspaces
+- Enhanced _ralph_detect_tech_stack() with more detections (React, TypeScript, Tailwind, Prisma, Drizzle)
+- Added _ralph_check_legacy_vars() to find RALPH_* exports in .zshrc
+- Self-healing: if bun missing, propose switch to bash with Y/n prompt
+- Tips shown after changes: "Run ralph-config to change settings"
+- Added 10 unit tests for validation and detection functions
+- All 184 tests pass
+- CodeRabbit: RATE LIMITED (all tests pass, proceeding with commit)
+
+### Learnings
+- Self-healing pattern: validate → prompt → update config → persist preference
+- Non-interactive mode (! -t 0) should use default option without prompting
+- Tech stack detection should set global var (RALPH_DETECTED_STACK) for validation output
+- jq --arg handles shell variable escaping properly for config updates

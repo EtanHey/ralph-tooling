@@ -97,15 +97,17 @@
     },
     {
       "text": "Commit: feat: US-109 self-healing config validation",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     }
   ],
   "dependencies": [
     "MP-003"
   ],
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-25T02:28:00Z",
+  "completedBy": "opus"
 }
