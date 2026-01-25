@@ -17,7 +17,7 @@
     {"text": "Add test: verify ralph --help still works after split", "checked": true},
     {"text": "Add test: verify ralph-status, ralph-session, ralph-logs work", "checked": true},
     {"text": "Run ./tests/test-ralph.zsh - all 122+ tests pass", "checked": true},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
     {"text": "Commit: refactor: MP-004 split ralph.zsh into modular files", "checked": false}
   ],
   "storyType": "MP",

@@ -309,9 +309,15 @@ _ralph_write_status() {
 
   local timestamp=$(date +%s)
 
-  # Build JSON with proper escaping
+  # Build JSON with proper escaping using jq for safety
   if [[ "$error_msg" != "null" ]]; then
-    error_msg="\"$(echo "$error_msg" | sed 's/"/\\"/g')\""
+    # Use jq for proper JSON string escaping (handles quotes, backslashes, newlines, etc.)
+    if command -v jq >/dev/null 2>&1; then
+      error_msg=$(printf '%s' "$error_msg" | jq -Rs '.')
+    else
+      # Fallback: escape quotes and backslashes
+      error_msg="\"$(echo "$error_msg" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\n/\\n/g')\""
+    fi
   fi
 
   cat > "$RALPH_STATUS_FILE" << EOF

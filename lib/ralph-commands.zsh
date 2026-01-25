@@ -125,7 +125,9 @@ ralph-kill-orphans() {
     # fswatch watching prd-json or stories
     local fswatch_pids=$(pgrep -f "fswatch.*prd-json\|fswatch.*stories" 2>/dev/null)
     if [[ -n "$fswatch_pids" ]]; then
-      for pid in $fswatch_pids; do
+      # Use ${(f)...} to split on newlines for safe PID iteration
+      for pid in ${(f)fswatch_pids}; do
+        [[ -z "$pid" ]] && continue
         echo "  Killing untracked fswatch: PID $pid"
         kill "$pid" 2>/dev/null
         ((untracked_count++))
@@ -135,7 +137,9 @@ ralph-kill-orphans() {
     # bun processes in ralph-ui directory
     local bun_pids=$(pgrep -f "bun.*ralph-ui" 2>/dev/null)
     if [[ -n "$bun_pids" ]]; then
-      for pid in $bun_pids; do
+      # Use ${(f)...} to split on newlines for safe PID iteration
+      for pid in ${(f)bun_pids}; do
+        [[ -z "$pid" ]] && continue
         echo "  Killing untracked bun (ralph-ui): PID $pid"
         kill "$pid" 2>/dev/null
         ((untracked_count++))
