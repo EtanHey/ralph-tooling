@@ -362,3 +362,27 @@ Started: Sun Jan 25 05:24:03 IST 2026
   * TypeScript typecheck passes
 - CodeRabbit: N/A (no uncommitted changes - MP-007 already committed)
 - V-021 COMPLETE - node-pty runner integration fully verified
+
+## Iteration 17 - AUDIT-004: Audit current skill loading token usage
+- Model: opus
+- Comprehensive audit of skill token consumption in Claude's context:
+  * === SKILL INVENTORY ===
+  * Total: 38 main skills + 45 workflows = 83 entries
+  * golem-powers: 24 skills (82,512 chars = ~20,628 tokens)
+  * superpowers: 14 skills (92,922 chars = ~23,230 tokens)
+  * Combined if all loaded: 175,434 chars = ~43,858 tokens
+  * === CURRENT SYSTEM (Progressive Disclosure) ===
+  * Descriptions only loaded at session start: ~2,500 tokens
+  * SAVINGS: 94% reduction (~41,358 tokens saved)
+  * === LARGE SKILLS (>1000 tokens) ===
+  * golem-powers: 7 skills (prd, skills, 1password, writing-skills, ralph-install, critique-waves, github)
+  * superpowers: 9 skills (writing-skills, systematic-debugging, TDD, subagent-driven-development, etc.)
+  * === OPTIMIZATION OPPORTUNITIES ===
+  * Verbose descriptions (13 skills >150 chars) - could save ~125 tokens
+  * Example skills (example-bash, example-typescript) - could be lazy-loaded
+  * Duplicate writing-skills (golem-powers + superpowers) - consolidation opportunity
+  * Context-aware loading - filter by detected project type
+- Output: Created docs.local/audit-skill-tokens.md with detailed findings
+- Tests: All 205 zsh tests pass
+- CodeRabbit: Passed (no issues)
+- AUDIT-004 COMPLETE - Skill token audit provides baseline for optimization
