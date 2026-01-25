@@ -45,12 +45,12 @@
     },
     {
       "text": "Commit: test: [STORY-ID] description",
-      "checked": false
+      "checked": true
     }
   ],
   "storyType": "TEST",
   "priority": "high",
   "createdAt": "2026-01-24T01:30:00.000Z",
-  "passes": false,
+  "passes": true,
   "blockedBy": null
 }

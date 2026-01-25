@@ -1194,3 +1194,24 @@ Changes:
 - Story-type-specific rules (debugging for BUG, TDD for V, etc.) provide focused guidance
 - Template variable substitution uses ZSH parameter expansion: ${var//pattern/replacement}
 - Legacy markdown mode preserved in ralph.zsh for projects not yet migrated to JSON mode
+
+## Iteration 59
+Story: TEST-001 - Add context injection tests to commit hooks
+Status: COMPLETED (opus)
+Changes:
+- Added 7 new tests for modular context system validation:
+  - test_context_files_exist: verifies contexts/base.md exists
+  - test_context_base_has_required_sections: checks Scratchpad, AIDEV-NOTE, etc.
+  - test_context_merge_function: verifies _ralph_build_context_file works
+  - test_context_cleanup: verifies _ralph_cleanup_context_file removes temp files
+  - test_context_patterns_valid: validates context-migrate.zsh regex patterns
+  - test_no_old_injection: ensures ${brave_skill} removed from ralph.zsh
+  - test_workflow_ralph_has_git_rules: verifies Ralph Git Rules in workflow/ralph.md
+- Created tests/README.md documenting test coverage
+- Tests run automatically in pre-commit hook via test-ralph.zsh
+- All 156 tests pass
+
+### Learnings
+- Tests are auto-discovered by run_all_tests() scanning for test_* functions
+- Pre-commit hook already runs test-ralph.zsh in section 7
+- Context tests verify both repo files (contexts/) and runtime functions
