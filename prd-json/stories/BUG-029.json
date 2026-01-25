@@ -1,0 +1,16 @@
+{
+  "id": "BUG-029",
+  "title": "update.json merge deletes file but doesn't update index.json",
+  "description": "When Ralph processes update.json, it deletes the file but fails to merge the new stories into index.json. The storyOrder and pending arrays remain unchanged. This caused 13 new stories to be lost.",
+  "priority": "high",
+  "acceptanceCriteria": [
+    {"text": "Investigate TypeScript merge logic in ralph-ui/src/runner/", "checked": false},
+    {"text": "Add test case: update.json with new stories merges into index.json", "checked": false},
+    {"text": "Fix merge logic to add storyOrder and pending from update.json", "checked": false},
+    {"text": "Verify update.json is only deleted AFTER successful merge", "checked": false},
+    {"text": "Run existing update.json tests - must pass", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: fix: BUG-029 update.json merge actually updates index.json", "checked": false}
+  ],
+  "passes": false
+}
