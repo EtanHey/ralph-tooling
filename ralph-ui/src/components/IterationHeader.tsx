@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
 
@@ -23,7 +23,25 @@ function formatElapsed(startTime: number): string {
   return `${seconds}s`;
 }
 
-export function IterationHeader({
+// ElapsedTime component - updates every second independently
+// Memoized to prevent parent re-renders from affecting it
+const ElapsedTime = memo(function ElapsedTime({ startTime }: { startTime: number }) {
+  const [elapsed, setElapsed] = useState(() => formatElapsed(startTime));
+
+  useEffect(() => {
+    // Update elapsed time every second
+    const interval = setInterval(() => {
+      setElapsed(formatElapsed(startTime));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  return <Text dimColor>Elapsed: {elapsed}</Text>;
+});
+
+// Main IterationHeader - memoized to prevent unnecessary re-renders
+// Only re-renders when iteration, model, or isRunning changes
+export const IterationHeader = memo(function IterationHeader({
   iteration,
   model,
   startTime,
@@ -43,8 +61,8 @@ export function IterationHeader({
         <Text color="yellow"> Model: {model}</Text>
       </Box>
       <Box justifyContent="flex-end">
-        <Text dimColor>Elapsed: {formatElapsed(startTime)}</Text>
+        <ElapsedTime startTime={startTime} />
       </Box>
     </Box>
   );
-}
+});

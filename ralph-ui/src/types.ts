@@ -57,7 +57,11 @@ export interface PRDStats {
 
 // Status file written by ralph.zsh at /tmp/ralph-status-$$.json
 export interface RalphStatus {
-  state: 'running' | 'cr_review' | 'error' | 'retry';
+  state: 'running' | 'cr_review' | 'error' | 'retry' | 'complete' | 'interrupted' | 'terminated';
+  iteration: number;
+  storyId: string;
+  model?: string; // Model being used (haiku, sonnet, opus)
+  startTime?: number; // Start time in milliseconds (for elapsed time calculation)
   lastActivity: number; // Unix timestamp in seconds
   error: string | null;
   retryIn: number; // Seconds until retry (0 if not retrying)

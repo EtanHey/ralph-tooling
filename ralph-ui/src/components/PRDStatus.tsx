@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Box, Text } from 'ink';
 import { ProgressBar } from './ProgressBar.js';
 import type { PRDStats } from '../types.js';
@@ -7,7 +7,8 @@ interface PRDStatusProps {
   stats: PRDStats;
 }
 
-export function PRDStatus({ stats }: PRDStatusProps) {
+// Memoized PRDStatus - only re-renders when stats values actually change
+export const PRDStatus = memo(function PRDStatus({ stats }: PRDStatusProps) {
   const {
     totalStories,
     completedStories,
@@ -56,4 +57,4 @@ export function PRDStatus({ stats }: PRDStatusProps) {
       </Box>
     </Box>
   );
-}
+});

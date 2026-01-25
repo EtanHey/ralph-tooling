@@ -175,13 +175,13 @@ export function Dashboard({
         <Text color="cyan">🕐 {currentTime}</Text>
       </Box>
 
-      {/* Iteration Header (shown in iteration/live modes) */}
+      {/* Iteration Header (shown in iteration/live modes) - reads from status file for dynamic values */}
       {(mode === 'iteration' || mode === 'live') && (
         <Box marginBottom={1}>
           <IterationHeader
-            iteration={iteration}
-            model={model}
-            startTime={startTime}
+            iteration={ralphStatus?.iteration ?? iteration}
+            model={ralphStatus?.model ?? model}
+            startTime={ralphStatus?.startTime ?? startTime}
             isRunning={mode === 'iteration'}
           />
         </Box>

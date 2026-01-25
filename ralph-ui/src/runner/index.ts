@@ -96,7 +96,8 @@ function verbose(config: RunnerConfig, message: string): void {
 // Single iteration execution
 export async function runSingleIteration(
   config: RunnerConfig,
-  iteration: number
+  iteration: number,
+  runStartTime?: number
 ): Promise<IterationResult> {
   const startTime = Date.now();
 
@@ -145,8 +146,11 @@ export async function runSingleIteration(
     };
   }
 
-  // Update status
-  setRunning(iteration, story.id);
+  // Update status with model and start time
+  setRunning(iteration, story.id, {
+    model: config.model,
+    startTime: runStartTime ?? startTime,
+  });
 
   // Check if story is blocked
   if (story.blockedBy) {
@@ -243,6 +247,7 @@ export async function* runIterations(
 ): AsyncGenerator<IterationResult> {
   let iteration = 1;
   let retryCount = 0;
+  const runStartTime = Date.now(); // Track start time for the entire run
 
   // Set up signal handlers
   let interrupted = false;
@@ -257,7 +262,7 @@ export async function* runIterations(
     while (iteration <= config.iterations && !interrupted) {
       log(config, `\n=== Iteration ${iteration} ===`);
 
-      const result = await runSingleIteration(config, iteration);
+      const result = await runSingleIteration(config, iteration, runStartTime);
 
       // Yield result to caller
       yield result;

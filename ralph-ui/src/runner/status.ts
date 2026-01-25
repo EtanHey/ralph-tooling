@@ -31,6 +31,8 @@ export function writeStatus(status: Partial<RalphStatus>): void {
     state: status.state ?? current.state ?? "running",
     iteration: status.iteration ?? current.iteration ?? 0,
     storyId: status.storyId ?? current.storyId ?? "",
+    model: status.model ?? current.model,
+    startTime: status.startTime ?? current.startTime,
     lastActivity: Math.floor(Date.now() / 1000),
     error: status.error ?? null,
     retryIn: status.retryIn ?? 0,
@@ -73,11 +75,17 @@ export function touchStatus(): void {
 }
 
 // State transition helpers
-export function setRunning(iteration: number, storyId: string): void {
+export function setRunning(
+  iteration: number,
+  storyId: string,
+  options?: { model?: string; startTime?: number }
+): void {
   writeStatus({
     state: "running",
     iteration,
     storyId,
+    model: options?.model,
+    startTime: options?.startTime,
     error: null,
     retryIn: 0,
   });
