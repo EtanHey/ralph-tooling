@@ -4,3 +4,4 @@ export { NotificationStatus } from './NotificationStatus.js';
 export { PRDStatus } from './PRDStatus.js';
 export { ProgressBar } from './ProgressBar.js';
 export { StoryBox } from './StoryBox.js';
+export { ConfigMenu } from './ConfigMenu.js';

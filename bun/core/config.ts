@@ -13,6 +13,7 @@ export type TaskType = "US" | "V" | "TEST" | "BUG" | "AUDIT" | "MP" | string;
 export type ModelStrategy = "single" | "smart";
 export type Runtime = "bash" | "bun";
 export type NotificationEvent = "iteration_complete" | "story_complete" | "all_complete" | "blocked" | "all_blocked" | "error";
+export type UiMode = "live" | "iteration" | "startup";
 
 // Pricing per million tokens
 export interface ModelPricing {
@@ -26,6 +27,7 @@ export interface RalphConfig {
   schemaVersion?: string;
   lastRalphVersion?: string;
   runtime?: Runtime;
+  uiMode?: UiMode;
   modelStrategy: ModelStrategy;
   defaultModel?: Model;
   unknownTaskType?: Model;
@@ -70,6 +72,7 @@ export interface RalphConfig {
 // Default config values
 export const DEFAULT_CONFIG: Partial<RalphConfig> = {
   runtime: "bun",
+  uiMode: "live",
   modelStrategy: "smart",
   defaultModel: "opus",
   unknownTaskType: "sonnet",
@@ -199,4 +202,23 @@ export function getConfigValue<K extends keyof RalphConfig>(
  */
 export function configExists(configPath?: string): boolean {
   return existsSync(configPath ?? RALPH_CONFIG_FILE);
+}
+
+/**
+ * Save config to config.json
+ * @param config - The config to save
+ * @param configPath - Optional custom config path (defaults to ~/.config/ralphtools/config.json)
+ */
+export function saveConfig(config: Partial<RalphConfig>, configPath?: string): void {
+  const { writeFileSync, mkdirSync } = require("fs");
+  const filePath = configPath ?? RALPH_CONFIG_FILE;
+  const dirPath = join(homedir(), ".config", "ralphtools");
+
+  // Ensure directory exists
+  if (!existsSync(dirPath)) {
+    mkdirSync(dirPath, { recursive: true });
+  }
+
+  // Write config with pretty printing
+  writeFileSync(filePath, JSON.stringify(config, null, 2) + "\n", "utf-8");
 }

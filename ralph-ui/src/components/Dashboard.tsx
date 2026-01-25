@@ -9,6 +9,7 @@ import { CodeRabbitStatus } from './CodeRabbitStatus.js';
 import { ErrorBanner } from './ErrorBanner.js';
 import { RetryCountdown } from './RetryCountdown.js';
 import { HangingWarning } from './HangingWarning.js';
+import { ConfigMenu } from './ConfigMenu.js';
 import { useFileWatch } from '../hooks/useFileWatch.js';
 import { useStatusFile } from '../hooks/useStatusFile.js';
 import type { DashboardProps, PRDStats } from '../types.js';
@@ -33,24 +34,30 @@ function useLiveClock(enabled: boolean): string {
 // AIDEV-NOTE: This component handles keyboard input for the dashboard.
 // It calls onExit() which signals the parent to exit gracefully.
 // The actual process.exit() is handled by the global signal handlers in index.tsx.
-function KeyboardHandler({ onExit }: { onExit: () => void }) {
+// Also handles 'c' key to open config menu.
+function KeyboardHandler({ onExit, onConfig, configActive }: { onExit: () => void; onConfig: () => void; configActive: boolean }) {
   const { isRawModeSupported } = useStdin();
 
   // Use Ink's useInput when raw mode is available
+  // Disabled when config menu is active (ConfigMenu handles its own input)
   useInput((input, key) => {
     if (input === 'q' || (key.ctrl && input === 'c') || key.escape) {
       onExit();
+    } else if (input === 'c') {
+      onConfig();
     }
-  }, { isActive: isRawModeSupported });
+  }, { isActive: isRawModeSupported && !configActive });
 
   // Fallback: direct stdin handler when raw mode not available but TTY is present
   useEffect(() => {
-    if (isRawModeSupported) return; // useInput handles it
+    if (isRawModeSupported || configActive) return; // useInput handles it, or config is active
 
     const stdinHandler = (data: Buffer) => {
       const char = data.toString();
       if (char === 'q' || char === '\x03' || char === '\x1b') { // q, Ctrl+C, Escape
         onExit();
+      } else if (char === 'c') {
+        onConfig();
       }
     };
 
@@ -64,7 +71,7 @@ function KeyboardHandler({ onExit }: { onExit: () => void }) {
         process.stdin.setRawMode?.(false);
       };
     }
-  }, [isRawModeSupported, onExit]);
+  }, [isRawModeSupported, onExit, onConfig, configActive]);
 
   return null;
 }
@@ -82,6 +89,7 @@ export function Dashboard({
   const { isRawModeSupported } = useStdin();
   const { exit } = useApp();
   const [terminalWidth, setTerminalWidth] = useState(stdout?.columns || 80);
+  const [showConfig, setShowConfig] = useState(false);
   const isLiveMode = mode === 'live';
   const isIterationMode = mode === 'iteration';
   const currentTime = useLiveClock(isLiveMode || isIterationMode);
@@ -93,6 +101,15 @@ export function Dashboard({
     }
     exit();
   }, [exit, onExitRequest]);
+
+  // Toggle config menu
+  const handleOpenConfig = useCallback(() => {
+    setShowConfig(true);
+  }, []);
+
+  const handleCloseConfig = useCallback(() => {
+    setShowConfig(false);
+  }, []);
 
   // Auto-exit for startup mode only: render once, then exit immediately
   // Iteration mode should stay open for live updates
@@ -148,7 +165,14 @@ export function Dashboard({
   return (
     <Box flexDirection="column" width={terminalWidth}>
       {/* Keyboard handler - in live or iteration mode (SIGINT works even without raw mode) */}
-      {(isLiveMode || isIterationMode) && <KeyboardHandler onExit={handleExit} />}
+      {(isLiveMode || isIterationMode) && (
+        <KeyboardHandler onExit={handleExit} onConfig={handleOpenConfig} configActive={showConfig} />
+      )}
+
+      {/* Config Menu overlay */}
+      {showConfig && (
+        <ConfigMenu onClose={handleCloseConfig} />
+      )}
 
       {/* Header */}
       <Box marginBottom={1}>
@@ -224,7 +248,7 @@ export function Dashboard({
       <Box marginTop={1}>
         <Text dimColor>
           {(isLiveMode || isIterationMode)
-            ? (isRawModeSupported ? "Press 'q' to quit" : 'Ctrl+C to quit')
+            ? (isRawModeSupported ? "'q' quit • 'c' config" : 'Ctrl+C to quit')
             : `Mode: ${mode}`} • Terminal width: {terminalWidth}
         </Text>
       </Box>

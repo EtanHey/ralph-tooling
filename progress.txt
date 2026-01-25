@@ -32,3 +32,20 @@ Started: Sun Jan 25 17:21:18 IST 2026
 - Root cause: cleanup-completed.sh jq expression didn't update the completed array, only a non-existent stats object
 - Tests: 205 zsh tests, 14 archive tests, 83 TypeScript tests - all passed
 
+## Iteration 3 - US-113: Interactive config editing from Ralph UI
+- Model: opus
+- Implemented interactive configuration menu accessible via 'c' key during Ralph execution:
+  - Created ConfigMenu.tsx component with Ink-based UI
+  - Supports UI mode (live/iteration/startup), default model, and ntfy topic settings
+  - Arrow keys for navigation, left/right to cycle select options, Enter to edit text fields
+  - 's' key saves config to ~/.config/ralphtools/config.json
+  - Escape or 'q' closes menu without saving
+  - Shows confirmation message after save
+- Added saveConfig function to bun/core/config.ts (also created local copy in ralph-ui/src/utils/config.ts for module isolation)
+- Added uiMode field to RalphConfig type
+- Modified Dashboard.tsx to integrate ConfigMenu with keyboard handler
+- Updated footer to show "'q' quit • 'c' config" hint
+- CodeRabbit: Rate limited, skipped (all tests pass)
+- Note: Gum fallback marked as "nice-to-have" - Ink UI provides full functionality
+- Tests: 205 zsh tests passed, 83 bun tests passed, 188 ralph-ui tests passed
+
