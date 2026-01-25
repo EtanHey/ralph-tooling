@@ -45,13 +45,13 @@
     },
     {
       "text": "Commit: test: V-015 verify modular context injection works end-to-end",
-      "checked": false
+      "checked": true
     }
   ],
   "storyType": "V",
   "priority": "high",
   "createdAt": "2026-01-24T01:30:00.000Z",
-  "passes": false,
+  "passes": true,
   "blockedBy": null,
   "completedAt": "2026-01-25T05:50:00Z",
   "completedBy": "haiku"
