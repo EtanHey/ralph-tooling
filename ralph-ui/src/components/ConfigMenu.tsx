@@ -47,15 +47,25 @@ interface ConfigMenuProps {
   onSave?: () => void;
 }
 
-export function ConfigMenu({ onClose, onSave }: ConfigMenuProps) {
-  const { isRawModeSupported } = useStdin();
-  const [config, setConfig] = useState<RalphConfig>(() => loadConfig());
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [editMode, setEditMode] = useState(false);
-  const [editValue, setEditValue] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
+// AIDEV-NOTE: Ink's useInput hook throws errors in non-TTY contexts.
+// ConfigMenu's input handling is split into a hook-based and effect-based approach.
 
-  // Handle keyboard input
+// Hook for raw mode keyboard handling - must be called at component level
+function useRawModeInput(
+  isActive: boolean,
+  config: RalphConfig,
+  setConfig: (c: RalphConfig) => void,
+  selectedIndex: number,
+  setSelectedIndex: (i: number | ((prev: number) => number)) => void,
+  editMode: boolean,
+  setEditMode: (b: boolean) => void,
+  editValue: string,
+  setEditValue: (s: string | ((prev: string) => string)) => void,
+  message: string | null,
+  setMessage: (m: string | null) => void,
+  onClose: () => void,
+  onSave?: () => void,
+) {
   useInput((input, key) => {
     // Clear any message on next input
     if (message) setMessage(null);
@@ -121,12 +131,44 @@ export function ConfigMenu({ onClose, onSave }: ConfigMenuProps) {
         setMessage(`Error saving config: ${error}`);
       }
     }
-  }, { isActive: isRawModeSupported });
+  }, { isActive });
+}
 
-  // Fallback for non-raw mode
+// Inner component for raw mode - renders when isRawModeSupported is true
+function ConfigMenuWithRawMode({ onClose, onSave }: ConfigMenuProps) {
+  const [config, setConfig] = useState<RalphConfig>(() => loadConfig());
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [editMode, setEditMode] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+
+  useRawModeInput(
+    true, config, setConfig, selectedIndex, setSelectedIndex,
+    editMode, setEditMode, editValue, setEditValue, message, setMessage,
+    onClose, onSave
+  );
+
+  return (
+    <ConfigMenuUI
+      config={config}
+      selectedIndex={selectedIndex}
+      editMode={editMode}
+      editValue={editValue}
+      message={message}
+    />
+  );
+}
+
+// Inner component for fallback mode - renders when isRawModeSupported is false
+function ConfigMenuWithFallback({ onClose, onSave }: ConfigMenuProps) {
+  const [config, setConfig] = useState<RalphConfig>(() => loadConfig());
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [editMode, setEditMode] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+
+  // Fallback for non-raw mode - limited functionality (just close on q/Esc)
   useEffect(() => {
-    if (isRawModeSupported) return;
-
     const handler = (data: Buffer) => {
       const char = data.toString();
       if (char === 'q' || char === '\x1b') {
@@ -144,8 +186,33 @@ export function ConfigMenu({ onClose, onSave }: ConfigMenuProps) {
         process.stdin.setRawMode?.(false);
       };
     }
-  }, [isRawModeSupported, onClose]);
+  }, [onClose]);
 
+  return (
+    <ConfigMenuUI
+      config={config}
+      selectedIndex={selectedIndex}
+      editMode={editMode}
+      editValue={editValue}
+      message={message}
+    />
+  );
+}
+
+// Shared UI rendering component
+function ConfigMenuUI({
+  config,
+  selectedIndex,
+  editMode,
+  editValue,
+  message,
+}: {
+  config: RalphConfig;
+  selectedIndex: number;
+  editMode: boolean;
+  editValue: string;
+  message: string | null;
+}) {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={2} paddingY={1}>
       <Box marginBottom={1}>
@@ -198,4 +265,15 @@ export function ConfigMenu({ onClose, onSave }: ConfigMenuProps) {
       </Box>
     </Box>
   );
+}
+
+export function ConfigMenu({ onClose, onSave }: ConfigMenuProps) {
+  const { isRawModeSupported } = useStdin();
+
+  // Conditionally render based on raw mode support to avoid Ink errors
+  if (isRawModeSupported) {
+    return <ConfigMenuWithRawMode onClose={onClose} onSave={onSave} />;
+  }
+
+  return <ConfigMenuWithFallback onClose={onClose} onSave={onSave} />;
 }

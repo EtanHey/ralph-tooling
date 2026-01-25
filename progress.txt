@@ -350,3 +350,22 @@ Started: Sun Jan 25 20:00:00 IST 2026
 - Learning: 1Password Environments is the preferred method for local development secrets because
   secrets never touch disk (named pipe), but CLI (op run/inject) is still needed for CI/CD pipelines
   where environments cannot be created programmatically.
+
+## Iteration 19 - BUG-030: Ralph UI keyboard shortcuts not working
+- Model: opus
+- Root cause: Ink's `useInput` hook throws "Raw mode is not supported" error when called in non-TTY
+  contexts (like when spawned by another process), even when `isActive: false` is set. The hook
+  still tries to set up raw mode internally.
+- Fix: Refactored keyboard handling to use conditional rendering:
+  - Split `KeyboardHandler` into `RawModeKeyboardHandler` (uses `useInput`) and `FallbackKeyboardHandler`
+    (uses manual stdin handling via `useEffect`)
+  - Parent `KeyboardHandler` checks `isRawModeSupported` and renders the appropriate child
+  - This ensures `useInput` is never called when raw mode is not available
+  - Applied same pattern to `ConfigMenu` component
+- Files modified:
+  - ralph-ui/src/components/Dashboard.tsx: Split keyboard handler into conditional components
+  - ralph-ui/src/components/ConfigMenu.tsx: Same pattern - conditional component rendering
+- CodeRabbit: Passed
+- Tests: 191 TypeScript tests pass
+- Learning: Ink's `useInput` hook throws even with `isActive: false` in non-TTY contexts.
+  The solution is to never render components that call `useInput` when `isRawModeSupported` is false.

@@ -30,15 +30,12 @@ function useLiveClock(enabled: boolean): string {
   return time;
 }
 
-// Wrapper component that conditionally uses input (only for live mode)
-// AIDEV-NOTE: This component handles keyboard input for the dashboard.
-// It calls onExit() which signals the parent to exit gracefully.
-// The actual process.exit() is handled by the global signal handlers in index.tsx.
-// Also handles 'c' key to open config menu.
-function KeyboardHandler({ onExit, onConfig, configActive }: { onExit: () => void; onConfig: () => void; configActive: boolean }) {
-  const { isRawModeSupported } = useStdin();
+// AIDEV-NOTE: Ink's useInput hook throws an error when called in non-TTY contexts
+// (even with isActive: false). We must conditionally render the component that uses it.
+// This is split into two components: one that uses useInput (for TTY), one that doesn't.
 
-  // Use Ink's useInput when raw mode is available
+// Component that uses Ink's useInput - only rendered when raw mode IS supported
+function RawModeKeyboardHandler({ onExit, onConfig, configActive }: { onExit: () => void; onConfig: () => void; configActive: boolean }) {
   // Disabled when config menu is active (ConfigMenu handles its own input)
   useInput((input, key) => {
     if (input === 'q' || (key.ctrl && input === 'c') || key.escape) {
@@ -46,11 +43,15 @@ function KeyboardHandler({ onExit, onConfig, configActive }: { onExit: () => voi
     } else if (input === 'c') {
       onConfig();
     }
-  }, { isActive: isRawModeSupported && !configActive });
+  }, { isActive: !configActive });
 
-  // Fallback: direct stdin handler when raw mode not available but TTY is present
+  return null;
+}
+
+// Component that uses manual stdin handling - only rendered when raw mode is NOT supported
+function FallbackKeyboardHandler({ onExit, onConfig, configActive }: { onExit: () => void; onConfig: () => void; configActive: boolean }) {
   useEffect(() => {
-    if (isRawModeSupported || configActive) return; // useInput handles it, or config is active
+    if (configActive) return; // Config menu handles its own input
 
     const stdinHandler = (data: Buffer) => {
       const char = data.toString();
@@ -71,9 +72,25 @@ function KeyboardHandler({ onExit, onConfig, configActive }: { onExit: () => voi
         process.stdin.setRawMode?.(false);
       };
     }
-  }, [isRawModeSupported, onExit, onConfig, configActive]);
+  }, [onExit, onConfig, configActive]);
 
   return null;
+}
+
+// Wrapper component that conditionally renders the appropriate keyboard handler
+// AIDEV-NOTE: This component handles keyboard input for the dashboard.
+// It calls onExit() which signals the parent to exit gracefully.
+// The actual process.exit() is handled by the global signal handlers in index.tsx.
+// Also handles 'c' key to open config menu.
+function KeyboardHandler({ onExit, onConfig, configActive }: { onExit: () => void; onConfig: () => void; configActive: boolean }) {
+  const { isRawModeSupported } = useStdin();
+
+  // Conditionally render based on raw mode support to avoid Ink errors
+  if (isRawModeSupported) {
+    return <RawModeKeyboardHandler onExit={onExit} onConfig={onConfig} configActive={configActive} />;
+  }
+
+  return <FallbackKeyboardHandler onExit={onExit} onConfig={onConfig} configActive={configActive} />;
 }
 
 export function Dashboard({
