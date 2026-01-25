@@ -1,5 +1,29 @@
 # Ralph Tooling
 
+## File Tree
+
+```
+claude-golem/
+├── ralph.zsh              # Main entry point - sources lib/*.zsh
+├── lib/                   # Modular library (see lib/README.md)
+│   ├── ralph-commands.zsh # Helper commands (ralph-session, jqf)
+│   ├── ralph-models.zsh   # Model routing, costs, ntfy
+│   ├── ralph-registry.zsh # repoGolem launchers
+│   ├── ralph-secrets.zsh  # 1Password integration
+│   ├── ralph-setup.zsh    # Setup wizard
+│   ├── ralph-ui.zsh       # Colors, progress bars
+│   ├── ralph-watcher.zsh  # PID tracking, orphan detection
+│   └── ralph-worktrees.zsh # Git worktree isolation
+├── bun/                   # TypeScript core (Ink UI, story management)
+├── contexts/              # Shared CLAUDE.md contexts
+├── skills/golem-powers/   # Skills for Claude
+├── tests/                 # Test suite
+├── prd-json/              # PRD stories (index.json + stories/)
+└── docs.local/            # Local docs, learnings (gitignored)
+```
+
+---
+
 ## 🚨 CRITICAL: Always Commit & Push Changes
 
 **After ANY edit to files in this repo:**
