@@ -16,7 +16,9 @@
     {"text": "Create docs/architecture-map.md with ASCII/mermaid visual of the system", "checked": true},
     {"text": "Add golem-system to recommended contexts for both golem and zikaron", "checked": true},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: docs: MP-127 golem system documentation and architecture", "checked": false}
+    {"text": "Commit: docs: MP-127 golem system documentation and architecture", "checked": true}
   ],
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-25T20:18:00Z",
+  "completedBy": "opus"
 }

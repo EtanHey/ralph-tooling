@@ -293,3 +293,33 @@ Started: Sun Jan 25 20:00:00 IST 2026
 - CodeRabbit: Rate limited, skipped (205 zsh tests, 274 TypeScript tests all pass)
 - Tests: All tests pass
 - Learning: An AI-friendly README section makes onboarding faster for both AIs and humans.
+
+## Iteration 17 - MP-127: Deep exploration & documentation of golem system
+- Model: opus
+- Completed the documentation creation for the golem system:
+  - Created contexts/golem-system.md explaining golem + zikaron philosophy
+    - Documents core principles: death/rebirth, single source of truth, incremental progress
+    - Explains Zikaron memory system and learning workflow
+    - Details story types and model routing
+    - Includes PRD system lifecycle diagrams
+    - Covers key design decisions and anti-patterns
+  - Created docs/architecture.md with detailed component documentation
+    - Full directory structure breakdown
+    - Component details for ralph.zsh, lib/*.zsh, bun/core/, skills
+    - Data flow diagrams for iteration lifecycle and story state machine
+    - Configuration schema documentation
+    - Extension points for adding skills, contexts, models, story types
+  - Created docs/architecture-map.md with ASCII visual diagrams
+    - System overview showing all layers
+    - Iteration flow diagram
+    - Story state flow
+    - Model routing decision tree
+    - Context system architecture
+    - Skills invocation architecture
+    - Cost tracking flow
+  - Updated contexts/README.md to add golem-system to available contexts table
+  - Added golem-system to golem project contexts in registry.json
+- CodeRabbit: Rate limited, skipped (205 zsh tests, 17 skills tests, 83 TypeScript tests all pass)
+- Tests: All tests pass
+- Learning: The golem-system context provides comprehensive documentation of the system
+  philosophy and architecture, helping new contributors understand the "why" behind design decisions.
