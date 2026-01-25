@@ -179,15 +179,17 @@ RALPH_CONFIG_FILE="${RALPH_CONFIG_DIR}/config.json"
 RALPH_LIB_DIR="${0:A:h}/lib"
 if [[ -d "$RALPH_LIB_DIR" ]]; then
   # Source modules in dependency order
+  # Base modules (UI, watcher, commands) - always sourced first
   [[ -f "$RALPH_LIB_DIR/ralph-ui.zsh" ]] && source "$RALPH_LIB_DIR/ralph-ui.zsh"
   [[ -f "$RALPH_LIB_DIR/ralph-watcher.zsh" ]] && source "$RALPH_LIB_DIR/ralph-watcher.zsh"
   [[ -f "$RALPH_LIB_DIR/ralph-commands.zsh" ]] && source "$RALPH_LIB_DIR/ralph-commands.zsh"
-  # Note: Additional modules will be added as extraction continues
-  # [[ -f "$RALPH_LIB_DIR/ralph-models.zsh" ]] && source "$RALPH_LIB_DIR/ralph-models.zsh"
-  # [[ -f "$RALPH_LIB_DIR/ralph-registry.zsh" ]] && source "$RALPH_LIB_DIR/ralph-registry.zsh"
-  # [[ -f "$RALPH_LIB_DIR/ralph-worktrees.zsh" ]] && source "$RALPH_LIB_DIR/ralph-worktrees.zsh"
-  # [[ -f "$RALPH_LIB_DIR/ralph-secrets.zsh" ]] && source "$RALPH_LIB_DIR/ralph-secrets.zsh"
-  # [[ -f "$RALPH_LIB_DIR/ralph-setup.zsh" ]] && source "$RALPH_LIB_DIR/ralph-setup.zsh"
+  # Extended modules (models, registry, worktrees, secrets)
+  [[ -f "$RALPH_LIB_DIR/ralph-models.zsh" ]] && source "$RALPH_LIB_DIR/ralph-models.zsh"
+  [[ -f "$RALPH_LIB_DIR/ralph-registry.zsh" ]] && source "$RALPH_LIB_DIR/ralph-registry.zsh"
+  [[ -f "$RALPH_LIB_DIR/ralph-worktrees.zsh" ]] && source "$RALPH_LIB_DIR/ralph-worktrees.zsh"
+  [[ -f "$RALPH_LIB_DIR/ralph-secrets.zsh" ]] && source "$RALPH_LIB_DIR/ralph-secrets.zsh"
+  # Setup module (depends on registry, secrets, UI)
+  [[ -f "$RALPH_LIB_DIR/ralph-setup.zsh" ]] && source "$RALPH_LIB_DIR/ralph-setup.zsh"
 fi
 # ═══════════════════════════════════════════════════════════════════
 

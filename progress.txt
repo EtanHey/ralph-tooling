@@ -1147,3 +1147,26 @@ Changes:
 - Claude CLI --print mode outputs to stdout (pipeable), interactive mode writes to TTY
 - script(1) requires a real terminal and fails in headless/Claude Code environment
 - wc -l and wc -c on macOS add leading spaces, use `tr -d ' '` to clean
+
+## Iteration 57
+Story: MP-004 - Split ralph.zsh into modular files
+Status: COMPLETED (opus)
+Changes:
+- Created lib/ directory with 8 modular ZSH files:
+  - ralph-ui.zsh: colors, progress bars, box drawing
+  - ralph-watcher.zsh: orphan tracking, file watching
+  - ralph-commands.zsh: helper commands (ralph-help, ralph-logs, etc.)
+  - ralph-models.zsh: model routing, cost tracking, ntfy notifications
+  - ralph-registry.zsh: registry management, project config, launchers
+  - ralph-worktrees.zsh: ralph-start, ralph-cleanup, ralph-archive
+  - ralph-secrets.zsh: ralph-secrets, MCP setup, 1Password integration
+  - ralph-setup.zsh: interactive setup wizard
+- Updated ralph.zsh to source all modules in dependency order
+- All 141 ZSH tests + 83 Bun tests pass
+- CodeRabbit: 4 issues flagged are pre-existing (security flags, ntfy topic, branch deletion, secret CLI args)
+- These are not new issues introduced by the refactor, they are existing code moved to modules
+
+### Learnings
+- Modular files should be sourced in dependency order (UI first, then others that depend on it)
+- CodeRabbit reviews new files but can't distinguish between new code and moved code
+- Pre-existing issues should be tracked as separate BUG stories, not fixed during refactors
