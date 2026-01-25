@@ -255,7 +255,7 @@ function repoGolem() {
 
   # Create Claude function
   eval "function ${lowercase_name}Claude() {
-    cd \"$path\" && claude
+    cd \"$path\" && claude \"\$@\"
   }"
 }
 

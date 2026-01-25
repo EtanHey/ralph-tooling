@@ -12,6 +12,7 @@
     {"text": "ralph-ui - display-only mode works", "checked": false},
     {"text": "ralph --help - shows all flags", "checked": false},
     {"text": "Ctrl+C stops cleanly mid-iteration", "checked": false},
+    {"text": "repoGolem launchers pass args (golemClaude -c works)", "checked": false},
     {"text": "=== FEATURE PARITY ===", "checked": false},
     {"text": "Notifications (--notify) work", "checked": false},
     {"text": "Model routing (opus/sonnet/haiku) works", "checked": false},
