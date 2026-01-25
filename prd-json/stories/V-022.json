@@ -1,0 +1,26 @@
+{
+  "id": "V-022",
+  "title": "Verify progressive skill disclosure reduces context",
+  "description": "Measure token savings after implementing progressive disclosure. Target: 40%+ reduction in skill-related context tokens (research showed 46.9% reduction with similar techniques).",
+  "acceptanceCriteria": [
+    {"text": "=== MEASURE NEW BASELINE ===", "checked": false},
+    {"text": "Count tokens in skill-descriptions.md", "checked": false},
+    {"text": "Compare to AUDIT-004 baseline (full skills loaded)", "checked": false},
+    {"text": "Calculate percentage reduction", "checked": false},
+    {"text": "=== VERIFY DISCOVERY WORKS ===", "checked": false},
+    {"text": "Start fresh Claude session", "checked": false},
+    {"text": "Ask: 'What skills are available?' - should list names", "checked": false},
+    {"text": "Ask: 'I need to review code' - should invoke /coderabbit", "checked": false},
+    {"text": "Ask: 'Help with Convex' - should invoke /convex", "checked": false},
+    {"text": "=== VERIFY ON-DEMAND LOADING ===", "checked": false},
+    {"text": "Confirm full SKILL.md only loads when Skill tool invoked", "checked": false},
+    {"text": "Confirm skill content not in context before invocation", "checked": false},
+    {"text": "=== DOCUMENT RESULTS ===", "checked": false},
+    {"text": "Update docs.local/audit-skill-tokens.md with after metrics", "checked": false},
+    {"text": "Note: before tokens, after tokens, % reduction", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: test: V-022 verify progressive skill disclosure", "checked": false}
+  ],
+  "dependencies": ["US-115"],
+  "passes": false
+}
