@@ -22,8 +22,10 @@
     {"text": "Mock Claude responses for predictable testing", "checked": true},
     {"text": "All tests pass: ./tests/integration/run.sh", "checked": true},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: test: TEST-004 integration tests for existing ralph", "checked": false}
+    {"text": "Commit: test: TEST-004 integration tests for existing ralph", "checked": true}
   ],
   "dependencies": ["AUDIT-002"],
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-25T04:25:00Z",
+  "completedBy": "opus"
 }

@@ -91,3 +91,27 @@ Started: Sun Jan 25 05:24:03 IST 2026
 - CodeRabbit: Passed (no issues found)
 - All 205 tests pass
 - AUDIT-002 COMPLETE - Ralph.zsh TypeScript migration audit complete
+
+## Iteration 6 - TEST-004: Integration tests for existing ralph behavior
+- Model: opus
+- Created integration test suite for characterizing ralph.zsh behavior before MP-006 migration:
+  - Created tests/integration/ directory structure
+  - Created tests/integration/run.sh with 13 characterization tests:
+    - ralph --version shows version (using actual --version flag, not --help)
+    - ralph reads prd-json/index.json correctly
+    - ralph processes update.json and adds stories
+    - ralph updates story criteria when checked
+    - ralph moves completed story to completed array
+    - ralph respects RALPH_SLEEP_SECONDS env var
+    - ralph writes status file during run
+    - status file contains state, lastActivity, pid
+    - status file captures error state correctly
+    - status file is cleaned up properly
+    - update.json adds multiple stories at once
+    - update.json sets nextStory to first pending
+    - ntfy topic format is correct
+  - Created tests/integration/mock-claude.sh for simulating Claude responses
+  - All 13 integration tests pass
+  - All 205 existing tests pass
+- CodeRabbit: Passed (fixed ntfy test to have meaningful assertions)
+- TEST-004 COMPLETE - Integration tests ready to catch regressions during MP-006 migration
