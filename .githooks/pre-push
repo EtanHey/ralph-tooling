@@ -35,8 +35,8 @@ cat > "$TEST_SCRIPT" << 'TESTEOF'
 #!/usr/bin/env zsh
 # Temporarily override functions to prevent execution
 ralph() { :; }
-ralph-init() { :; }
 ralph-status() { :; }
+ralph-setup() { :; }
 ralph-archive() { :; }
 
 # Source the file - this will parse all functions
@@ -66,13 +66,21 @@ echo ""
 echo "${YELLOW}[2/4] Function Completeness${NC}"
 
 # Check that all expected functions are defined
-EXPECTED_FUNCTIONS=("ralph" "ralph-init" "ralph-status" "ralph-archive")
+# Note: Functions are now split across ralph.zsh and lib/*.zsh modules
+EXPECTED_FUNCTIONS=(
+  "ralph:ralph.zsh"           # Main entry point
+  "ralph-status:ralph.zsh"    # Status display
+  "ralph-setup:lib/ralph-setup.zsh"     # Setup wizard (was ralph-init)
+  "ralph-archive:lib/ralph-worktrees.zsh"  # Archive subcommand
+)
 
-for func in "${EXPECTED_FUNCTIONS[@]}"; do
-  if grep -qE "^function $func\(\)|^$func\(\)" ralph.zsh 2>/dev/null; then
-    echo "  ${GREEN}✓${NC} Function '$func' is defined"
+for entry in "${EXPECTED_FUNCTIONS[@]}"; do
+  func="${entry%%:*}"
+  file="${entry##*:}"
+  if grep -qE "^function $func\(\)|^$func\(\)" "$file" 2>/dev/null; then
+    echo "  ${GREEN}✓${NC} Function '$func' is defined in $file"
   else
-    echo "  ${RED}✗${NC} Function '$func' is MISSING"
+    echo "  ${RED}✗${NC} Function '$func' is MISSING from $file"
     ERRORS=$((ERRORS + 1))
   fi
 done
@@ -99,8 +107,9 @@ else
 fi
 
 # Check 2: Ensure all while loops have proper exit conditions
-WHILE_COUNT=$(grep -c 'while \[\[' ralph.zsh 2>/dev/null || echo 0)
-BREAK_COUNT=$(grep -c '\bbreak\b' ralph.zsh 2>/dev/null || echo 0)
+# Note: grep -c returns 0 output with exit code 1 when no matches, so we capture and default
+WHILE_COUNT=$(grep -c 'while \[\[' ralph.zsh 2>/dev/null) || WHILE_COUNT=0
+BREAK_COUNT=$(grep -c '\bbreak\b' ralph.zsh 2>/dev/null) || BREAK_COUNT=0
 
 if [[ $WHILE_COUNT -gt 0 && $BREAK_COUNT -eq 0 ]]; then
   echo "  ${YELLOW}⚠${NC} Found $WHILE_COUNT while loops but no break statements"

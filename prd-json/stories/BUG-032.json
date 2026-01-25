@@ -6,11 +6,11 @@
   "status": "pending",
   "description": "Pre-push hook has multiple issues: 'bad math expression: operator expected at 0' error on line 105, and checks for missing functions (ralph-init, ralph-archive) that were removed/renamed in MP-006.",
   "acceptanceCriteria": [
-    {"text": "Fix 'bad math expression' error in .githooks/pre-push:105", "checked": false},
-    {"text": "Update function completeness check - remove ralph-init (now ralph-setup)", "checked": false},
-    {"text": "Update function completeness check - remove ralph-archive (now archive subcommand)", "checked": false},
-    {"text": "Verify pre-push hook runs without errors", "checked": false},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Fix 'bad math expression' error in .githooks/pre-push:105", "checked": true},
+    {"text": "Update function completeness check - remove ralph-init (now ralph-setup)", "checked": true},
+    {"text": "Update function completeness check - remove ralph-archive (now archive subcommand)", "checked": true},
+    {"text": "Verify pre-push hook runs without errors", "checked": true},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
     {"text": "Commit: fix: BUG-032 fix pre-push hook errors", "checked": false}
   ],
   "dependencies": [],
