@@ -5219,6 +5219,8 @@ At the START of any iteration that needs browser verification:
 
       # Execute with stderr going to separate file, stdout to RALPH_TMP (via tee or cat)
       # The { cmd 2>file; } pattern ensures stderr is captured to file before any redirects
+      # BUG-025: Suppress xtrace during execution to prevent $context_content leaking to terminal
+      setopt localoptions noxtrace
       { NODE_OPTIONS="--unhandled-rejections=strict" "${cli_cmd_arr[@]}" ${prompt_flag:+$prompt_flag} "${ralph_prompt}
 
 ## Dev Server Rules (CRITICAL)

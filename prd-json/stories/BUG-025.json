@@ -7,12 +7,14 @@
   "storyPoints": 1,
   "status": "pending",
   "acceptanceCriteria": [
-    {"text": "Find where context_content is being echoed/printed", "checked": false},
-    {"text": "Add setopt noxtrace to context building section if needed", "checked": false},
-    {"text": "Verify context is passed silently to Claude CLI", "checked": false},
-    {"text": "Test: ralph iteration shows no context_content= output", "checked": false},
-    {"text": "Commit: fix: BUG-025 suppress context debug output", "checked": false}
+    {"text": "Find where context_content is being echoed/printed", "checked": true},
+    {"text": "Add setopt noxtrace to context building section if needed", "checked": true},
+    {"text": "Verify context is passed silently to Claude CLI", "checked": true},
+    {"text": "Test: ralph iteration shows no context_content= output", "checked": true},
+    {"text": "Commit: fix: BUG-025 suppress context debug output", "checked": true}
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-25T03:30:00Z",
+  "completedBy": "opus"
 }
