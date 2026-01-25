@@ -106,6 +106,7 @@ ralph 20                         # Execute 20 iterations
 | `ralph-costs` | Show cost tracking summary |
 | `ralph-start` | Create worktree for isolated Ralph session |
 | `ralph-cleanup` | Merge changes and remove worktree |
+| `fsteps` / `fs` | View and process farther-steps queue |
 
 ### ralph-start Flags
 
@@ -145,6 +146,61 @@ Create a `.worktree-sync.json` in your repo root to configure custom worktree sy
 - **files**: Additional files/directories to copy to worktree
 - **symlinks**: Files/directories to symlink instead of copy
 - **commands**: Post-setup commands to run in the worktree
+
+---
+
+## Farther-Steps (Deferred Actions Queue)
+
+Ralph uses a **farther-steps** system to track deferred actions that need human review before applying. Unlike learnings (which are knowledge), farther-steps are **actionable items** with source, target, and status.
+
+### When It's Used
+
+During autonomous execution, Ralph may identify:
+- Config changes that need review before applying
+- File syncs between repo and global locations (`~/.claude/`)
+- Quality improvements discovered but not in current scope
+- Cross-project learnings that should also be global
+
+Instead of acting immediately, Ralph queues these to `~/.claude/farther-steps.json`.
+
+### Queue Format
+
+```json
+{
+  "steps": [{
+    "id": "step-001",
+    "type": "sync",
+    "source": "~/Gits/claude-golem/contexts/tech/ink.md",
+    "target": "~/.claude/contexts/tech/ink.md",
+    "reason": "Ink stdin keyboard handling - critical for CLI projects",
+    "story": "BUG-030",
+    "criteria": "Save learning about Ink stdin",
+    "status": "pending",
+    "priority": "high"
+  }]
+}
+```
+
+### CLI Commands
+
+```bash
+fsteps              # List all steps (alias: fs)
+fsteps pending      # Show pending with details
+fsteps apply ID     # Apply a sync step and mark done
+fsteps done ID      # Mark as done (without applying)
+fsteps skip ID      # Mark as skipped
+fsteps clean        # Remove done/skipped steps
+fsteps stats        # Show statistics
+```
+
+### Human Review Workflow
+
+1. Ralph adds entries during execution
+2. Human runs `fsteps pending` to review queue
+3. For each step, decide: `apply`, `done`, or `skip`
+4. `fsteps clean` removes processed entries
+
+This keeps Ralph autonomous while ensuring humans review sensitive operations.
 
 ---
 

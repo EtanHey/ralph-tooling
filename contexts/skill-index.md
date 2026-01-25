@@ -1,6 +1,6 @@
 # Available Skills
 
-> Auto-generated: 2026-01-25T20:50:40Z
+> Auto-generated: 2026-01-25T22:27:05Z
 > Regenerate: ~/.claude/scripts/generate-skill-index.sh
 
 ## Skills
@@ -13,6 +13,7 @@
 - /golem-powers:catchup-recent
 - /golem-powers:catchup
 - /golem-powers:coderabbit
+- /golem-powers:commit
 - /golem-powers:context-audit
 - /golem-powers:context7
 - /golem-powers:convex
