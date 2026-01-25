@@ -292,6 +292,28 @@ export function applyUpdateQueue(prdJsonDir: string): { applied: boolean; change
       }
     }
 
+    // BUG-029 fix: Process direct override format (storyOrder and pending arrays)
+    // This supports the format used by the /prd skill when adding stories to an existing PRD
+    if (queue.storyOrder && Array.isArray(queue.storyOrder)) {
+      // Merge new story IDs into storyOrder (preserve existing, add new ones not already present)
+      for (const storyId of queue.storyOrder) {
+        if (!index.storyOrder.includes(storyId)) {
+          index.storyOrder.push(storyId);
+          changes.push(`Added to storyOrder: ${storyId}`);
+        }
+      }
+    }
+
+    if (queue.pending && Array.isArray(queue.pending)) {
+      // Merge new story IDs into pending (preserve existing, add new ones not already present)
+      for (const storyId of queue.pending) {
+        if (!index.pending.includes(storyId)) {
+          index.pending.push(storyId);
+          changes.push(`Added to pending: ${storyId}`);
+        }
+      }
+    }
+
     // Update nextStory
     index.nextStory = index.pending.length > 0 ? index.pending[0] : undefined;
 

@@ -113,11 +113,16 @@ export interface PRDIndex {
 }
 
 export interface UpdateQueue {
+  // Standard queue operations
   newStories?: Story[];
   updateStories?: Partial<Story>[];
   moveToPending?: string[];
   moveToBlocked?: [string, string][];
   removeStories?: string[];
+  // Direct override format (BUG-029 fix)
+  // These allow update.json to directly specify new values for index arrays
+  storyOrder?: string[];
+  pending?: string[];
 }
 
 // Constants

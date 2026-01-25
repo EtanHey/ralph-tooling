@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, unlinkSync } from "fs";
 import { join } from "path";
+import { applyUpdateQueue } from "../src/runner/prd";
 
 // Types
 interface AcceptanceCriterion {
@@ -450,5 +451,120 @@ describe("Criteria Progress", () => {
     const hasPartialProgress = checked > 0 && checked < total && !story.passes;
 
     expect(hasPartialProgress).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// BUG-029: Direct override format in update.json
+// ═══════════════════════════════════════════════════════════════════
+
+describe("BUG-029: Direct Override Format", () => {
+  beforeEach(setupTestPRD);
+  afterEach(cleanupTestPRD);
+
+  it("should merge storyOrder and pending from update.json direct override format", () => {
+    // Setup: Create initial index with completed stories
+    const indexPath = join(PRD_JSON_DIR, "index.json");
+    const initialIndex = {
+      storyOrder: ["BUG-013", "US-115"],
+      pending: [],
+      blocked: [],
+      completed: ["BUG-013", "US-115"],
+      nextStory: undefined,
+    };
+    writeFileSync(indexPath, JSON.stringify(initialIndex, null, 2));
+
+    // Create new story files
+    const newStories = [
+      { id: "US-116", title: "New Story 1", acceptanceCriteria: [{ text: "Test", checked: false }] },
+      { id: "US-117", title: "New Story 2", acceptanceCriteria: [{ text: "Test", checked: false }] },
+    ];
+    for (const story of newStories) {
+      writeFileSync(join(STORIES_DIR, `${story.id}.json`), JSON.stringify(story, null, 2));
+    }
+
+    // Create update.json with DIRECT override format (the bug case)
+    // This is the format the /prd skill was using that caused the bug
+    const updateQueue = {
+      storyOrder: ["BUG-013", "US-115", "US-116", "US-117"],
+      pending: ["US-116", "US-117"],
+    };
+    writeFileSync(join(PRD_JSON_DIR, "update.json"), JSON.stringify(updateQueue, null, 2));
+
+    // Apply update queue
+    const result = applyUpdateQueue(PRD_JSON_DIR);
+
+    // Verify the merge happened
+    expect(result.applied).toBe(true);
+    expect(result.changes.length).toBeGreaterThan(0);
+
+    // Verify index was updated correctly
+    const updatedIndex = JSON.parse(readFileSync(indexPath, "utf-8"));
+    expect(updatedIndex.storyOrder).toContain("US-116");
+    expect(updatedIndex.storyOrder).toContain("US-117");
+    expect(updatedIndex.pending).toContain("US-116");
+    expect(updatedIndex.pending).toContain("US-117");
+    expect(updatedIndex.nextStory).toBe("US-116");
+
+    // Verify update.json was deleted
+    expect(existsSync(join(PRD_JSON_DIR, "update.json"))).toBe(false);
+  });
+
+  it("should preserve existing index fields when merging direct overrides", () => {
+    // Setup: Create initial index with existing data
+    const indexPath = join(PRD_JSON_DIR, "index.json");
+    const initialIndex = {
+      "$schema": "https://ralph.dev/schemas/prd-index.schema.json",
+      generatedAt: "2026-01-25T10:00:00Z",
+      storyOrder: ["BUG-013"],
+      pending: [],
+      blocked: ["BUG-001"],
+      completed: ["BUG-013"],
+      nextStory: undefined,
+      stats: { total: 2, completed: 1, pending: 0, blocked: 1 },
+    };
+    writeFileSync(indexPath, JSON.stringify(initialIndex, null, 2));
+
+    // Create new story file
+    writeFileSync(
+      join(STORIES_DIR, "US-NEW.json"),
+      JSON.stringify({ id: "US-NEW", title: "New", acceptanceCriteria: [] }, null, 2)
+    );
+
+    // Create update.json with direct override - should add to existing, not replace
+    const updateQueue = {
+      storyOrder: ["BUG-013", "US-NEW"],
+      pending: ["US-NEW"],
+    };
+    writeFileSync(join(PRD_JSON_DIR, "update.json"), JSON.stringify(updateQueue, null, 2));
+
+    // Apply update queue
+    applyUpdateQueue(PRD_JSON_DIR);
+
+    // Verify preserved fields
+    const updatedIndex = JSON.parse(readFileSync(indexPath, "utf-8"));
+    expect(updatedIndex.$schema).toBe("https://ralph.dev/schemas/prd-index.schema.json");
+    expect(updatedIndex.blocked).toContain("BUG-001"); // blocked should be preserved
+    expect(updatedIndex.completed).toContain("BUG-013"); // completed should be preserved
+  });
+
+  it("should not delete update.json if merge fails", () => {
+    // Setup: Create a scenario where merge should fail (missing index.json)
+    const indexPath = join(PRD_JSON_DIR, "index.json");
+    unlinkSync(indexPath); // Remove index.json
+
+    // Create update.json
+    const updateQueue = { pending: ["US-001"] };
+    const updatePath = join(PRD_JSON_DIR, "update.json");
+    writeFileSync(updatePath, JSON.stringify(updateQueue, null, 2));
+
+    // Apply update queue - should fail
+    const result = applyUpdateQueue(PRD_JSON_DIR);
+
+    // Verify merge failed
+    expect(result.applied).toBe(false);
+
+    // Verify update.json was NOT deleted (so we can retry)
+    expect(existsSync(updatePath)).toBe(true);
   });
 });

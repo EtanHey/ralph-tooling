@@ -78,3 +78,24 @@ Started: Sun Jan 25 20:00:00 IST 2026
 - CodeRabbit: Passed
 - Tests: 205 zsh tests passed
 
+## Iteration 5 - BUG-029: update.json merge deletes file but doesn't update index.json
+- Model: opus
+- Root cause identified: The /prd skill was using a "direct override" format for update.json:
+  ```json
+  { "storyOrder": [...], "pending": [...] }
+  ```
+  But the `applyUpdateQueue()` function only supported the `newStories`, `updateStories`, etc. format.
+  Result: The file was deleted without actually merging the new stories.
+- Fix: Added support for direct `storyOrder` and `pending` array overrides in `applyUpdateQueue()`
+  - Updated `UpdateQueue` interface in ralph-ui/src/runner/types.ts
+  - Added merge logic for storyOrder and pending arrays in ralph-ui/src/runner/prd.ts
+  - New story IDs from update.json are merged into existing arrays (deduplicated)
+- Added 3 new tests in ralph-ui/tests/prd.test.ts:
+  - Test direct override format merges correctly
+  - Test existing fields are preserved during merge
+  - Test update.json NOT deleted if merge fails
+- CodeRabbit: Passed
+- Tests: 205 zsh tests passed, 191 TypeScript tests passed
+- Learning: The update.json format documentation in /prd skill was misleading - it showed direct
+  field overrides but the code expected queue operations. Now the code supports both formats.
+
