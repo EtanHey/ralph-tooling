@@ -1170,3 +1170,27 @@ Changes:
 - Modular files should be sourced in dependency order (UI first, then others that depend on it)
 - CodeRabbit reviews new files but can't distinguish between new code and moved code
 - Pre-existing issues should be tracked as separate BUG stories, not fixed during refactors
+
+## Iteration 58
+Story: MP-005 - Layer AGENTS prompt by story type
+Status: COMPLETED (opus)
+Changes:
+- Created ~/.config/ralphtools/prompts/ directory with modular prompt files
+- Created base.md with universal rules (~200 lines)
+- Created story-type-specific files: US.md, BUG.md, V.md, AUDIT.md, TEST.md, MP.md
+- Added _ralph_build_story_prompt() function to ralph.zsh:
+  - Loads base.md always
+  - Detects story type from ID prefix (US-, BUG-, V-, AUDIT-, TEST-, MP-)
+  - Layers story-type-specific prompt on top of base
+  - Handles template substitution ({{MODEL}}, {{PRD_JSON_DIR}}, {{WORKING_DIR}}, {{ISO_TIMESTAMP}})
+- Replaced ~50 line embedded JSON mode prompt with 3-line function call
+- Legacy markdown mode kept for backwards compatibility
+- Added 8 unit tests for prompt functionality
+- All 149 tests pass
+- CodeRabbit: PASS (0 issues)
+
+### Learnings
+- Modular prompts reduce embedded code by ~50 lines while improving maintainability
+- Story-type-specific rules (debugging for BUG, TDD for V, etc.) provide focused guidance
+- Template variable substitution uses ZSH parameter expansion: ${var//pattern/replacement}
+- Legacy markdown mode preserved in ralph.zsh for projects not yet migrated to JSON mode

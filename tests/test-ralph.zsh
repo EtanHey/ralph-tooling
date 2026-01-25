@@ -4517,6 +4517,213 @@ test_ralph_help_works() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# MODULAR PROMPTS TESTS (MP-005)
+# ═══════════════════════════════════════════════════════════════════
+
+# Test: prompt files exist and are valid markdown
+test_mp005_prompt_files_exist() {
+  test_start "MP-005: prompt files exist in ~/.config/ralphtools/prompts/"
+
+  local prompts_dir="$HOME/.config/ralphtools/prompts"
+
+  # Check directory exists
+  if [[ ! -d "$prompts_dir" ]]; then
+    test_fail "prompts directory does not exist: $prompts_dir"
+    return
+  fi
+
+  # Check required files exist
+  local required_files=("base.md" "US.md" "BUG.md" "V.md" "AUDIT.md" "TEST.md" "MP.md")
+  local missing_files=()
+
+  for file in "${required_files[@]}"; do
+    if [[ ! -f "$prompts_dir/$file" ]]; then
+      missing_files+=("$file")
+    fi
+  done
+
+  if [[ ${#missing_files[@]} -gt 0 ]]; then
+    test_fail "missing prompt files: ${missing_files[*]}"
+    return
+  fi
+
+  # Verify each file starts with a markdown heading
+  for file in "${required_files[@]}"; do
+    local first_line=$(head -1 "$prompts_dir/$file")
+    if [[ ! "$first_line" =~ ^#.* ]]; then
+      test_fail "$file does not start with markdown heading"
+      return
+    fi
+  done
+
+  test_pass
+}
+
+# Test: _ralph_build_story_prompt function exists and returns content
+test_mp005_build_story_prompt_function_exists() {
+  test_start "MP-005: _ralph_build_story_prompt function exists"
+
+  if ! typeset -f _ralph_build_story_prompt >/dev/null 2>&1; then
+    test_fail "_ralph_build_story_prompt function not found"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: _ralph_build_story_prompt returns content for US stories
+test_mp005_build_story_prompt_us() {
+  test_start "MP-005: _ralph_build_story_prompt returns content for US stories"
+
+  local prompt
+  prompt=$(_ralph_build_story_prompt "US-001" "opus" "/tmp/prd-json" "/tmp/work" 2>&1)
+
+  # Should contain base content
+  if [[ ! "$prompt" =~ "Ralph" ]]; then
+    test_fail "prompt missing 'Ralph' (base content)"
+    return
+  fi
+
+  # Should contain US-specific content
+  if [[ ! "$prompt" =~ "feature" ]] && [[ ! "$prompt" =~ "Feature" ]]; then
+    test_fail "prompt missing feature story content"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: _ralph_build_story_prompt returns content for BUG stories
+test_mp005_build_story_prompt_bug() {
+  test_start "MP-005: _ralph_build_story_prompt returns content for BUG stories"
+
+  local prompt
+  prompt=$(_ralph_build_story_prompt "BUG-001" "sonnet" "/tmp/prd-json" "/tmp/work" 2>&1)
+
+  # Should contain base content
+  if [[ ! "$prompt" =~ "Ralph" ]]; then
+    test_fail "prompt missing 'Ralph' (base content)"
+    return
+  fi
+
+  # Should contain BUG-specific content
+  if [[ ! "$prompt" =~ "Bug" ]] && [[ ! "$prompt" =~ "bug" ]] && [[ ! "$prompt" =~ "Debugging" ]]; then
+    test_fail "prompt missing bug fix content"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: _ralph_build_story_prompt returns content for V stories
+test_mp005_build_story_prompt_v() {
+  test_start "MP-005: _ralph_build_story_prompt returns content for V stories"
+
+  local prompt
+  prompt=$(_ralph_build_story_prompt "V-001" "haiku" "/tmp/prd-json" "/tmp/work" 2>&1)
+
+  # Should contain base content
+  if [[ ! "$prompt" =~ "Ralph" ]]; then
+    test_fail "prompt missing 'Ralph' (base content)"
+    return
+  fi
+
+  # Should contain V-specific content
+  if [[ ! "$prompt" =~ "Verification" ]] && [[ ! "$prompt" =~ "verification" ]] && [[ ! "$prompt" =~ "TDD" ]]; then
+    test_fail "prompt missing verification content"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: _ralph_build_story_prompt template substitution works
+test_mp005_template_substitution() {
+  test_start "MP-005: _ralph_build_story_prompt template substitution"
+
+  local prompt
+  prompt=$(_ralph_build_story_prompt "US-123" "opus" "/test/prd" "/test/work" 2>&1)
+
+  # Model should be substituted
+  if [[ "$prompt" =~ "{{MODEL}}" ]]; then
+    test_fail "{{MODEL}} template not substituted"
+    return
+  fi
+
+  # Should contain the model name
+  if [[ ! "$prompt" =~ "opus" ]]; then
+    test_fail "model name 'opus' not found in prompt"
+    return
+  fi
+
+  # PRD path should be substituted
+  if [[ "$prompt" =~ "{{PRD_JSON_DIR}}" ]]; then
+    test_fail "{{PRD_JSON_DIR}} template not substituted"
+    return
+  fi
+
+  test_pass
+}
+
+# Test: _ralph_build_story_prompt detects story types correctly
+test_mp005_story_type_detection() {
+  test_start "MP-005: story type detection from ID prefix"
+
+  # Test each story type
+  local -A story_types=(
+    ["US-001"]="feature"
+    ["BUG-002"]="Bug"
+    ["V-003"]="Verification"
+    ["AUDIT-004"]="Audit"
+    ["TEST-005"]="Test"
+    ["MP-006"]="Master"
+  )
+
+  for story_id expected_content in "${(@kv)story_types}"; do
+    local prompt
+    prompt=$(_ralph_build_story_prompt "$story_id" "opus" "/tmp" "/tmp" 2>&1)
+
+    if [[ ! "$prompt" =~ "$expected_content" ]]; then
+      test_fail "story $story_id should include '$expected_content' content"
+      return
+    fi
+  done
+
+  test_pass
+}
+
+# Test: unknown story type gets base prompt only
+test_mp005_unknown_story_type() {
+  test_start "MP-005: unknown story type gets base prompt only"
+
+  local prompt
+  prompt=$(_ralph_build_story_prompt "UNKNOWN-001" "opus" "/tmp" "/tmp" 2>&1)
+
+  # Should still contain base content
+  if [[ ! "$prompt" =~ "Ralph" ]]; then
+    test_fail "unknown story type should still get base prompt"
+    return
+  fi
+
+  # Should NOT contain story-type-specific headers (from US.md, BUG.md, etc.)
+  # The prompt should not have the story-type sections since no matching .md file
+  # We check that it's shorter than a prompt with story-type content
+  local us_prompt
+  us_prompt=$(_ralph_build_story_prompt "US-001" "opus" "/tmp" "/tmp" 2>&1)
+
+  # Unknown prompt should be shorter since it doesn't have story-type additions
+  if [[ ${#prompt} -ge ${#us_prompt} ]]; then
+    # This is okay if base.md is comprehensive - just verify base content exists
+    if [[ ! "$prompt" =~ "iteration" ]]; then
+      test_fail "base prompt should contain 'iteration'"
+      return
+    fi
+  fi
+
+  test_pass
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════
 

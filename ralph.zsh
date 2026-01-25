@@ -3500,6 +3500,54 @@ _ralph_interactive_context() {
   print -r -- "$context"
 }
 
+# Build story-type-specific prompt by layering base.md + type-specific .md
+# Prompts are loaded from ~/.config/ralphtools/prompts/
+# Story type is detected from ID prefix (US-, BUG-, V-, AUDIT-, TEST-, MP-)
+# Usage: local prompt=$(_ralph_build_story_prompt "US-123" "opus" "/path/to/prd-json" "/path/to/workdir")
+_ralph_build_story_prompt() {
+  local story_id="$1"
+  local model="$2"
+  local prd_json_dir="$3"
+  local working_dir="$4"
+
+  local prompts_dir="${RALPH_PROMPTS_DIR:-$HOME/.config/ralphtools/prompts}"
+  local prompt=""
+
+  # 1. Always load base.md
+  if [[ -f "$prompts_dir/base.md" ]]; then
+    prompt="$(<"$prompts_dir/base.md")"
+  else
+    # Fallback: minimal base prompt if file doesn't exist
+    prompt="You are Ralph, an autonomous coding agent. Do exactly ONE task per iteration."
+  fi
+
+  # 2. Detect story type from ID prefix
+  local story_type=""
+  case "$story_id" in
+    US-*)    story_type="US" ;;
+    BUG-*)   story_type="BUG" ;;
+    V-*)     story_type="V" ;;
+    AUDIT-*) story_type="AUDIT" ;;
+    TEST-*)  story_type="TEST" ;;
+    MP-*)    story_type="MP" ;;
+    *)       story_type="" ;; # Unknown type, use base only
+  esac
+
+  # 3. Load story-type-specific prompt if available
+  if [[ -n "$story_type" && -f "$prompts_dir/${story_type}.md" ]]; then
+    prompt+=$'\n\n---\n\n'
+    prompt+="$(<"$prompts_dir/${story_type}.md")"
+  fi
+
+  # 4. Template variable substitution
+  prompt="${prompt//\{\{MODEL\}\}/$model}"
+  prompt="${prompt//\{\{PRD_JSON_DIR\}\}/$prd_json_dir}"
+  prompt="${prompt//\{\{WORKING_DIR\}\}/$working_dir}"
+  prompt="${prompt//\{\{ISO_TIMESTAMP\}\}/$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+
+  print -r -- "$prompt"
+}
+
 # ═══════════════════════════════════════════════════════════════════
 # JSON MODE HELPERS
 # ═══════════════════════════════════════════════════════════════════
@@ -4781,59 +4829,11 @@ function ralph() {
       local ralph_prompt=""
 
       if [[ "$use_json_mode" == "true" ]]; then
-        # JSON MODE PROMPT
-        # Note: Git rules, skills, and agent instructions now loaded via --append-system-prompt from context files
-        ralph_prompt="You are Ralph, an autonomous coding agent. Do exactly ONE task per iteration.
-
-## Model Information
-You are running on model: **${active_model}**
-
-## Meta-Learnings
-Read docs.local/ralph-meta-learnings.md if it exists - contains critical patterns about avoiding loops and state management.
-
-## File Access (CRITICAL)
-If \`read_file\` or \`write_file\` fail due to \"ignored by configured ignore patterns\", you MUST use shell commands to access them:
-- To read: \`run_shell_command(\"cat <path>\")\`
-- To write: \`run_shell_command(\"printf '...content...' > <path>\")\`
-Always prioritize standard tools, but use shell as a fallback for \`progress.txt\` and \`prd-json/\` files.
-
-## Paths (JSON MODE)
-- PRD Index: $PRD_JSON_DIR/index.json
-- Stories: $PRD_JSON_DIR/stories/*.json
-- Working Dir: $(pwd)
-
-## Steps (JSON MODE)
-1. Read prd-json/index.json - find nextStory field for the story to work on
-2. Read prd-json/stories/{nextStory}.json - get acceptanceCriteria
-3. Read progress.txt - check Learnings section for patterns
-4. Check if story has blockedBy field (see Blocked Task Rules below)
-5. If blocked: move to next in pending array
-6. If actionable: work through acceptance criteria ONE BY ONE
-
-## INCREMENTAL CRITERION CHECKING (CRITICAL)
-As you complete EACH acceptance criterion:
-1. Immediately update the story JSON: set that criterion's checked=true
-2. Do NOT wait until all criteria are done
-3. This allows live progress tracking via 'ralph-live'
-4. After updating the JSON, continue to the next criterion
-
-Example workflow:
-- Complete criterion 1 → Edit JSON, set checked=true for criterion 1
-- Complete criterion 2 → Edit JSON, set checked=true for criterion 2
-- ...continue until all done
-- When ALL checked=true → set passes=true
-
-## Final Steps
-7. Run typecheck to verify all code changes
-8. If 'verify in browser': take a screenshot (see Browser Rules below)
-9. Update prd-json/index.json:
-   - Remove story from pending array
-   - Update stats.completed and stats.pending counts
-   - Set nextStory to first remaining pending item
-10. Commit prd-json/ AND progress.txt together
-11. Verify commit succeeded before ending iteration"
+        # JSON MODE: Use modular prompts from ~/.config/ralphtools/prompts/
+        # Prompt is layered: base.md + story-type-specific .md (e.g., US.md, BUG.md)
+        ralph_prompt=$(_ralph_build_story_prompt "$current_story" "$active_model" "$PRD_JSON_DIR" "$(pwd)")
       else
-        # MARKDOWN MODE PROMPT (legacy)
+        # MARKDOWN MODE PROMPT (legacy - keeps embedded prompt for backwards compatibility)
         ralph_prompt="You are Ralph, an autonomous coding agent. Do exactly ONE task per iteration.
 
 ${private_skills}
