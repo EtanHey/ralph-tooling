@@ -38,11 +38,16 @@ export function usePollingWatch({
       return;
     }
 
-    // Poll at regular intervals
+    // Poll at regular intervals - only update if stats changed
     const interval = setInterval(() => {
       const newStats = loadStats();
       if (newStats) {
-        setStats(newStats);
+        setStats(prev => {
+          // Only update if something actually changed
+          if (!prev) return newStats;
+          if (JSON.stringify(prev) === JSON.stringify(newStats)) return prev;
+          return newStats;
+        });
       }
     }, intervalMs);
 

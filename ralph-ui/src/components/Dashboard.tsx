@@ -90,29 +90,35 @@ export function Dashboard({
   model = 'sonnet',
   startTime = Date.now(),
   ntfyTopic,
+  onExitRequest,
 }: DashboardProps & { ntfyTopic?: string }) {
   const { stdout } = useStdout();
   const { isRawModeSupported } = useStdin();
   const { exit } = useApp();
   const [terminalWidth, setTerminalWidth] = useState(stdout?.columns || 80);
   const isLiveMode = mode === 'live';
-  const currentTime = useLiveClock(isLiveMode);
+  const isIterationMode = mode === 'iteration';
+  const currentTime = useLiveClock(isLiveMode || isIterationMode);
 
-  // Stable exit callback
+  // Stable exit callback - calls onExitRequest first (for runner mode), then exits UI
   const handleExit = useCallback(() => {
+    if (onExitRequest) {
+      onExitRequest();
+    }
     exit();
-  }, [exit]);
+  }, [exit, onExitRequest]);
 
-  // Auto-exit for non-live modes: render once, then exit immediately
+  // Auto-exit for startup mode only: render once, then exit immediately
+  // Iteration mode should stay open for live updates
   useEffect(() => {
-    if (!isLiveMode) {
+    if (mode === 'startup') {
       // Use setImmediate/setTimeout 0 to allow render to complete, then exit
       const timer = setTimeout(() => {
         handleExit();
       }, 100); // 100ms to ensure render completes
       return () => clearTimeout(timer);
     }
-  }, [isLiveMode, handleExit]);
+  }, [mode, handleExit]);
 
   // Poll for file changes in live and iteration modes (fs.watch unreliable on macOS)
   const liveStats = useFileWatch({
@@ -155,8 +161,8 @@ export function Dashboard({
 
   return (
     <Box flexDirection="column" width={terminalWidth}>
-      {/* Keyboard handler - in live mode (SIGINT works even without raw mode) */}
-      {isLiveMode && <KeyboardHandler onExit={handleExit} />}
+      {/* Keyboard handler - in live or iteration mode (SIGINT works even without raw mode) */}
+      {(isLiveMode || isIterationMode) && <KeyboardHandler onExit={handleExit} />}
 
       {/* Header */}
       <Box marginBottom={1}>
@@ -228,10 +234,10 @@ export function Dashboard({
         <NotificationStatus topic={ntfyTopic} enabled={!!ntfyTopic} />
       </Box>
 
-      {/* Footer - only show quit hint in live mode */}
+      {/* Footer - show quit hint in live and iteration modes */}
       <Box marginTop={1}>
         <Text dimColor>
-          {isLiveMode
+          {(isLiveMode || isIterationMode)
             ? (isRawModeSupported ? "Press 'q' to quit" : 'Ctrl+C to quit')
             : `Mode: ${mode}`} • Terminal width: {terminalWidth}
         </Text>
