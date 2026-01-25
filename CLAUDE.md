@@ -9,7 +9,7 @@
 2. Check `lib/README.md` for modular library documentation
 3. Run `./tests/test-ralph.zsh` before committing
 
-**Skills Available:** Use `/skills` to discover all skills. Key ones for this project:
+**Skills Available:** Use `/golem-powers:skills` to discover all skills. Key ones for this project:
 - `/golem-powers:prd` - Create/manage PRDs for Ralph to execute
 - `/golem-powers:coderabbit` - Code review before commits
 - `/golem-powers:ralph-commit` - Atomic commit with pre-commit hooks
@@ -21,7 +21,7 @@
 **Self-Improvement Loop:** When working on this repo, you ARE dogfooding the tools you build:
 - Skills you create in `skills/golem-powers/` → used by future Claude sessions
 - Contexts you write in `contexts/` → loaded into future CLAUDE.md files
-- Bugs you find → should become PRD stories via `/prd`
+- Bugs you find → should become PRD stories via `/golem-powers:prd`
 - Test failures → fix before committing, never bypass hooks
 
 **Contexts:** This CLAUDE.md inherits rules from:

@@ -18,9 +18,9 @@ Add this section at the TOP of your project's CLAUDE.md:
 2. [Second step]
 3. [Any other essential steps]
 
-**Skills Available:** Use `/skills` to see available skills. Key ones for this project:
-- `/skill-name` - What it does
-- `/another-skill` - What it does
+**Skills Available:** Use `/golem-powers:skills` to see available skills. Key ones for this project:
+- `/golem-powers:skill-name` - What it does
+- `/golem-powers:another-skill` - What it does
 
 **Self-Improvement Loop:** When working on this repo, you ARE dogfooding the tools you build:
 - Skills you create → used by future Claude sessions
@@ -38,7 +38,7 @@ Add this section at the TOP of your project's CLAUDE.md:
 |----------|-------------|---------|
 | `[Purpose]` | Brief repo description | "Ralph tooling - autonomous PRD execution" |
 | `[Quick Start]` | Essential first steps | "1. Read file tree, 2. Check lib/README.md" |
-| `[Skills]` | Project-relevant skills | "/prd, /convex, /coderabbit" |
+| `[Skills]` | Project-relevant skills | "/golem-powers:prd, /golem-powers:convex, /golem-powers:coderabbit" |
 | `[Self-Improvement]` | If applicable, dogfooding notes | Skills, contexts, or tools you build here |
 
 ---

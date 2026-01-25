@@ -369,3 +369,21 @@ Started: Sun Jan 25 20:00:00 IST 2026
 - Tests: 191 TypeScript tests pass
 - Learning: Ink's `useInput` hook throws even with `isActive: false` in non-TTY contexts.
   The solution is to never render components that call `useInput` when `isRawModeSupported` is false.
+
+## Iteration 20 - BUG-031: skill-index.md uses short names but Skill tool needs full names
+- Model: opus
+- Root cause: generate-skill-index.sh was outputting short skill names (e.g., /prd) but the Skill tool
+  expects full namespace:name format (e.g., golem-powers:prd). This caused Claude to try the short name
+  first, fail, then retry with the full name - wasting an extra API call per skill invocation.
+- Fix: Updated scripts/generate-skill-index.sh to output full names:
+  - Changed `echo "- /${name}"` to `echo "- /${namespace}:${name}"` in the index output
+  - Changed `echo "- **/${name}**: ${desc}"` to `echo "- **/${namespace}:${name}**: ${desc}"` in descriptions
+- Regenerated contexts/skill-index.md with full names (e.g., /golem-powers:prd, /superpowers:brainstorming)
+- Updated documentation files that referenced short names:
+  - contexts/templates/project-setup-header.md
+  - docs/claude-md-layering.md
+  - docs-site/docs/advanced/claude-md-layering.md
+- CodeRabbit: Rate limited, skipped (205 zsh tests, 191 TypeScript tests all pass)
+- Tests: All tests pass
+- Learning: The Skill tool uses namespace:name format for skill identification. When generating
+  references for Claude, always use the full format to avoid unnecessary retries.

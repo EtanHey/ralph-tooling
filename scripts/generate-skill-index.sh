@@ -118,7 +118,7 @@ main() {
                 echo "### ${namespace}"
                 current_namespace="$namespace"
             fi
-            echo "- /${name}"
+            echo "- /${namespace}:${name}"
         done
     } > "$OUTPUT_INDEX"
 
@@ -150,7 +150,7 @@ main() {
             if [[ ${#desc} -gt 200 ]]; then
                 desc="${desc:0:197}..."
             fi
-            echo "- **/${name}**: ${desc}"
+            echo "- **/${namespace}:${name}**: ${desc}"
         done
     } > "$OUTPUT_DESCRIPTIONS"
 

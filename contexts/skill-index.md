@@ -1,52 +1,52 @@
 # Available Skills
 
-> Auto-generated: 2026-01-25T20:41:30Z
+> Auto-generated: 2026-01-25T20:50:40Z
 > Regenerate: ~/.claude/scripts/generate-skill-index.sh
 
 ## Skills
 
 
 ### golem-powers
-- /1password
-- /archive
-- /brave
-- /catchup-recent
-- /catchup
-- /coderabbit
-- /context-audit
-- /context7
-- /convex
-- /create-pr
-- /critique-waves
-- /example-bash
-- /example-typescript
-- /github
-- /linear
-- /lsp
-- /obsidian
-- /prd-manager
-- /prd
-- /project-context
-- /ralph-commit
-- /ralph-install
-- /skills
-- /test-plan
-- /worktrees
-- /writing-skills
-- /zikaron
+- /golem-powers:1password
+- /golem-powers:archive
+- /golem-powers:brave
+- /golem-powers:catchup-recent
+- /golem-powers:catchup
+- /golem-powers:coderabbit
+- /golem-powers:context-audit
+- /golem-powers:context7
+- /golem-powers:convex
+- /golem-powers:create-pr
+- /golem-powers:critique-waves
+- /golem-powers:example-bash
+- /golem-powers:example-typescript
+- /golem-powers:github
+- /golem-powers:linear
+- /golem-powers:lsp
+- /golem-powers:obsidian
+- /golem-powers:prd-manager
+- /golem-powers:prd
+- /golem-powers:project-context
+- /golem-powers:ralph-commit
+- /golem-powers:ralph-install
+- /golem-powers:skills
+- /golem-powers:test-plan
+- /golem-powers:worktrees
+- /golem-powers:writing-skills
+- /golem-powers:zikaron
 
 ### superpowers
-- /brainstorming
-- /dispatching-parallel-agents
-- /executing-plans
-- /finishing-a-development-branch
-- /receiving-code-review
-- /requesting-code-review
-- /subagent-driven-development
-- /systematic-debugging
-- /test-driven-development
-- /using-git-worktrees
-- /using-superpowers
-- /verification-before-completion
-- /writing-plans
-- /writing-skills
+- /superpowers:brainstorming
+- /superpowers:dispatching-parallel-agents
+- /superpowers:executing-plans
+- /superpowers:finishing-a-development-branch
+- /superpowers:receiving-code-review
+- /superpowers:requesting-code-review
+- /superpowers:subagent-driven-development
+- /superpowers:systematic-debugging
+- /superpowers:test-driven-development
+- /superpowers:using-git-worktrees
+- /superpowers:using-superpowers
+- /superpowers:verification-before-completion
+- /superpowers:writing-plans
+- /superpowers:writing-skills

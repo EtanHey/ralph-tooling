@@ -39,7 +39,7 @@ Later layers can override earlier ones. If both global and project define commit
 | **Python Version** | `python3` not `python` |
 | **Global Patterns** | Multi-agent verification workflow, data extraction patterns |
 | **MCP Tool Usage** | Tempmail rate limiting, usage tracking files |
-| **Cross-Project Skills** | `/prd` for PRD work, `/1password` for secrets |
+| **Cross-Project Skills** | `/golem-powers:prd` for PRD work, `/golem-powers:1password` for secrets |
 | **Learnings Locations** | Where to store global vs project learnings |
 
 ### What Does NOT Belong Here
@@ -135,7 +135,7 @@ Include these pointers in your global CLAUDE.md to ensure Claude uses the right 
 ### PRD Management
 ```markdown
 ### When Working with PRDs or Ralph:
-**Use `/prd` skill** for:
+**Use `/golem-powers:prd` skill** for:
 - Creating new PRDs
 - Adding stories to existing PRDs
 - Story JSON format (criteria objects, file locations)
@@ -145,7 +145,7 @@ Include these pointers in your global CLAUDE.md to ensure Claude uses the right 
 ### Secrets Management
 ```markdown
 ### When Working with Secrets:
-**Use `/1password` skill** for:
+**Use `/golem-powers:1password` skill** for:
 - Setting up 1Password Environments (PREFERRED)
 - Migrating .env files to 1Password
 - Retrieving secrets for CI/CD
@@ -181,10 +181,10 @@ Include these pointers in your global CLAUDE.md to ensure Claude uses the right 
 ## Skill Pointers
 
 ### PRD Work
-Use `/prd` skill for creating and managing PRDs.
+Use `/golem-powers:prd` skill for creating and managing PRDs.
 
 ### Secrets
-Use `/1password` skill for secrets management.
+Use `/golem-powers:1password` skill for secrets management.
 
 ---
 
@@ -276,6 +276,6 @@ bun lint        # Run linter
 
 ## See Also
 
-- `/prd` skill - PRD creation and management
-- `/1password` skill - Secrets management
+- `/golem-powers:prd` skill - PRD creation and management
+- `/golem-powers:1password` skill - Secrets management
 - `docs/skills.md` - Available skills reference
