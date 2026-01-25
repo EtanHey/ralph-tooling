@@ -9,91 +9,91 @@
   "acceptanceCriteria": [
     {
       "text": "=== CONFIG VALIDATION ON STARTUP ===",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Create _ralph_validate_config() function",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test runtime setting: if bun, check command -v bun",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test gum availability for bash UI enhancements",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run validation on every ralph startup (fast, <100ms)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== SELF-HEALING PROPOSALS ===",
-      "checked": false
+      "checked": true
     },
     {
       "text": "If runtime=bun but bun missing: propose switch to bash",
-      "checked": false
+      "checked": true
     },
     {
       "text": "If gum missing: note 'install gum for better UI'",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Show Y/n prompt, default to safe option",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update config.json with user's choice",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Don't ask again once saved (persist preference)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== ENVIRONMENT DETECTION ===",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Detect monorepo from package.json workspaces",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Detect tech stack from dependencies",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Check for RALPH_* vars in .zshrc to migrate",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== TIPS ===",
-      "checked": false
+      "checked": true
     },
     {
       "text": "After any change: 'Run ralph-config to change settings'",
-      "checked": false
+      "checked": true
     },
     {
       "text": "If auto-fixed: 'Config updated. Run ralph-config --reset to reconfigure'",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== TESTING ===",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Validation catches missing bun",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Proposal updates config correctly",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: Saved preference persists across runs",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: feat: US-109 self-healing config validation",

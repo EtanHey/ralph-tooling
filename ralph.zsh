@@ -2332,6 +2332,189 @@ _ralph_load_config() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+# SELF-HEALING CONFIG VALIDATION
+# ═══════════════════════════════════════════════════════════════════
+
+# Update a config.json value using jq
+# Usage: _ralph_update_config_value <key> <value>
+# Example: _ralph_update_config_value "runtime" "bash"
+_ralph_update_config_value() {
+  local key="$1"
+  local value="$2"
+
+  if [[ ! -f "$RALPH_CONFIG_FILE" ]]; then
+    return 1
+  fi
+
+  local tmp_file=$(mktemp)
+  jq --arg val "$value" ".$key = \$val" "$RALPH_CONFIG_FILE" > "$tmp_file" && \
+    mv "$tmp_file" "$RALPH_CONFIG_FILE"
+}
+
+# Check if a runtime tool is available
+# Usage: _ralph_check_tool <tool_name>
+# Returns: 0 if available, 1 if not
+_ralph_check_tool() {
+  command -v "$1" &>/dev/null
+}
+
+# Prompt user with Y/n question (default: yes)
+# Usage: _ralph_prompt_yn "Question?" [default_yes=true]
+# Returns: 0 for yes, 1 for no
+_ralph_prompt_yn() {
+  local question="$1"
+  local default_yes="${2:-true}"
+
+  if [[ "$default_yes" == "true" ]]; then
+    echo -n "$question [Y/n] "
+  else
+    echo -n "$question [y/N] "
+  fi
+
+  # Check if we're in non-interactive mode
+  if [[ ! -t 0 ]]; then
+    echo ""
+    [[ "$default_yes" == "true" ]] && return 0 || return 1
+  fi
+
+  local reply
+  read -r reply
+
+  if [[ -z "$reply" ]]; then
+    [[ "$default_yes" == "true" ]] && return 0 || return 1
+  fi
+
+  case "$reply" in
+    [Yy]|[Yy][Ee][Ss]) return 0 ;;
+    [Nn]|[Nn][Oo]) return 1 ;;
+    *) [[ "$default_yes" == "true" ]] && return 0 || return 1 ;;
+  esac
+}
+
+# Detect monorepo structure from package.json
+# Sets RALPH_DETECTED_MONOREPO=true and RALPH_DETECTED_WORKSPACES=<list>
+_ralph_detect_monorepo() {
+  RALPH_DETECTED_MONOREPO=false
+  RALPH_DETECTED_WORKSPACES=""
+
+  local pkg_json="./package.json"
+  [[ ! -f "$pkg_json" ]] && return
+
+  local workspaces
+  workspaces=$(jq -r '.workspaces // empty | if type == "array" then join(" ") else empty end' "$pkg_json" 2>/dev/null)
+
+  if [[ -n "$workspaces" && "$workspaces" != "null" ]]; then
+    RALPH_DETECTED_MONOREPO=true
+    RALPH_DETECTED_WORKSPACES="$workspaces"
+  fi
+}
+
+# Check for legacy RALPH_* environment variables in .zshrc
+# Sets RALPH_LEGACY_VARS=<space-separated list>
+_ralph_check_legacy_vars() {
+  RALPH_LEGACY_VARS=""
+
+  local zshrc="$HOME/.zshrc"
+  [[ ! -f "$zshrc" ]] && return
+
+  local legacy_vars=""
+
+  # Check for common RALPH_* exports that should be in config.json
+  grep -q "^export RALPH_MAX_ITERATIONS=" "$zshrc" 2>/dev/null && legacy_vars="$legacy_vars RALPH_MAX_ITERATIONS"
+  grep -q "^export RALPH_SLEEP_SECONDS=" "$zshrc" 2>/dev/null && legacy_vars="$legacy_vars RALPH_SLEEP_SECONDS"
+  grep -q "^export RALPH_MODEL_STRATEGY=" "$zshrc" 2>/dev/null && legacy_vars="$legacy_vars RALPH_MODEL_STRATEGY"
+  grep -q "^export RALPH_DEFAULT_MODEL=" "$zshrc" 2>/dev/null && legacy_vars="$legacy_vars RALPH_DEFAULT_MODEL"
+
+  RALPH_LEGACY_VARS="${legacy_vars# }"
+}
+
+# Validate config and propose fixes (self-healing)
+# Usage: _ralph_validate_config [--quiet]
+# Returns: 0 if valid or fixed, 1 if user declined fix
+_ralph_validate_config() {
+  local quiet=false
+  [[ "$1" == "--quiet" ]] && quiet=true
+
+  local config_changed=false
+  local tips=""
+
+  # Skip validation if no config file
+  [[ ! -f "$RALPH_CONFIG_FILE" ]] && return 0
+
+  # Get current runtime setting
+  local current_runtime
+  current_runtime=$(jq -r '.runtime // "bun"' "$RALPH_CONFIG_FILE" 2>/dev/null)
+
+  # 1. Validate runtime: bun
+  if [[ "$current_runtime" == "bun" ]]; then
+    if ! _ralph_check_tool bun; then
+      echo ""
+      echo "⚠️  Config says runtime=bun, but bun is not installed."
+      echo ""
+      if _ralph_prompt_yn "Switch to bash runtime?"; then
+        _ralph_update_config_value "runtime" "bash"
+        RALPH_RUNTIME="bash"
+        config_changed=true
+        echo "✅ Config updated: runtime=bash"
+        tips="${tips}• Install bun later: curl -fsSL https://bun.sh/install | bash\n"
+      else
+        echo "⚠️  Keeping runtime=bun. Some features may not work."
+        return 1
+      fi
+    fi
+  fi
+
+  # 2. Check gum availability (for bash UI enhancements)
+  if [[ "$RALPH_RUNTIME" == "bash" ]] || [[ "$current_runtime" == "bash" ]]; then
+    if ! _ralph_check_tool gum; then
+      if [[ "$quiet" != "true" ]]; then
+        echo ""
+        echo "💡 Tip: Install 'gum' for enhanced bash UI (better prompts, spinners)"
+        echo "   brew install gum"
+        echo ""
+      fi
+      tips="${tips}• Install gum: brew install gum\n"
+    fi
+  fi
+
+  # 3. Detect and report monorepo
+  _ralph_detect_monorepo
+  if [[ "$RALPH_DETECTED_MONOREPO" == "true" && "$quiet" != "true" ]]; then
+    echo "📦 Monorepo detected with workspaces: $RALPH_DETECTED_WORKSPACES"
+  fi
+
+  # 4. Detect and report tech stack
+  _ralph_detect_tech_stack
+  if [[ -n "$RALPH_DETECTED_STACK" && "$quiet" != "true" ]]; then
+    echo "🛠  Tech stack detected: $RALPH_DETECTED_STACK"
+  fi
+
+  # 5. Check for legacy RALPH_* vars in .zshrc
+  _ralph_check_legacy_vars
+  if [[ -n "$RALPH_LEGACY_VARS" ]]; then
+    echo ""
+    echo "⚠️  Found legacy RALPH_* variables in ~/.zshrc: $RALPH_LEGACY_VARS"
+    echo "   These can be migrated to config.json for better management."
+    tips="${tips}• Run: ralph-config to configure settings\n"
+  fi
+
+  # Show tips if config was changed
+  if [[ "$config_changed" == "true" ]]; then
+    echo ""
+    echo "✅ Config auto-fixed. Run 'ralph-config --reset' to reconfigure."
+  fi
+
+  # Show accumulated tips
+  if [[ -n "$tips" && "$quiet" != "true" ]]; then
+    echo ""
+    echo "📝 Tips:"
+    echo -e "$tips"
+  fi
+
+  return 0
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # REGISTRY - Centralized Project/MCP Configuration
 # ═══════════════════════════════════════════════════════════════════
 
@@ -3361,34 +3544,67 @@ RALPH_UI_PATH="${RALPH_SCRIPT_DIR}/ralph-ui/src/index.tsx"
 
 # Detect project technology stack for loading appropriate tech contexts
 # Returns: space-separated list of tech contexts (e.g., "nextjs supabase")
+# Also sets RALPH_DETECTED_STACK for validation output
 _ralph_detect_tech_stack() {
   local tech_stack=""
   local project_dir="${1:-$(pwd)}"
+  local pkg_json="$project_dir/package.json"
 
-  # Check for Next.js
+  # Check for Next.js (config file OR package.json dependency)
   if [[ -f "$project_dir/next.config.js" ]] || [[ -f "$project_dir/next.config.mjs" ]] || [[ -f "$project_dir/next.config.ts" ]]; then
     tech_stack="$tech_stack nextjs"
+  elif [[ -f "$pkg_json" ]] && jq -e '.dependencies.next // .devDependencies.next' "$pkg_json" &>/dev/null; then
+    tech_stack="$tech_stack nextjs"
+  fi
+
+  # Check for React (package.json dependency)
+  if [[ -f "$pkg_json" ]] && jq -e '.dependencies.react // .devDependencies.react' "$pkg_json" &>/dev/null; then
+    tech_stack="$tech_stack react"
   fi
 
   # Check for Convex
   if [[ -f "$project_dir/convex.json" ]] || [[ -d "$project_dir/convex" ]]; then
     tech_stack="$tech_stack convex"
+  elif [[ -f "$pkg_json" ]] && jq -e '.dependencies.convex // .devDependencies.convex' "$pkg_json" &>/dev/null; then
+    tech_stack="$tech_stack convex"
   fi
 
   # Check for Supabase
-  if [[ -d "$project_dir/supabase" ]] || grep -q "supabase" "$project_dir/package.json" 2>/dev/null; then
+  if [[ -d "$project_dir/supabase" ]] || grep -q "@supabase" "$pkg_json" 2>/dev/null; then
     tech_stack="$tech_stack supabase"
   fi
 
   # Check for React Native / Expo
   if [[ -f "$project_dir/app.json" ]] && grep -q "expo" "$project_dir/app.json" 2>/dev/null; then
     tech_stack="$tech_stack react-native"
-  elif grep -q "react-native" "$project_dir/package.json" 2>/dev/null; then
+  elif grep -q "react-native" "$pkg_json" 2>/dev/null; then
     tech_stack="$tech_stack react-native"
   fi
 
-  # Trim leading space
-  echo "${tech_stack## }"
+  # Check for TypeScript
+  if [[ -f "$pkg_json" ]] && jq -e '.dependencies.typescript // .devDependencies.typescript' "$pkg_json" &>/dev/null; then
+    tech_stack="$tech_stack typescript"
+  fi
+
+  # Check for Tailwind
+  if [[ -f "$pkg_json" ]] && jq -e '.dependencies.tailwindcss // .devDependencies.tailwindcss' "$pkg_json" &>/dev/null; then
+    tech_stack="$tech_stack tailwind"
+  fi
+
+  # Check for Prisma
+  if [[ -f "$pkg_json" ]] && jq -e '.dependencies.prisma // .devDependencies.prisma' "$pkg_json" &>/dev/null; then
+    tech_stack="$tech_stack prisma"
+  fi
+
+  # Check for Drizzle
+  if [[ -f "$pkg_json" ]] && jq -e '.dependencies["drizzle-orm"] // .devDependencies["drizzle-orm"]' "$pkg_json" &>/dev/null; then
+    tech_stack="$tech_stack drizzle"
+  fi
+
+  # Trim leading space and set global variable
+  tech_stack="${tech_stack## }"
+  RALPH_DETECTED_STACK="$tech_stack"
+  echo "$tech_stack"
 }
 
 # Build a merged context file from modular context files
@@ -4109,6 +4325,10 @@ function ralph() {
   else
     _ralph_first_run_check
   fi
+
+  # Self-healing config validation (fast, silent unless issues found)
+  # This tests runtime availability and proposes fixes if needed
+  _ralph_validate_config --quiet
 
   # Set UI mode from config.runtime (unless --ui-ink or --ui-bash was passed explicitly)
   if [[ "$force_bash_ui" != "true" && "$use_ink_ui" != "true" && "$RALPH_RUNTIME" == "bun" ]]; then
