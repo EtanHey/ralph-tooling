@@ -22,7 +22,7 @@ function parseArgs(): {
   startTime: number;
   cost: number;
   displayMode: DisplayMode;
-  debounceMs: number;
+  pollIntervalMs: number;
 } {
   const args = process.argv.slice(2);
   let mode: 'startup' | 'iteration' | 'live' = 'startup';
@@ -34,7 +34,7 @@ function parseArgs(): {
   let startTime = Date.now();
   let cost = 0;
   let displayMode: DisplayMode = 'full';
-  let debounceMs = 500;
+  let pollIntervalMs = 1000;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -91,10 +91,10 @@ function parseArgs(): {
       cost = parseFloat(arg.split('=')[1]) || 0;
     } else if (arg === '--compact') {
       displayMode = 'compact';
-    } else if (arg === '--debounce') {
-      debounceMs = parseInt(args[++i], 10) || 500;
-    } else if (arg.startsWith('--debounce=')) {
-      debounceMs = parseInt(arg.split('=')[1], 10) || 500;
+    } else if (arg === '--poll-interval') {
+      pollIntervalMs = parseInt(args[++i], 10) || 1000;
+    } else if (arg.startsWith('--poll-interval=')) {
+      pollIntervalMs = parseInt(arg.split('=')[1], 10) || 1000;
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
 Ralph UI - React Ink Terminal Dashboard
@@ -112,7 +112,7 @@ Options:
   --start-time <ms>         Start timestamp in milliseconds (default: now)
   --cost <amount>           Current cost in dollars (default: 0)
   --compact                 Use compact display mode (single line)
-  --debounce <ms>           Debounce delay for file watching (default: 500)
+  --poll-interval <ms>      Polling interval for updates (default: 1000)
   --help, -h                Show this help message
 
 Modes:
@@ -132,7 +132,7 @@ Examples:
     }
   }
 
-  return { mode, prdPath, version, iteration, maxIterations, model, startTime, cost, displayMode, debounceMs };
+  return { mode, prdPath, version, iteration, maxIterations, model, startTime, cost, displayMode, pollIntervalMs };
 }
 
 // Only run the dashboard when executed directly (not imported as library)
@@ -150,7 +150,7 @@ if (import.meta.main) {
       startTime={config.startTime}
       cost={config.cost}
       displayMode={config.displayMode}
-      debounceMs={config.debounceMs}
+      pollIntervalMs={config.pollIntervalMs}
     />
   );
 }

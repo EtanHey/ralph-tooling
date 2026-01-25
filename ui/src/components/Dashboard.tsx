@@ -5,7 +5,7 @@ import { StartupBanner, StartupInfo } from './StartupBanner.js';
 import { IterationBox } from './IterationBox.js';
 import { StoryId } from './StoryId.js';
 import { ProgressBar } from './ProgressBar.js';
-import { useFileWatch } from '../hooks/useFileWatch.js';
+import { usePollingWatch } from '../hooks/useFileWatch.js';
 import { useInPlaceRender } from '../hooks/useCursor.js';
 import type { PRDStats, IterationInfo, DisplayMode, ModelName } from '../types.js';
 
@@ -19,8 +19,8 @@ interface DashboardProps {
   startTime?: number;
   cost?: number;
   displayMode?: DisplayMode;
-  /** Debounce for file watching (default 500ms) */
-  debounceMs?: number;
+  /** Polling interval in ms (default 1000ms) */
+  pollIntervalMs?: number;
 }
 
 // Wrapper component that conditionally uses input
@@ -65,7 +65,7 @@ export function Dashboard({
   startTime = Date.now(),
   cost = 0,
   displayMode = 'full',
-  debounceMs = 500,
+  pollIntervalMs = 1000,
 }: DashboardProps) {
   const { stdout } = useStdout();
   const { isRawModeSupported } = useStdin();
@@ -73,11 +73,11 @@ export function Dashboard({
   const [terminalWidth, setTerminalWidth] = useState(stdout?.columns || 80);
   const [elapsedTime, setElapsedTime] = useState('0s');
 
-  // Watch for file changes in live mode
-  const liveStats = useFileWatch({
+  // Poll for file changes (fs.watch unreliable on macOS)
+  const liveStats = usePollingWatch({
     prdPath,
     enabled: mode === 'live' || mode === 'iteration',
-    debounceMs,
+    intervalMs: pollIntervalMs,
   });
 
   // Use live stats if available, otherwise use defaults
