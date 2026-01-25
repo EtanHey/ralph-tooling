@@ -762,10 +762,18 @@ function repoGolem() {
 
     _ralph_setup_mcps '$mcps_json'
 
-    # Load interactive context (CLAUDE_COUNTER, git safety rules)
-    local interactive_ctx=\"\$HOME/.claude/contexts/workflow/interactive.md\"
-    if [[ -f \"\$interactive_ctx\" ]]; then
-      claude_args+=(\"--append-system-prompt\" \"\$(cat \"\$interactive_ctx\")\")
+    # Load contexts from registry
+    local contexts_dir=\"\$HOME/.claude/contexts\"
+    local registry=\"\$RALPH_REGISTRY_FILE\"
+    if [[ -f \"\$registry\" ]]; then
+      local ctx_list
+      ctx_list=\$(jq -r --arg proj \"$lowercase_name\" '.projects[\$proj].contexts // [] | .[]' \"\$registry\" 2>/dev/null)
+      for ctx in \${(f)ctx_list}; do
+        local ctx_file=\"\${contexts_dir}/\${ctx}.md\"
+        if [[ -f \"\$ctx_file\" ]]; then
+          claude_args+=(\"--append-system-prompt\" \"\$(cat \"\$ctx_file\")\")
+        fi
+      done
     fi
 
     claude \"\${claude_args[@]}\"

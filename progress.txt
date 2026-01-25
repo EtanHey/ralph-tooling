@@ -115,3 +115,18 @@ Started: Sun Jan 25 20:00:00 IST 2026
 - Learning: The context-audit script's grep pattern doesn't handle inline descriptions after context refs
   (e.g., "@context: base - Universal rules" shows parsing issues). Consider fixing in a future story.
 
+## Iteration 7 - US-118: Registry contexts field + launchers auto-load contexts
+- Model: opus
+- Added 'contexts' array field to registry.json project schema
+- Updated golem entry: contexts: ['base', 'skill-index', 'workflow/interactive']
+- Updated domica entry: contexts: ['base', 'skill-index', 'tech/supabase', 'workflow/rtl', 'workflow/interactive']
+- Modified repoGolem function in ralph-registry.zsh to read contexts from registry
+  - Each context file is loaded via --append-system-prompt "$(cat file)"
+  - Replaced hardcoded interactive.md with dynamic registry lookup
+- Symlinked skill-index.md to ~/.claude/contexts/ (was missing from install)
+- Tested golemClaude loads all 3 contexts at startup
+- CodeRabbit: Passed
+- Tests: 205 zsh tests passed
+- Learning: The contexts array in registry.json is project-specific, allowing different projects
+  to load different technology and workflow contexts automatically.
+
