@@ -46,7 +46,7 @@
     },
     {
       "text": "Commit: test: V-012 verify full system audit post-rename",
-      "checked": false
+      "checked": true
     }
   ],
   "dependencies": [
