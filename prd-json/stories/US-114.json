@@ -1,28 +1,18 @@
 {
   "id": "US-114",
-  "title": "Implement progressive skill disclosure in CLAUDE.md",
-  "description": "Per research: 'At session start, agent only receives metadata (name + description). Full SKILL.md loaded only on-demand.' Currently all skill content may bloat context. Implement 3-tier disclosure: names → descriptions → full content.",
+  "title": "Migrate etanheyman.com secrets to 1Password",
+  "description": "Create a 'portfolio' vault in 1Password and migrate etanheyman.com .env.local secrets to use op:// references. This follows the pattern established in US-100/US-101 for the main projects.",
+  "priority": "medium",
   "acceptanceCriteria": [
-    {"text": "=== TIER 1: NAMES ONLY ===", "checked": true},
-    {"text": "Create ~/.claude/skill-index.md with just skill names (1 line each)", "checked": true},
-    {"text": "Format: '- /skill-name' (no descriptions yet)", "checked": true},
-    {"text": "=== TIER 2: DESCRIPTIONS ===", "checked": true},
-    {"text": "Create ~/.claude/skill-descriptions.md with name + 1-line description", "checked": true},
-    {"text": "Extract descriptions from SKILL.md frontmatter automatically", "checked": true},
-    {"text": "Keep under 50 tokens per skill", "checked": true},
-    {"text": "=== TIER 3: FULL CONTENT ===", "checked": true},
-    {"text": "Full SKILL.md stays where it is - loaded via Skill tool on-demand", "checked": true},
-    {"text": "=== CLAUDE.MD UPDATE ===", "checked": true},
-    {"text": "Update global CLAUDE.md to reference skill-descriptions.md (not full skills)", "checked": true},
-    {"text": "Add instruction: 'Use Skill tool to load full skill when needed'", "checked": true},
-    {"text": "=== GENERATOR SCRIPT ===", "checked": true},
-    {"text": "Create ~/.claude/scripts/generate-skill-index.sh", "checked": true},
-    {"text": "Script regenerates skill-index.md and skill-descriptions.md from installed skills", "checked": true},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: feat: US-114 implement progressive skill disclosure", "checked": true}
+    { "text": "Check if RESEND_API_KEY, NEXTAUTH_SECRET, UPLOADTHING_TOKEN, OPTIMIZE_API_KEY exist in Development vault", "checked": false },
+    { "text": "If not in Development: create 'portfolio' vault in 1Password", "checked": false },
+    { "text": "Add secrets to appropriate vault with proper item names", "checked": false },
+    { "text": "Update etanheyman.com/.env.local to use op:// references", "checked": false },
+    { "text": "Verify secrets resolve correctly with 'op inject'", "checked": false },
+    { "text": "Document migration in docs.local/audits/AUDIT-005-secrets.md", "checked": false },
+    { "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false },
+    { "text": "Commit: feat: US-114 migrate etanheyman.com to 1Password", "checked": false }
   ],
-  "dependencies": ["AUDIT-004"],
-  "passes": true,
-  "completedAt": "2026-01-25T12:35:55Z",
-  "completedBy": "opus"
+  "passes": false,
+  "failedAttempts": 0
 }

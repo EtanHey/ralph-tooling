@@ -1,27 +1,21 @@
 {
   "id": "US-115",
-  "title": "Add skill matching hints to descriptions",
-  "description": "Per research: 'Tool description is the most high-leverage point. Should explain WHEN to use, WHEN NOT to use, and provide context.' Improve skill descriptions with trigger words and negative instructions.",
+  "title": "Fix archive script with template-based testing",
+  "description": "The archive skill scripts have bugs - they don't properly reset index.json after cleanup. Add comprehensive tests using generated fixtures from schema templates to catch regressions.",
+  "priority": "high",
   "acceptanceCriteria": [
-    {"text": "=== AUDIT CURRENT DESCRIPTIONS ===", "checked": true},
-    {"text": "Review all SKILL.md description fields", "checked": true},
-    {"text": "Identify vague descriptions (missing 'when to use')", "checked": true},
-    {"text": "=== IMPROVE DESCRIPTIONS ===", "checked": true},
-    {"text": "Add trigger words to each skill (what user might say)", "checked": true},
-    {"text": "Add 'Do NOT use for:' section where applicable", "checked": true},
-    {"text": "Keep descriptions under 50 tokens each", "checked": true},
-    {"text": "=== EXAMPLES ===", "checked": true},
-    {"text": "/coderabbit: 'Use when reviewing code, preparing PRs. NOT for: runtime debugging'", "checked": true},
-    {"text": "/convex: 'Use when working with Convex backend. NOT for: other databases'", "checked": true},
-    {"text": "/linear: 'Use when managing issues. NOT for: general git operations'", "checked": true},
-    {"text": "=== REGENERATE INDEX ===", "checked": true},
-    {"text": "Run generate-skill-index.sh to update descriptions", "checked": true},
-    {"text": "Verify skill-descriptions.md has improved content", "checked": true},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: feat: US-115 add skill matching hints to descriptions", "checked": true}
+    { "text": "Create tests/fixtures/prd-archive/ directory with template generator script", "checked": false },
+    { "text": "Template generator creates valid index.json and story files from schema", "checked": false },
+    { "text": "Test: archive-snapshot.sh creates timestamped archive with all files", "checked": false },
+    { "text": "Test: cleanup-completed.sh removes only passes=true stories", "checked": false },
+    { "text": "Test: After cleanup, index.json has empty completed array", "checked": false },
+    { "text": "Test: After cleanup, pending array contains only non-completed story IDs", "checked": false },
+    { "text": "Test: Blocked stories are preserved (not deleted)", "checked": false },
+    { "text": "Fix any bugs discovered by tests in archive scripts", "checked": false },
+    { "text": "Tests run as part of tests/test-ralph.zsh or separate test file", "checked": false },
+    { "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false },
+    { "text": "Commit: fix: US-115 archive script with template-based tests", "checked": false }
   ],
-  "dependencies": ["US-114"],
-  "passes": true,
-  "completedAt": "2026-01-25T12:53:00Z",
-  "completedBy": "opus"
+  "passes": false,
+  "failedAttempts": 0
 }
