@@ -10,11 +10,13 @@
 3. Run `./tests/test-ralph.zsh` before committing
 
 **Skills Available:** Use `/skills` to discover all skills. Key ones for this project:
-- `/prd` - Create/manage PRDs for Ralph to execute
-- `/coderabbit` - Code review before commits
-- `/ralph-commit` - Atomic commit with pre-commit hooks
-- `/context-audit` - Verify context references are valid
-- `/writing-skills` - Create new skills in this repo
+- `/golem-powers:prd` - Create/manage PRDs for Ralph to execute
+- `/golem-powers:coderabbit` - Code review before commits
+- `/golem-powers:ralph-commit` - Atomic commit with pre-commit hooks
+- `/golem-powers:context-audit` - Verify context references are valid
+- `/golem-powers:writing-skills` - Create new skills in this repo
+
+**⚠️ Skill Invocation:** Even though skills live in `skills/golem-powers/` locally, always invoke via `golem-powers:xxx` using the Skill tool - same as any other project. Don't read SKILL.md files directly.
 
 **Self-Improvement Loop:** When working on this repo, you ARE dogfooding the tools you build:
 - Skills you create in `skills/golem-powers/` → used by future Claude sessions
