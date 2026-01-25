@@ -1,0 +1,18 @@
+{
+  "id": "US-112",
+  "title": "Ralph setup wizard with user preferences",
+  "description": "Add interactive setup wizard to ralph-setup.zsh that asks user about their preferred defaults (UI mode, model, ntfy topic, etc.) and saves to config file",
+  "acceptanceCriteria": [
+    {"text": "Wizard prompts for default UI mode (live/iteration/startup)", "checked": false},
+    {"text": "Wizard prompts for default model preference", "checked": false},
+    {"text": "Wizard prompts for ntfy topic (optional)", "checked": false},
+    {"text": "Preferences saved to ~/.config/ralphtools/user-prefs.json", "checked": false},
+    {"text": "Ralph reads user-prefs.json and applies defaults", "checked": false},
+    {"text": "ralph-setup --configure re-runs wizard", "checked": false},
+    {"text": "Typecheck passes", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: US-112 add setup wizard with user preferences", "checked": false}
+  ],
+  "passes": false,
+  "blockedBy": null
+}

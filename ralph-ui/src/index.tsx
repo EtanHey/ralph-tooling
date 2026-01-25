@@ -13,7 +13,7 @@ function parseArgs(): {
   ntfyTopic?: string;
 } {
   const args = process.argv.slice(2);
-  let mode: 'startup' | 'iteration' | 'live' = 'startup';
+  let mode: 'startup' | 'iteration' | 'live' = 'live'; // Default to live for continuous updates
   let prdPath = process.cwd() + '/prd-json';
   let iteration = 1;
   let model = 'sonnet';
@@ -61,7 +61,7 @@ Usage:
   bun ralph-ui/src/index.tsx [options]
 
 Options:
-  --mode, -m <mode>       Mode: startup, iteration, or live (default: startup)
+  --mode, -m <mode>       Mode: startup, iteration, or live (default: live)
   --prd-path, -p <path>   Path to prd-json directory (default: ./prd-json)
   --iteration, -i <num>   Current iteration number (default: 1)
   --model <model>         Current model name (default: sonnet)

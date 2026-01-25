@@ -9,31 +9,31 @@
   "acceptanceCriteria": [
     {
       "text": "=== DESIGN ===",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Support moveToPending: ['BUG-017'] - moves from blocked to pending",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Support moveToBlocked: ['US-001', 'reason'] - moves to blocked with blockedBy",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Support removeStories: ['US-094'] - removes from all arrays and deletes file",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Existing updateStories and newStories still work",
-      "checked": false
+      "checked": true
     },
     {
       "text": "=== IMPLEMENTATION ===",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update _ralph_process_update_queue() in ralph.zsh",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Update bun/core/stories.ts processUpdateQueue()",

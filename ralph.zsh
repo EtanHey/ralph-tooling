@@ -3968,10 +3968,11 @@ _ralph_apply_update_queue() {
   [[ -f "$index_file" ]] || return 1
 
   # Warn about ignored fields in update.json
-  local ignored_fields=$(jq -r 'keys[] | select(. != "newStories" and . != "updateStories")' "$update_file" 2>/dev/null)
+  local valid_fields='newStories|updateStories|moveToPending|moveToBlocked|removeStories'
+  local ignored_fields=$(jq -r "keys[] | select(. | test(\"^(${valid_fields})$\") | not)" "$update_file" 2>/dev/null)
   if [[ -n "$ignored_fields" ]]; then
     echo "${RALPH_COLOR_YELLOW}⚠ Warning: update.json has ignored fields: $(echo $ignored_fields | tr '\n' ', ')${RALPH_COLOR_RESET}"
-    echo "${RALPH_COLOR_YELLOW}  Only 'newStories' and 'updateStories' are processed${RALPH_COLOR_RESET}"
+    echo "${RALPH_COLOR_YELLOW}  Valid fields: newStories, updateStories, moveToPending, moveToBlocked, removeStories${RALPH_COLOR_RESET}"
   fi
 
   local tmp_file=$(mktemp)
@@ -4037,8 +4038,75 @@ _ralph_apply_update_queue() {
     update_stories_count=$(jq '.updateStories | length' "$update_file" 2>/dev/null || echo 0)
   fi
 
-  # 3. Update nextStory after any changes (stats are derived on-the-fly, US-106)
-  if [[ $new_stories_count -gt 0 ]] || [[ $update_stories_count -gt 0 ]]; then
+  # 3. Process moveToPending - moves stories from blocked to pending, clears blockedBy
+  local move_to_pending_count=0
+  local move_to_pending=$(jq -r '.moveToPending // [] | .[]' "$update_file" 2>/dev/null)
+  if [[ -n "$move_to_pending" ]]; then
+    echo "$move_to_pending" | while IFS= read -r story_id; do
+      local story_file="$stories_dir/${story_id}.json"
+
+      # Update index.json: remove from blocked, add to pending
+      jq --arg id "$story_id" '
+        .blocked = (.blocked | map(select(. != $id))) |
+        .pending = ((.pending + [$id]) | unique)
+      ' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
+
+      # Update story file: clear blockedBy
+      if [[ -f "$story_file" ]]; then
+        jq 'del(.blockedBy)' "$story_file" > "$tmp_file" && mv "$tmp_file" "$story_file"
+      fi
+    done
+    move_to_pending_count=$(jq '.moveToPending | length' "$update_file" 2>/dev/null || echo 0)
+  fi
+
+  # 4. Process moveToBlocked - moves stories from pending to blocked with reason
+  # Format: [["STORY-ID", "reason"], ["OTHER-ID", "other reason"]]
+  local move_to_blocked_count=0
+  local move_to_blocked=$(jq -c '.moveToBlocked // [] | .[]' "$update_file" 2>/dev/null)
+  if [[ -n "$move_to_blocked" ]]; then
+    echo "$move_to_blocked" | while IFS= read -r entry; do
+      local story_id=$(echo "$entry" | jq -r '.[0]')
+      local reason=$(echo "$entry" | jq -r '.[1]')
+      local story_file="$stories_dir/${story_id}.json"
+
+      # Update index.json: remove from pending, add to blocked
+      jq --arg id "$story_id" '
+        .pending = (.pending | map(select(. != $id))) |
+        .blocked = ((.blocked + [$id]) | unique)
+      ' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
+
+      # Update story file: set blockedBy
+      if [[ -f "$story_file" ]]; then
+        jq --arg reason "$reason" '.blockedBy = $reason' "$story_file" > "$tmp_file" && mv "$tmp_file" "$story_file"
+      fi
+    done
+    move_to_blocked_count=$(jq '.moveToBlocked | length' "$update_file" 2>/dev/null || echo 0)
+  fi
+
+  # 5. Process removeStories - removes stories from all arrays and deletes files
+  local remove_stories_count=0
+  local remove_stories=$(jq -r '.removeStories // [] | .[]' "$update_file" 2>/dev/null)
+  if [[ -n "$remove_stories" ]]; then
+    echo "$remove_stories" | while IFS= read -r story_id; do
+      local story_file="$stories_dir/${story_id}.json"
+
+      # Update index.json: remove from all arrays
+      jq --arg id "$story_id" '
+        .pending = (.pending | map(select(. != $id))) |
+        .blocked = (.blocked | map(select(. != $id))) |
+        .storyOrder = (.storyOrder | map(select(. != $id))) |
+        .completed = ((.completed // []) | map(select(. != $id)))
+      ' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
+
+      # Delete story file
+      rm -f "$story_file"
+    done
+    remove_stories_count=$(jq '.removeStories | length' "$update_file" 2>/dev/null || echo 0)
+  fi
+
+  # 6. Update nextStory after any changes (stats are derived on-the-fly, US-106)
+  local any_changes=$((new_stories_count + update_stories_count + move_to_pending_count + move_to_blocked_count + remove_stories_count))
+  if [[ $any_changes -gt 0 ]]; then
     # Update nextStory in index.json
     jq '.nextStory = (.pending[0] // null)' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
 
@@ -4046,16 +4114,14 @@ _ralph_apply_update_queue() {
     jq '.newStories = []' "$index_file" > "$tmp_file" && mv "$tmp_file" "$index_file"
   fi
 
-  # 4. Delete update.json after successful processing
+  # 7. Delete update.json after successful processing
   rm -f "$update_file"
 
   # Set global for caller to use
   RALPH_UPDATES_APPLIED=$new_stories_count
 
   # Return success if we applied anything
-  if [[ $new_stories_count -gt 0 ]] || [[ $update_stories_count -gt 0 ]]; then
-    return 0
-  fi
+  [[ $any_changes -gt 0 ]] && return 0
   return 1
 }
 
