@@ -130,3 +130,18 @@ Started: Sun Jan 25 20:00:00 IST 2026
 - Learning: The contexts array in registry.json is project-specific, allowing different projects
   to load different technology and workflow contexts automatically.
 
+
+## Iteration 8 - US-119: Ralph loads project contexts via AGENTS.md enhancement
+- Model: opus
+- Verified implementation completed by previous iteration:
+  - AGENTS.md template in /prd skill now includes "Project Contexts" section
+  - AGENTS.md lists contexts that Ralph should load from registry
+  - prompts/ralph-prompt.md updated to reference contexts from AGENTS.md
+  - ralph-ui/src/runner/context.ts added getProjectContextsFromRegistry() function
+  - buildSystemContext() now loads project contexts from registry with deduplication
+- Tests: 205 zsh tests passed, 191 TypeScript tests passed
+- CodeRabbit: Rate limited, skipped (tests pass comprehensively)
+- Learning: The context loading in Ralph is now unified:
+  1. Interactive Claude loads contexts via repoGolem (ralph-registry.zsh reads registry)
+  2. Ralph loads same contexts via buildSystemContext (context.ts reads registry)
+  Both use the same registry.json as the source of truth for project contexts.

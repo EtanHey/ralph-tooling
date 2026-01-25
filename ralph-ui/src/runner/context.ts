@@ -4,7 +4,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from "fs";
-import { join, dirname } from "path";
+import { join, dirname, sep } from "path";
 import type { Story, Model } from "./types";
 
 // AIDEV-NOTE: This module replicates the context building logic from ralph.zsh
@@ -39,6 +39,46 @@ export function getDefaultPaths(): { contextsDir: string; promptsDir: string } {
   const promptsDir = join(home, ".config", "ralphtools", "prompts");
 
   return { contextsDir, promptsDir };
+}
+
+/**
+ * Get project contexts from registry based on working directory
+ * Returns array of context paths (e.g., ['base', 'skill-index', 'workflow/interactive'])
+ */
+export function getProjectContextsFromRegistry(workingDir: string): string[] {
+  const home = process.env.HOME || "";
+  const registryPath = join(home, ".config", "ralphtools", "registry.json");
+
+  if (!existsSync(registryPath)) {
+    return [];
+  }
+
+  try {
+    const registry = JSON.parse(readFileSync(registryPath, "utf-8"));
+    const projects = registry.projects || {};
+
+    // Find project matching this working directory
+    for (const [projectKey, projectConfig] of Object.entries(projects)) {
+      const config = projectConfig as { path?: string; contexts?: string[] };
+      let projectPath = config.path || "";
+      // Expand ~ in path
+      projectPath = projectPath.replace(/^~/, home);
+
+      // Skip entries with missing or empty paths
+      if (!projectPath) {
+        continue;
+      }
+
+      // Ensure path boundary match (prevent /project-v2 matching /project)
+      if (workingDir === projectPath || workingDir.startsWith(projectPath + sep)) {
+        return config.contexts || [];
+      }
+    }
+  } catch {
+    // Ignore JSON parse errors
+  }
+
+  return [];
 }
 
 /**
@@ -119,35 +159,48 @@ export function detectTechStack(workingDir: string): string[] {
  */
 export function buildSystemContext(config: ContextConfig): string {
   const parts: string[] = [];
+  const loadedContexts = new Set<string>(); // Track loaded context paths to prevent duplicates
+
+  // Helper to load a context file if not already loaded
+  const loadContext = (ctxPath: string): boolean => {
+    if (loadedContexts.has(ctxPath)) {
+      return false;
+    }
+    if (existsSync(ctxPath)) {
+      parts.push(readFileSync(ctxPath, "utf-8"));
+      loadedContexts.add(ctxPath);
+      return true;
+    }
+    return false;
+  };
 
   // 1. Load base.md (core Ralph rules)
-  const basePath = join(config.contextsDir, "base.md");
-  if (existsSync(basePath)) {
-    parts.push(readFileSync(basePath, "utf-8"));
-  }
+  loadContext(join(config.contextsDir, "base.md"));
 
   // 2. Load workflow/ralph.md (Ralph-specific instructions)
-  const workflowPath = join(config.contextsDir, "workflow", "ralph.md");
-  if (existsSync(workflowPath)) {
-    parts.push(readFileSync(workflowPath, "utf-8"));
+  loadContext(join(config.contextsDir, "workflow", "ralph.md"));
+
+  // 3. Load project contexts from registry
+  // AIDEV-NOTE: This loads contexts defined in ~/.config/ralphtools/registry.json
+  // for the project matching the working directory
+  const projectContexts = getProjectContextsFromRegistry(config.workingDir);
+  for (const ctx of projectContexts) {
+    // Context names can be plain (e.g., 'base') or paths (e.g., 'workflow/interactive')
+    // Add .md extension if not present
+    const ctxFileName = ctx.endsWith(".md") ? ctx : `${ctx}.md`;
+    loadContext(join(config.contextsDir, ctxFileName));
   }
 
-  // 3. Load tech-specific contexts based on detected stack
+  // 4. Load tech-specific contexts based on detected stack
   const techStack = detectTechStack(config.workingDir);
   for (const tech of techStack) {
-    const techPath = join(config.contextsDir, "tech", `${tech}.md`);
-    if (existsSync(techPath)) {
-      parts.push(readFileSync(techPath, "utf-8"));
-    }
+    loadContext(join(config.contextsDir, "tech", `${tech}.md`));
   }
 
-  // 4. Load additional contexts if specified
+  // 5. Load additional contexts if specified (passed programmatically)
   if (config.additionalContexts) {
     for (const ctx of config.additionalContexts) {
-      const ctxPath = join(config.contextsDir, ctx);
-      if (existsSync(ctxPath)) {
-        parts.push(readFileSync(ctxPath, "utf-8"));
-      }
+      loadContext(join(config.contextsDir, ctx));
     }
   }
 

@@ -8,6 +8,9 @@ You are running on model: **{{MODEL}}**
 ## Meta-Learnings
 Read docs.local/ralph-meta-learnings.md if it exists - contains critical patterns about avoiding loops and state management.
 
+## Project Contexts (Auto-Loaded)
+Your system context includes project-specific rules from the registry (`~/.config/ralphtools/registry.json`). Check `prd-json/AGENTS.md` for which contexts are loaded for this project. These provide technology-specific patterns and workflow rules that you should follow.
+
 ## File Access (CRITICAL)
 If `read_file` or `write_file` fail due to "ignored by configured ignore patterns", you MUST use shell commands to access them:
 - To read: `run_shell_command("cat <path>")`

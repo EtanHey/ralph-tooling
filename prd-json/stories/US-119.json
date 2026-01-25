@@ -3,14 +3,36 @@
   "title": "Ralph loads project contexts via AGENTS.md enhancement",
   "description": "Ralph autonomous execution should also load the project's contexts. Enhance AGENTS.md template and ralph prompt to include context loading instructions.",
   "priority": "high",
-  "dependsOn": ["US-118"],
-  "acceptanceCriteria": [
-    {"text": "Update AGENTS.md template in /prd skill to include contexts section", "checked": false},
-    {"text": "AGENTS.md lists which contexts Ralph should load from registry", "checked": false},
-    {"text": "Update prompts/ralph-prompt.md to reference contexts from AGENTS.md", "checked": false},
-    {"text": "Test: Ralph iteration loads contexts when running on a project", "checked": false},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
-    {"text": "Commit: feat: US-119 Ralph context loading", "checked": false}
+  "dependsOn": [
+    "US-118"
   ],
-  "passes": false
+  "acceptanceCriteria": [
+    {
+      "text": "Update AGENTS.md template in /prd skill to include contexts section",
+      "checked": true
+    },
+    {
+      "text": "AGENTS.md lists which contexts Ralph should load from registry",
+      "checked": true
+    },
+    {
+      "text": "Update prompts/ralph-prompt.md to reference contexts from AGENTS.md",
+      "checked": true
+    },
+    {
+      "text": "Test: Ralph iteration loads contexts when running on a project",
+      "checked": true
+    },
+    {
+      "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
+      "checked": true
+    },
+    {
+      "text": "Commit: feat: US-119 Ralph context loading",
+      "checked": true
+    }
+  ],
+  "passes": true,
+  "completedAt": "2026-01-25T19:16:30.000Z",
+  "completedBy": "opus"
 }

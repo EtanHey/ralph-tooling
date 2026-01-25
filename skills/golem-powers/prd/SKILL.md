@@ -249,6 +249,10 @@ ls -1 ~/.claude/commands/golem-powers/*/SKILL.md 2>/dev/null | while read f; do
   desc=$(awk '/^description:/{gsub(/^description: *"?/, ""); gsub(/"$/, ""); print}' "$f")
   echo "| \`/$skill\` | $desc |"
 done
+
+# Get project contexts from registry
+project_key="$(basename $(pwd))"  # or the registered project name
+jq -r --arg p "$project_key" '.projects[$p].contexts // [] | .[]' ~/.config/ralphtools/registry.json 2>/dev/null
 ```
 
 ```markdown
@@ -265,6 +269,17 @@ done
 | `/coderabbit` | Runs AI code reviews. Use when reviewing changes, preparing PRs, or checking code quality. |
 | `/prd-manager` | Manage PRD stories - add, update, bulk operations. |
 | `/catchup` | Recover context by reading all files changed since diverging from main. |
+
+## 📦 Project Contexts
+
+**Ralph loads these contexts automatically from the registry:**
+
+<!-- List contexts from: jq '.projects["<project>"].contexts[]' ~/.config/ralphtools/registry.json -->
+- `base` - Universal rules (scratchpad, AIDEV-NOTE, type safety)
+- `skill-index` - Available skills reference
+- `workflow/interactive` - CLAUDE_COUNTER, git safety
+
+These contexts provide project-specific rules and patterns. If you need additional contexts, update the project's `contexts` array in `~/.config/ralphtools/registry.json`.
 
 ## 🔄 CodeRabbit Iteration Rule
 

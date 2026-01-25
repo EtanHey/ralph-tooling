@@ -19,12 +19,14 @@ This PRD makes claude-golem eat its own dogfood:
 | `/golem-powers:context7` | Look up library docs when unsure about APIs |
 | `/golem-powers:catchup` | Recover context after long breaks |
 
-## Project Contexts (Load These)
+## Project Contexts (Auto-Loaded by Ralph)
 
-This project should load these contexts at startup:
-- `base` - Universal rules
-- `skill-index` - Available skills list
+Ralph automatically loads these contexts from the registry (`~/.config/ralphtools/registry.json`):
+- `base` - Universal rules (scratchpad, AIDEV-NOTE, type safety)
+- `skill-index` - Available skills reference
 - `workflow/interactive` - CLAUDE_COUNTER, git safety
+
+To modify contexts, update the project's `contexts` array in the registry.
 
 ## Key Files for This PRD
 
