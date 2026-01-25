@@ -40,6 +40,13 @@ function cleanupAndExit(code: number = 0): void {
     inkInstance = undefined;
   }
 
+  // Reset terminal raw mode before exit so command line works
+  try {
+    if (process.stdin.isTTY && process.stdin.setRawMode) {
+      process.stdin.setRawMode(false);
+    }
+  } catch {}
+
   process.exit(code);
 }
 
@@ -59,6 +66,21 @@ const watchdogInterval = setInterval(() => {
     }
   } catch {}
 }, 500);
+
+// AIDEV-NOTE: Keyboard exit handler - ONLY catches Ctrl+C at process level.
+// Let Ink handle 'q', 'c', arrows etc. via useInput in components.
+// This avoids conflicts with ConfigMenu navigation.
+function setupKeyboardExit() {
+  if (process.stdin.isTTY) {
+    process.stdin.on('data', (data: Buffer) => {
+      const code = data[0];
+      // ONLY Ctrl+C (0x03) - let Ink handle everything else
+      if (code === 0x03) {
+        forceExit();
+      }
+    });
+  }
+}
 
 // CLI configuration interface
 interface CLIConfig {
@@ -367,6 +389,9 @@ async function runInRunnerMode(config: CLIConfig) {
     // Use the global inkInstance so cleanup can access it
     inkInstance = render(<RunnerDashboard />, { exitOnCtrlC: false });
 
+    // Set up keyboard exit handler after Ink has initialized raw mode
+    setupKeyboardExit();
+
     // Also listen for Ink's exit event to set exitRequested
     inkInstance.waitUntilExit().then(() => {
       exitRequested = true;
@@ -480,6 +505,9 @@ async function runInDisplayMode(config: CLIConfig) {
     />,
     { exitOnCtrlC: false }
   );
+
+  // Set up keyboard exit handler after Ink has initialized raw mode
+  setupKeyboardExit();
 
   // Wait for the app to exit, then cleanup
   await inkInstance.waitUntilExit();

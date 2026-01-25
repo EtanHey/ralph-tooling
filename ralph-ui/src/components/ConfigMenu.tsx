@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput, useStdin } from 'ink';
+import { Box, Text, useInput } from 'ink';
 import { loadConfig, saveConfig, type RalphConfig, type UiMode, type Model } from '../utils/config.js';
 
 // Config item definition
@@ -268,12 +268,8 @@ function ConfigMenuUI({
 }
 
 export function ConfigMenu({ onClose, onSave }: ConfigMenuProps) {
-  const { isRawModeSupported } = useStdin();
-
-  // Conditionally render based on raw mode support to avoid Ink errors
-  if (isRawModeSupported) {
-    return <ConfigMenuWithRawMode onClose={onClose} onSave={onSave} />;
-  }
-
-  return <ConfigMenuWithFallback onClose={onClose} onSave={onSave} />;
+  // AIDEV-NOTE: Always use raw mode version since Ink's useInput works
+  // (Dashboard's 'c' key opens this menu, proving Ink input is functional)
+  // The fallback was too limited (only q/Esc) and caused navigation to break.
+  return <ConfigMenuWithRawMode onClose={onClose} onSave={onSave} />;
 }
