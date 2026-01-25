@@ -61,13 +61,13 @@
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: feat: US-111 enhanced update.json with index operations",
-      "checked": false
+      "checked": true
     }
   ],
   "dependencies": [],
-  "passes": false
+  "passes": true
 }

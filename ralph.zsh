@@ -4779,6 +4779,15 @@ function ralph() {
     _ralph_start_watcher "$PRD_JSON_DIR"
   fi
 
+  # Clear stale status file before starting
+  rm -f "${RALPH_STATUS_FILE:-$HOME/.ralph-status.json}" 2>/dev/null
+
+  # Tell user about live UI option
+  if [[ "$use_ink_ui" == "true" && -f "$RALPH_UI_PATH" ]]; then
+    echo "💡 Run 'ralph-ui' in another terminal for live dashboard"
+    echo ""
+  fi
+
   for ((i=1; i<=$MAX; i++)); do
     # Check for update.json at START of each iteration (hot-reload)
     if [[ "$use_json_mode" == "true" ]]; then
