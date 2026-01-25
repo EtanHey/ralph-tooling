@@ -1,6 +1,6 @@
 # Available Skills
 
-> Auto-generated: 2026-01-25T12:52:07Z
+> Auto-generated: 2026-01-25T20:41:30Z
 > Regenerate: ~/.claude/scripts/generate-skill-index.sh
 
 ## Skills
@@ -13,6 +13,7 @@
 - /catchup-recent
 - /catchup
 - /coderabbit
+- /context-audit
 - /context7
 - /convex
 - /create-pr
@@ -22,6 +23,7 @@
 - /github
 - /linear
 - /lsp
+- /obsidian
 - /prd-manager
 - /prd
 - /project-context
@@ -31,6 +33,7 @@
 - /test-plan
 - /worktrees
 - /writing-skills
+- /zikaron
 
 ### superpowers
 - /brainstorming
