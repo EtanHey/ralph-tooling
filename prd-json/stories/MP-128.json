@@ -20,8 +20,10 @@
     {"text": "All tests pass: bun test bun/tests/session-context.test.ts", "checked": true},
     {"text": "Typecheck passes", "checked": true},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: refactor: MP-128 add unified session context manager", "checked": false}
+    {"text": "Commit: refactor: MP-128 add unified session context manager", "checked": true}
   ],
   "storyType": "infrastructure",
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-26T11:30:54.000Z",
+  "completedBy": "kiro"
 }

@@ -100,3 +100,16 @@ Started: Mon Jan 26 00:22:11 IST 2026
 - CodeRabbit review rate limited but tests verify functionality works correctly
 - Root cause: Stories blocked by other stories required manual intervention to unblock when blocker completed
 - Learning: Auto-unblock prevents manual intervention and enables chain reactions where A blocks B blocks C
+
+## Iteration 10 - MP-128: Session Context Manager (TDD)
+- Model: kiro
+- Implemented unified SessionContext system using TDD approach
+- Created comprehensive test suite with 5 passing tests for session detection and notification config resolution
+- Built SessionContext class with factory pattern and unified config resolution
+- Added RALPH_SESSION environment variable export to ralph.zsh for session identification
+- Integrated SessionContext into ralph-ui runner, replacing scattered notification checks
+- Fixed CodeRabbit findings: notification flag handling and RunnerConfig ntfyTopic inclusion
+- All tests pass: Ralph (205 passed), Skills (17 passed), Bun (99 passed)
+- TypeScript compilation successful in both ralph-ui and bun directories
+- CodeRabbit: Fixed identified issues (flag handling and config structure)
+- Replaces scattered env/flag/config checks with single source of truth for session management
