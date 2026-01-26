@@ -65,11 +65,16 @@ skill-name/
 - Use `set -euo pipefail` for safety
 - Exit 0 on success, non-zero on failure
 - Print errors to stderr, results to stdout
+- **MUST use BASH_SOURCE for path detection** (see Path Standard below)
 
 **Example script:**
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
+
+# REQUIRED: Self-detect script location (works from any cwd)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "## Review Results"
 echo ""
@@ -104,9 +109,11 @@ skill-name/
 #!/usr/bin/env bash
 set -euo pipefail
 
+# REQUIRED: Self-detect script location (works from any cwd)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/.."
+SKILL_DIR="$(dirname "$SCRIPT_DIR")"
 
+cd "$SKILL_DIR"
 bun run src/index.ts "$@"
 ```
 
@@ -217,4 +224,50 @@ See working examples in this repo:
 2. **Test before commit** - Run `shellcheck` on all .sh files
 3. **Output Markdown** - Scripts should return Markdown Claude can parse
 4. **Exit codes matter** - 0 = success, non-zero = failure
-5. **No hardcoded paths** - Use `$SCRIPT_DIR` for relative paths
+5. **Use BASH_SOURCE pattern** - All scripts MUST self-detect their location
+
+## Path Standard (CRITICAL)
+
+All skill scripts MUST use this pattern for portability:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# REQUIRED: Self-detect script location (works from any cwd)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Now use absolute paths relative to skill
+source "$SKILL_DIR/config.sh"  # If needed
+```
+
+**For project detection** (when script needs prd-json/, package.json, etc.):
+
+```bash
+# Walk up from cwd to find project root
+find_project_root() {
+    local dir="$PWD"
+    while [[ ! -d "$dir/prd-json" && "$dir" != "/" ]]; do
+        dir="$(dirname "$dir")"
+    done
+    if [[ -d "$dir/prd-json" ]]; then
+        echo "$dir"
+    else
+        echo ""
+    fi
+}
+
+PROJECT_ROOT="$(find_project_root)"
+if [[ -z "$PROJECT_ROOT" ]]; then
+    echo "Error: Cannot find prd-json/ directory" >&2
+    exit 1
+fi
+```
+
+**Why this matters:**
+- Skills are symlinked in `~/.claude/commands/` but users run Claude from project directories
+- Relative paths like `./scripts/foo.sh` fail when cwd != skill directory
+- BASH_SOURCE provides reliable self-location regardless of invocation context
+
+See `contexts/skill-authoring.md` for full details.

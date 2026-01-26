@@ -21,10 +21,12 @@
     "US-116",
     "US-117",
     "US-118",
-    "AUDIT-001"
+    "AUDIT-001",
+    "MP-130"
   ],
   "pending": [
-    "AUDIT-001"
+    "AUDIT-001",
+    "MP-130"
   ],
   "blocked": [
     "V-002",
@@ -49,9 +51,9 @@
     "US-118"
   ],
   "stats": {
-    "total": 19,
+    "total": 20,
     "completed": 10,
-    "pending": 1,
+    "pending": 2,
     "blocked": 8
   }
 }

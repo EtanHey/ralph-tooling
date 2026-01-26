@@ -44,6 +44,61 @@ claude-golem/
 └── docs/                  # Documentation
 ```
 
+## How Claude Code Works (Essential Background)
+
+This project extends **Claude Code** - Anthropic's official CLI. Key mechanics:
+
+### CLAUDE.md = Instructions for AI
+```
+~/.claude/CLAUDE.md     → Global (all projects)
+./CLAUDE.md             → Project-level
+./subdir/CLAUDE.md      → Subdirectory-specific
+```
+Auto-loaded as system context. Like README but FOR the AI.
+
+### Skills = Reusable Prompts
+```
+~/.claude/commands/golem-powers/
+├── prd/
+│   ├── SKILL.md         ← Main prompt (loaded on /golem-powers:prd)
+│   ├── scripts/         ← Optional shell scripts
+│   └── workflows/       ← Sub-workflows
+├── coderabbit/
+│   └── SKILL.md
+└── ...
+```
+
+**SKILL.md format:**
+```yaml
+---
+name: skill-name
+description: When to use this skill (shown in listings)
+---
+# The actual prompt/instructions
+```
+
+User invokes: `/golem-powers:prd` → Claude loads that SKILL.md into context.
+
+### Contexts = Composable Rules
+Instead of duplicating, reference shared contexts:
+```markdown
+@context: base           ← Universal rules
+@context: tech/nextjs    ← Framework-specific
+@context: workflow/ralph ← Workflow-specific
+```
+Loaded from `~/.claude/contexts/` or `contexts/` in this repo.
+
+### Ralph's Context Building
+1. Load base context (always)
+2. Auto-detect tech stack (Next.js? Convex?)
+3. Load relevant tech contexts
+4. Add story-type prompt (US.md, BUG.md, V.md)
+5. Spawn Claude with `--append-system-prompt`
+
+**Fresh context each iteration** = No accumulated confusion.
+
+---
+
 ## Import Context Files
 
 @./contexts/README.md

@@ -2,7 +2,31 @@
 # PRD Manager - Manage prd-json stories
 set -euo pipefail
 
-PRD_DIR="${PRD_DIR:-./prd-json}"
+# REQUIRED: Self-detect script location (works from any cwd)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Walk up from cwd to find project root with prd-json/
+find_project_root() {
+    local dir="$PWD"
+    while [[ ! -d "$dir/prd-json" && "$dir" != "/" ]]; do
+        dir="$(dirname "$dir")"
+    done
+    if [[ -d "$dir/prd-json" ]]; then
+        echo "$dir"
+    else
+        echo ""
+    fi
+}
+
+PROJECT_ROOT="$(find_project_root)"
+if [[ -z "$PROJECT_ROOT" ]]; then
+    echo "Error: Cannot find prd-json/ directory" >&2
+    echo "Run this from a directory containing prd-json/ or its subdirectory" >&2
+    exit 1
+fi
+
+PRD_DIR="$PROJECT_ROOT/prd-json"
 INDEX="$PRD_DIR/index.json"
 
 # Parse arguments
