@@ -37,9 +37,11 @@
     },
     {
       "text": "Commit: fix: BUG-003 auto-block stories with blockedBy field mismatch",
-      "checked": false
+      "checked": true
     }
   ],
   "storyType": "bug",
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-26T10:55:00.000Z",
+  "completedBy": "kiro"
 }

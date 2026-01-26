@@ -21,7 +21,7 @@ Create PRDs for autonomous AI implementation via Ralph loop.
 2. Find git root: `git rev-parse --show-toplevel`
 3. **Discover relevant skills** for this project (see below)
 4. Create JSON output:
-   - `prd-json/index.json` - Story order and stats
+   - `prd-json/index.json` - Story order (stats computed automatically)
    - `prd-json/stories/{US-XXX}.json` - One file per story
 5. Create `prd-json/AGENTS.md` with skills section
 6. Create `progress.txt` at git root
@@ -180,10 +180,10 @@ Use `prd-json/update.json` instead. Ralph auto-merges it on next run.
 ```json
 {
   "storyOrder": ["...existing IDs...", "US-034", "US-035"],
-  "pending": ["...existing pending...", "US-034", "US-035"],
-  "stats": { "total": 29, "pending": 8 }
+  "pending": ["...existing pending...", "US-034", "US-035"]
 }
 ```
+Note: Do NOT include `stats` - they are computed automatically from arrays.
 3. Ralph merges update.json → index.json automatically, then deletes update.json
 
 ### Why update.json?
@@ -200,13 +200,13 @@ Use `prd-json/update.json` instead. Ralph auto-merges it on next run.
 {
   "$schema": "https://ralph.dev/schemas/prd-index.schema.json",
   "generatedAt": "2026-01-19T12:00:00Z",
-  "stats": {"total": 4, "completed": 0, "pending": 4, "blocked": 0},
   "nextStory": "US-001",
   "storyOrder": ["US-001", "US-002", "V-001", "V-002"],
   "pending": ["US-001", "US-002", "V-001", "V-002"],
   "blocked": []
 }
 ```
+**Note:** Do NOT include `stats` - the UI computes them from array lengths.
 
 ### Story JSON (prd-json/stories/US-XXX.json)
 ```json
@@ -305,10 +305,10 @@ To add/modify stories, use `update.json`:
 \`\`\`json
 {
   "storyOrder": ["existing...", "NEW-001"],
-  "pending": ["existing...", "NEW-001"],
-  "stats": { "total": X, "pending": Y }
+  "pending": ["existing...", "NEW-001"]
 }
 \`\`\`
+Note: Do NOT include `stats` - computed automatically.
 
 ## Story ID Rules
 - Check `archive/` for used IDs before creating new ones
@@ -325,7 +325,7 @@ To add/modify stories, use `update.json`:
 
 - [ ] Ran skill discovery - identified relevant skills for project
 - [ ] prd-json/ created at repo root
-- [ ] index.json has valid stats, storyOrder, pending
+- [ ] index.json has storyOrder, pending, blocked (NO stats - computed automatically)
 - [ ] AGENTS.md created with skills section + update.json instructions
 - [ ] Each story has its own JSON file
 - [ ] Stories ordered by dependency
