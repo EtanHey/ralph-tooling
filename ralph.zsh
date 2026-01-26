@@ -27,7 +27,14 @@
 # ═══════════════════════════════════════════════════════════════════
 # VERSION
 # ═══════════════════════════════════════════════════════════════════
-RALPH_SCRIPT_DIR="${0:A:h}"
+# Get script directory (works when sourced)
+if [[ -n "${BASH_SOURCE[0]}" ]]; then
+  RALPH_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+elif [[ -n "${(%):-%x}" ]]; then
+  RALPH_SCRIPT_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+else
+  RALPH_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
 RALPH_VERSION_FILE="${RALPH_SCRIPT_DIR}/VERSION"
 if [[ -f "$RALPH_VERSION_FILE" ]]; then
   RALPH_VERSION=$(head -1 "$RALPH_VERSION_FILE")
@@ -270,9 +277,10 @@ function ralph-stop() {
 # Generate launchers from registry if it exists
 if [[ -f "$RALPH_CONFIG_DIR/config.json" ]]; then
   projects=$(jq -r '.projects // {} | to_entries[] | "\(.key)|\(.value.path)"' "$RALPH_CONFIG_DIR/config.json" 2>/dev/null)
-  for entry in ${(f)projects}; do
+  while IFS= read -r entry; do
+    [[ -z "$entry" ]] && continue
     name="${entry%%|*}"
     path="${entry#*|}"
     [[ -n "$name" && -n "$path" ]] && repoGolem "$name" "$path"
-  done
+  done <<< "$projects"
 fi

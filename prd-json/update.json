@@ -1,0 +1,6 @@
+{
+  "storyOrder": ["BUG-001", "BUG-002", "V-002", "US-115", "US-116", "US-117", "US-118"],
+  "pending": ["BUG-002", "V-002", "US-115", "US-116", "US-117", "US-118"],
+  "blocked": ["V-002"],
+  "stats": { "total": 7, "completed": 1, "pending": 5, "blocked": 1 }
+}

@@ -35,6 +35,9 @@ export async function sendNtfy(options: NtfyOptions): Promise<boolean> {
     return false;
   }
 
+  // Verbose logging for debugging
+  console.log(`[NTFY] Sending to ${options.topic}: ${options.title}`);
+
   try {
     const headers: Record<string, string> = {
       Title: options.title,
