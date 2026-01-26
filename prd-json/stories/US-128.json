@@ -41,9 +41,11 @@
     },
     {
       "text": "Commit: docs: US-128 research session context architecture",
-      "checked": false
+      "checked": true
     }
   ],
   "storyType": "research",
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-26T10:25:02.331Z",
+  "completedBy": "kiro"
 }
