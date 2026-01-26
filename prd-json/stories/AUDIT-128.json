@@ -1,0 +1,20 @@
+{
+  "id": "AUDIT-128",
+  "title": "Verify Session Context System",
+  "description": "Audit story to verify MP-128 session context works end-to-end. Tests -QN flag flows correctly through the entire chain.",
+  "acceptanceCriteria": [
+    {"text": "Verify RALPH_SESSION is exported in ralph.zsh before bun spawn", "checked": false},
+    {"text": "Verify detectRunner() returns 'ralph' during Ralph execution", "checked": false},
+    {"text": "Test: ralph 1 -QN should set ctx.notifications.enabled=true", "checked": false},
+    {"text": "Test: ralph 1 (no -QN) should set ctx.notifications.enabled=false", "checked": false},
+    {"text": "Verify notification topic flows from config → context → ntfy call", "checked": false},
+    {"text": "Add verbose log: '[SESSION] runner={runner} model={model} notify={enabled}'", "checked": false},
+    {"text": "Test: Run ralph 1 -v, verify [SESSION] log appears with correct values", "checked": false},
+    {"text": "Run full test suite: bun test - all tests pass", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: test: AUDIT-128 verify session context system", "checked": false}
+  ],
+  "storyType": "audit",
+  "blockedBy": "MP-128",
+  "passes": false
+}
