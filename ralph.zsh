@@ -48,7 +48,7 @@ if [[ -f "$RALPH_CONFIG_FILE" ]]; then
   _ralph_cfg_model=$(jq -r '.defaultModel // empty' "$RALPH_CONFIG_FILE" 2>/dev/null)
   _ralph_cfg_ntfy_topic=$(jq -r '.notifications.ntfyTopic // empty' "$RALPH_CONFIG_FILE" 2>/dev/null)
   _ralph_cfg_ntfy_enabled=$(jq -r '.notifications.enabled // false' "$RALPH_CONFIG_FILE" 2>/dev/null)
-  [[ -n "$_ralph_cfg_model" ]] && RALPH_DEFAULT_MODEL="${RALPH_DEFAULT_MODEL:-$_ralph_cfg_model}"
+  [[ -n "$_ralph_cfg_model" ]] && RALPH_DEFAULT_MODEL="$_ralph_cfg_model"
   [[ -n "$_ralph_cfg_ntfy_topic" && "$_ralph_cfg_ntfy_topic" != "null" ]] && RALPH_NTFY_TOPIC="${RALPH_NTFY_TOPIC:-$_ralph_cfg_ntfy_topic}"
   [[ "$_ralph_cfg_ntfy_enabled" == "true" ]] && RALPH_NOTIFY_ENABLED=1
   unset _ralph_cfg_model _ralph_cfg_ntfy_topic _ralph_cfg_ntfy_enabled
@@ -58,7 +58,7 @@ fi
 if [[ -f "$RALPH_USER_PREFS_FILE" ]]; then
   _ralph_prefs_model=$(jq -r '.defaultModel // empty' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
   _ralph_prefs_ntfy=$(jq -r '.ntfyTopic // empty' "$RALPH_USER_PREFS_FILE" 2>/dev/null)
-  [[ -n "$_ralph_prefs_model" ]] && RALPH_DEFAULT_MODEL="${RALPH_DEFAULT_MODEL:-$_ralph_prefs_model}"
+  [[ -n "$_ralph_prefs_model" ]] && RALPH_DEFAULT_MODEL="$_ralph_prefs_model"
   [[ -n "$_ralph_prefs_ntfy" && "$_ralph_prefs_ntfy" != "null" ]] && RALPH_NTFY_TOPIC="${RALPH_NTFY_TOPIC:-$_ralph_prefs_ntfy}"
   unset _ralph_prefs_model _ralph_prefs_ntfy
 fi
@@ -269,10 +269,10 @@ function ralph-stop() {
 
 # Generate launchers from registry if it exists
 if [[ -f "$RALPH_CONFIG_DIR/config.json" ]]; then
-  local projects=$(jq -r '.projects // {} | to_entries[] | "\(.key)|\(.value.path)"' "$RALPH_CONFIG_DIR/config.json" 2>/dev/null)
+  projects=$(jq -r '.projects // {} | to_entries[] | "\(.key)|\(.value.path)"' "$RALPH_CONFIG_DIR/config.json" 2>/dev/null)
   for entry in ${(f)projects}; do
-    local name="${entry%%|*}"
-    local path="${entry#*|}"
+    name="${entry%%|*}"
+    path="${entry#*|}"
     [[ -n "$name" && -n "$path" ]] && repoGolem "$name" "$path"
   done
 fi
