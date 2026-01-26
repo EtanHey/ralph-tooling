@@ -202,3 +202,17 @@ Started: Mon Jan 26 00:22:11 IST 2026
 - CodeRabbit: Rate limited but TypeScript compilation passes
 - All Ralph tests pass (205 passed, 0 failed)
 - Validates that MP-128 SessionContext implementation works correctly as designed
+
+## Iteration 18 - US-132: Research: Ntfy on Story Completion
+- Model: kiro
+- Completed comprehensive research on rich ntfy notifications for story completion
+- Reviewed current ntfy.ts implementations in both bun/core/ and ralph-ui/src/runner/
+- Analyzed story completion detection points in runner/index.ts and available data in types.ts
+- Designed title format: [Ralph/Claude] {repo} {status-icon} | {story-id}
+- Researched repoClaude integration patterns in lib/ralph-registry.zsh
+- Designed 3-line body format: story title + model, cost/tokens, next story preview
+- Documented icon mapping: ✅=done, 🔄=progress, ⚠️=blocked, ❌=error
+- Created comprehensive research document at docs.local/research/US-132-ntfy-story-complete.md
+- CodeRabbit review passed with no issues
+- All tests passed (205 Ralph tests)
+- Established foundation for implementing rich story completion notifications in both Ralph and interactive Claude sessions

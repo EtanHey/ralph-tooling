@@ -32,7 +32,6 @@
     "AUDIT-132"
   ],
   "pending": [
-    "US-132",
     "US-115",
     "US-130"
   ],
@@ -63,13 +62,14 @@
     "US-118",
     "AUDIT-001",
     "MP-130",
-    "TEST-128"
+    "TEST-128",
+    "US-132"
   ],
   "stats": {
     "total": 28,
-    "completed": 14,
-    "pending": 3,
+    "completed": 15,
+    "pending": 2,
     "blocked": 11
   },
-  "nextStory": "US-132"
+  "nextStory": "US-115"
 }
