@@ -37,3 +37,15 @@ Started: Mon Jan 26 00:22:11 IST 2026
 - Story marked as complete
 - Root cause: The `${RALPH_DEFAULT_MODEL:-$_ralph_cfg_model}` pattern was backwards - it only used config if RALPH_DEFAULT_MODEL was unset, but it was already set to "opus" by default
 - Learning: Always check variable assignment order when debugging config precedence issues
+
+## Iteration 5 - BUG-002: -QN notification flag not working
+- Model: kiro
+- Created bun/core/ntfy.ts with sendNotification function and buildCurlArgs helper
+- Added comprehensive test suite in bun/tests/ntfy.test.ts with 8 tests covering curl argument building and notification sending
+- Fixed misleading log message for missing topic (CodeRabbit finding)
+- All tests pass: bun test bun/tests/ntfy.test.ts (8 pass, 0 fail)
+- Direct curl test successful to ntfy.sh/etanheys-ralph-claude-golem-notify
+- TypeScript compilation passes in both bun/ and ralph-ui/ directories
+- CodeRabbit review passed after fixing logging issue
+- Root cause: The bug was that there was no TypeScript implementation of sendNotification in the bun directory, only in ralph-ui
+- Learning: When acceptance criteria ask for specific file locations, create the exact files requested even if similar functionality exists elsewhere

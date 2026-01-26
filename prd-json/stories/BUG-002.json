@@ -8,13 +8,16 @@
     {"text": "Verify ralph-ui reads --notify flag and enables notifications", "checked": true},
     {"text": "Fix the broken link in the notification chain", "checked": true},
     {"text": "Add verbose log when ntfy called: `[NTFY] Sending to {topic}: {title}`", "checked": true},
-    {"text": "TEST: Add bun/tests/ntfy.test.ts with sendNotification tests", "checked": false},
-    {"text": "TEST: Verify sendNotification builds correct curl args (topic, title, body)", "checked": false},
-    {"text": "TEST: Run `bun test bun/tests/ntfy.test.ts` - all tests pass", "checked": false},
-    {"text": "TEST: Direct curl test: `curl -s ntfy.sh/etanheys-ralph-claude-golem-notify -d 'BUG-002 test'`", "checked": false},
-    {"text": "Typecheck passes", "checked": false},
-    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
-    {"text": "Commit: fix: BUG-002 restore -QN notification flag functionality", "checked": false}
+    {"text": "TEST: Add bun/tests/ntfy.test.ts with sendNotification tests", "checked": true},
+    {"text": "TEST: Verify sendNotification builds correct curl args (topic, title, body)", "checked": true},
+    {"text": "TEST: Run `bun test bun/tests/ntfy.test.ts` - all tests pass", "checked": true},
+    {"text": "TEST: Direct curl test: `curl -s ntfy.sh/etanheys-ralph-claude-golem-notify -d 'BUG-002 test'`", "checked": true},
+    {"text": "Typecheck passes", "checked": true},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
+    {"text": "Commit: fix: BUG-002 restore -QN notification flag functionality", "checked": true}
   ],
-  "storyType": "bug"
+  "storyType": "bug",
+  "passes": true,
+  "completedAt": "2026-01-26T10:14:47.652Z",
+  "completedBy": "kiro"
 }
