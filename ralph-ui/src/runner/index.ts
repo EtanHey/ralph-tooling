@@ -19,6 +19,9 @@ import {
   isAllBlocked,
   getCriteriaProgress,
   autoBlockStoryIfNeeded,
+  readStory,
+  writeStory,
+  writeIndex,
 } from "./prd";
 import { spawnClaude, analyzeResult } from "./claude";
 import { spawnClaudePTY } from "./pty-claude";
@@ -46,6 +49,7 @@ import {
   notifyPRDComplete,
   notifyError,
   notifyRetry,
+  notifyBlocked,
 } from "./ntfy";
 import { SessionContext } from "./session-context";
 
@@ -103,6 +107,48 @@ function log(config: RunnerConfig, message: string): void {
 function verbose(config: RunnerConfig, message: string): void {
   if (config.verbose && !config.quiet) {
     console.log(`[verbose] ${message}`);
+  }
+}
+
+// Startup scan: check all blocked stories and unblock if blocker is completed
+function scanAndUnblockStories(prdJsonDir: string): void {
+  const index = readIndex(prdJsonDir);
+  if (!index) return;
+
+  const unblockedStories: string[] = [];
+  
+  for (const blockedStoryId of [...index.blocked]) {
+    const blockedStory = readStory(prdJsonDir, blockedStoryId);
+    if (!blockedStory || !blockedStory.blockedBy) continue;
+
+    // Check if the blocker story is completed
+    const blockerStory = readStory(prdJsonDir, blockedStory.blockedBy);
+    if (blockerStory && blockerStory.passes) {
+      // Remove blockedBy field from story
+      delete blockedStory.blockedBy;
+      writeStory(prdJsonDir, blockedStory);
+
+      // Move from blocked to pending
+      index.blocked = index.blocked.filter(id => id !== blockedStoryId);
+      index.pending.push(blockedStoryId);
+      
+      // Update stats
+      index.stats.blocked = Math.max(0, index.stats.blocked - 1);
+      index.stats.pending++;
+
+      unblockedStories.push(blockedStoryId);
+      console.log(`[PRD] Startup scan: Auto-unblocked ${blockedStoryId} (blocker ${blockedStory.blockedBy} completed)`);
+    }
+  }
+
+  if (unblockedStories.length > 0) {
+    // Set next story if pending was empty before
+    if (index.pending.length > 0 && !index.nextStory) {
+      index.nextStory = index.pending[0];
+    }
+    
+    writeIndex(prdJsonDir, index);
+    console.log(`[PRD] Startup scan: Unblocked ${unblockedStories.length} stories`);
   }
 }
 
@@ -296,6 +342,9 @@ export async function* runIterations(
   process.on("SIGTERM", handleSignal);
 
   try {
+    // Startup scan: check all blocked stories and unblock if blocker is completed
+    scanAndUnblockStories(config.prdJsonDir);
+    
     while (iteration <= config.iterations && !interrupted) {
       log(config, `\n=== Iteration ${iteration} ===`);
 
@@ -319,7 +368,7 @@ export async function* runIterations(
         log(config, "All remaining stories are blocked");
         setError("All stories blocked");
         if (sessionContext.notifications.enabled && sessionContext.notifications.topic) {
-          await notifyError(sessionContext.notifications.topic, "All stories blocked");
+          await notifyBlocked(sessionContext.notifications.topic, undefined, "All stories blocked");
         }
         break;
       }
