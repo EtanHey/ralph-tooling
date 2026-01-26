@@ -18,6 +18,7 @@ import {
   isComplete,
   isAllBlocked,
   getCriteriaProgress,
+  autoBlockStoryIfNeeded,
 } from "./prd";
 import { spawnClaude, analyzeResult } from "./claude";
 import { spawnClaudePTY } from "./pty-claude";
@@ -164,7 +165,10 @@ export async function runSingleIteration(
 
   // Check if story is blocked
   if (story.blockedBy) {
-    verbose(config, `Story ${story.id} is blocked: ${story.blockedBy}`);
+    // Auto-block: move from pending to blocked if needed
+    const wasAutoBlocked = autoBlockStoryIfNeeded(config.prdJsonDir, story.id);
+    
+    verbose(config, `Story ${story.id} is blocked: ${story.blockedBy}${wasAutoBlocked ? " (auto-moved to blocked)" : ""}`);
     return {
       iteration,
       storyId: story.id,

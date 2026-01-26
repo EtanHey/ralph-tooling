@@ -33,7 +33,7 @@
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: fix: BUG-003 auto-block stories with blockedBy field mismatch",

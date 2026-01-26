@@ -377,3 +377,35 @@ export function getCriteriaProgress(story: Story): {
 
   return { total, checked, percentage };
 }
+
+/**
+ * Auto-block a story that has blockedBy field but is still in pending array
+ * This fixes the bug where Ralph loops forever on such stories
+ */
+export function autoBlockStoryIfNeeded(prdJsonDir: string, storyId: string): boolean {
+  const story = readStory(prdJsonDir, storyId);
+  const index = readIndex(prdJsonDir);
+
+  if (!story || !index) {
+    return false;
+  }
+
+  // Check if story has blockedBy but is in pending array
+  if (story.blockedBy && index.pending.includes(storyId)) {
+    console.log(`[PRD] Auto-blocked ${storyId}: ${story.blockedBy}`);
+    
+    // Move from pending to blocked
+    index.pending = index.pending.filter((id) => id !== storyId);
+    if (!index.blocked.includes(storyId)) {
+      index.blocked.push(storyId);
+    }
+
+    // Update nextStory to next pending story
+    index.nextStory = index.pending.length > 0 ? index.pending[0] : undefined;
+
+    writeIndex(prdJsonDir, index);
+    return true;
+  }
+
+  return false;
+}
