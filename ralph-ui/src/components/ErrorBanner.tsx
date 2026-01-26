@@ -13,8 +13,12 @@ export function ErrorBanner({ error }: ErrorBannerProps) {
     return null;
   }
 
+  // Use stable key to prevent duplicate box renders for the same error
+  const stableKey = `error-${error.slice(0, 50)}`;
+
   return (
     <Box
+      key={stableKey}
       borderStyle="double"
       borderColor="red"
       paddingX={2}

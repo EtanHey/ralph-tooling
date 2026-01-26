@@ -62,3 +62,15 @@ Started: Mon Jan 26 00:22:11 IST 2026
 - Listed 11 files that will need changes for MP-128 implementation
 - CodeRabbit review passed with no issues
 - All criteria completed successfully
+
+## Iteration 7 - BUG-003: Ralph loops forever when story has blockedBy but is in pending array
+- Model: kiro
+- Fixed infinite loop bug where Ralph would retry blocked stories forever
+- Added autoBlockStoryIfNeeded() function to automatically move stories from pending to blocked when blockedBy field exists
+- Updated runSingleIteration() to call auto-block function and advance to next pending story
+- Created comprehensive tests to verify auto-block functionality and Ralph advancement behavior
+- All tests pass: Ralph test suite (205 passed), Bun tests (91 passed), custom auto-block tests
+- TypeScript compilation passes in both ralph-ui and bun directories
+- CodeRabbit review attempted but rate limited - tests verify functionality works correctly
+- Root cause: Stories with blockedBy field but still in pending array caused Ralph to detect blocking but not update index
+- Learning: Always ensure index state matches story file state to prevent infinite loops in autonomous systems

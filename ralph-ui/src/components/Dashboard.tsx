@@ -182,7 +182,7 @@ export function Dashboard({
   }, [stdout]);
 
   return (
-    <Box flexDirection="column" width={terminalWidth}>
+    <Box key={`dashboard-${ralphStatus?.iteration ?? iteration}-${ralphStatus?.state ?? 'unknown'}`} flexDirection="column" width={terminalWidth}>
       {/* Keyboard handler - in live or iteration mode (SIGINT works even without raw mode) */}
       {(isLiveMode || isIterationMode) && (
         <KeyboardHandler onExit={handleExit} onConfig={handleOpenConfig} configActive={showConfig} />

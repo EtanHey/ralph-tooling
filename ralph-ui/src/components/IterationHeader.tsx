@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useRef } from 'react';
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
 
@@ -47,8 +47,12 @@ export const IterationHeader = memo(function IterationHeader({
   startTime,
   isRunning = true,
 }: IterationHeaderProps) {
+  // Use a stable key based on meaningful content to prevent duplicate box renders
+  // This ensures Ink doesn't create multiple boxes for the same iteration
+  const stableKey = `iteration-${iteration}-${model}-${isRunning}`;
+  
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1} width="100%">
+    <Box key={stableKey} flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1} width="100%">
       <Box justifyContent="space-between">
         <Box>
           {isRunning && (
