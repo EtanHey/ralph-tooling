@@ -47,6 +47,7 @@ import {
   notifyError,
   notifyRetry,
 } from "./ntfy";
+import { SessionContext } from "./session-context";
 
 // AIDEV-NOTE: This is the main iteration loop that replaces the 943-line loop in ralph.zsh
 // The state machine follows the design in docs.local/mp-006-design.md
@@ -77,6 +78,7 @@ export function createConfig(options: Partial<RunnerConfig>): RunnerConfig {
     gapSeconds: options.gapSeconds ?? DEFAULT_CONFIG.gapSeconds!,
     model: options.model ?? DEFAULT_CONFIG.model!,
     notify: options.notify ?? DEFAULT_CONFIG.notify!,
+    ntfyTopic: options.ntfyTopic,
     quiet: options.quiet ?? DEFAULT_CONFIG.quiet!,
     verbose: options.verbose ?? DEFAULT_CONFIG.verbose!,
     usePty: options.usePty,
@@ -265,6 +267,16 @@ export async function runSingleIteration(
 export async function* runIterations(
   config: RunnerConfig
 ): AsyncGenerator<IterationResult> {
+  // Create unified session context
+  const sessionContext = SessionContext.create({
+    config: {
+      notifications: {
+        enabled: config.notify,
+        topic: config.ntfyTopic,
+      },
+    },
+  });
+
   let iteration = 1;
   let retryCount = 0;
   const runStartTime = Date.now(); // Track start time for the entire run
@@ -291,8 +303,8 @@ export async function* runIterations(
       if (result.hasComplete) {
         log(config, "All stories complete!");
         setComplete();
-        if (config.notify && config.ntfyTopic) {
-          await notifyPRDComplete(config.ntfyTopic);
+        if (sessionContext.notifications.enabled && sessionContext.notifications.topic) {
+          await notifyPRDComplete(sessionContext.notifications.topic);
         }
         break;
       }
@@ -301,8 +313,8 @@ export async function* runIterations(
       if (result.hasBlocked && !result.storyId) {
         log(config, "All remaining stories are blocked");
         setError("All stories blocked");
-        if (config.notify && config.ntfyTopic) {
-          await notifyError(config.ntfyTopic, "All stories blocked");
+        if (sessionContext.notifications.enabled && sessionContext.notifications.topic) {
+          await notifyError(sessionContext.notifications.topic, "All stories blocked");
         }
         break;
       }
@@ -318,8 +330,8 @@ export async function* runIterations(
 
           log(config, `Retry ${retryCount}: ${result.error}`);
           setRetry(cooldownSecs);
-          if (config.notify && config.ntfyTopic) {
-            await notifyRetry(config.ntfyTopic, retryCount, cooldownSecs);
+          if (sessionContext.notifications.enabled && sessionContext.notifications.topic) {
+            await notifyRetry(sessionContext.notifications.topic, retryCount, cooldownSecs);
           }
 
           await sleep(cooldown);
@@ -333,8 +345,8 @@ export async function* runIterations(
       // Reset retry count on success
       if (result.success) {
         retryCount = 0;
-        if (config.notify && config.ntfyTopic) {
-          await notifyIterationComplete(config.ntfyTopic, iteration, result.storyId);
+        if (sessionContext.notifications.enabled && sessionContext.notifications.topic) {
+          await notifyIterationComplete(sessionContext.notifications.topic, iteration, result.storyId);
         }
       }
 

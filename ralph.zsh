@@ -209,6 +209,9 @@ function ralph() {
   export RALPH_SLEEP_SECONDS="$gap"
   export RALPH_NTFY_TOPIC="$ntfy_topic"
   [[ -n "$notify" ]] && export RALPH_NOTIFY=1
+  
+  # Generate and export session ID for SessionContext
+  export RALPH_SESSION="ralph-$(date +%s)-$$"
 
   # Run TypeScript iteration loop
   echo "🚀 Ralph v${RALPH_VERSION} | Model: $model | Iterations: $iterations"
