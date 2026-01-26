@@ -33,7 +33,6 @@
     "BUG-007"
   ],
   "pending": [
-    "BUG-007",
     "AUDIT-128",
     "MP-131",
     "MP-132"
@@ -65,13 +64,14 @@
     "TEST-128",
     "US-132",
     "US-115",
-    "US-130"
+    "US-130",
+    "BUG-007"
   ],
   "stats": {
     "total": 29,
-    "completed": 17,
-    "pending": 4,
+    "completed": 18,
+    "pending": 3,
     "blocked": 8
   },
-  "nextStory": "BUG-007"
+  "nextStory": "AUDIT-128"
 }

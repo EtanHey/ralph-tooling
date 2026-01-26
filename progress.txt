@@ -229,3 +229,17 @@ Started: Mon Jan 26 00:22:11 IST 2026
 - CodeRabbit: Rate limited but research documentation only, no code changes
 - All tests passed (205 Ralph + 17 Skills + 101 Bun)
 - Established foundation for implementing ralph-ui performance improvements in MP-131
+
+## Iteration 21 - BUG-007: Ralph hangs when all stories blocked + auto-unblock not triggered
+- Model: kiro
+- Fixed two critical issues in Ralph's autonomous loop:
+  1. Runner now detects 'all blocked' state and exits gracefully with proper ntfy notification
+  2. Added startup scan to auto-unblock stories when their blockers are completed
+- Changed notification from generic notifyError to specific notifyBlocked for better categorization
+- Added scanAndUnblockStories() function that runs at iteration start to check blocked stories
+- Fixed issue where Kiro completing stories directly (JSON updates) bypassed auto-unblock logic
+- Created test script to verify auto-unblock functionality works correctly
+- All tests passed: Ralph (205 passed), Skills (17 passed), Bun (101 passed)
+- TypeScript compilation successful - CodeRabbit rate limited but code quality validated
+- Root cause: Ralph would hang when all stories blocked because it didn't detect this state properly, and auto-unblock only triggered via completeStory() function calls, not direct JSON updates
+- Learning: Always ensure startup scans check for state inconsistencies that can accumulate over time in autonomous systems

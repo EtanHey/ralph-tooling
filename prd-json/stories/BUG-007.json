@@ -8,8 +8,10 @@
     {"text": "Add startup scan: check all blocked stories, unblock if blocker is completed", "checked": true},
     {"text": "Test: complete a blocker, verify dependent auto-unblocks on next iteration", "checked": true},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": true},
-    {"text": "Commit: fix: BUG-007 ralph hang on all-blocked + auto-unblock scan", "checked": false}
+    {"text": "Commit: fix: BUG-007 ralph hang on all-blocked + auto-unblock scan", "checked": true}
   ],
   "storyType": "bug",
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-26T16:37:22.000Z",
+  "completedBy": "kiro"
 }
