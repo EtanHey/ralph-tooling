@@ -213,16 +213,37 @@ Instead of acting immediately, Ralph queues these to `~/.claude/farther-steps.js
     "criteria": "Save learning about Ink stdin",
     "status": "pending",
     "priority": "high"
+  }, {
+    "id": "step-002",
+    "type": "context-proposal",
+    "target": "~/.claude/contexts/tech/nextjs.md",
+    "diff": "## Server Components\n\nUse async components for data fetching...",
+    "position": "after:## Components",
+    "confidence": 0.95,
+    "evidence": 8,
+    "reason": "Zikaron identified missing Next.js server component patterns",
+    "story": "US-123",
+    "status": "pending",
+    "priority": "high"
   }]
 }
 ```
+
+### Step Types
+
+| Type | Description | Fields |
+|------|-------------|--------|
+| `sync` | File synchronization | `source`, `target` |
+| `context-proposal` | AI-suggested context improvements | `target`, `diff`, `position`, `confidence`, `evidence` |
 
 ### CLI Commands
 
 ```bash
 fsteps              # List all steps (alias: fs)
 fsteps pending      # Show pending with details
-fsteps apply ID     # Apply a sync step and mark done
+fsteps pending --auto-high  # Auto-apply high confidence context-proposals (>=0.9 confidence, >=5 evidence)
+fsteps preview ID   # Show diff preview for context-proposal steps
+fsteps apply ID     # Apply a step and mark done (supports smart merge for context-proposals)
 fsteps done ID      # Mark as done (without applying)
 fsteps skip ID      # Mark as skipped
 fsteps clean        # Remove done/skipped steps

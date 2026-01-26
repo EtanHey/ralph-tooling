@@ -216,3 +216,15 @@ Started: Mon Jan 26 00:22:11 IST 2026
 - CodeRabbit review passed with no issues
 - All tests passed (205 Ralph tests)
 - Established foundation for implementing rich story completion notifications in both Ralph and interactive Claude sessions
+
+## Iteration 19 - US-115: Extend farther-steps for zikaron context proposals
+- Model: kiro
+- Added `fsteps preview ID` command to show diff for context-proposals with confidence/evidence display
+- Implemented smart merge in `apply` for context-proposal type with section-aware positioning (after:section, end)
+- Added `--auto-high` flag for auto-apply with confidence >= 0.9 and evidence >= 5
+- Updated scripts/farther-steps.sh with comprehensive context-proposal support
+- Enhanced README.md farther-steps section with new step types and CLI commands documentation
+- Fixed CodeRabbit finding: added proper error handling for fallback file copy operations
+- All tests pass: Ralph test suite (205 passed, 0 failed)
+- Created and tested functionality with mock context-proposal entries - all features working correctly
+- This establishes the infrastructure for zikaron active learning system integration
