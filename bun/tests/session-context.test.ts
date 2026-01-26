@@ -1,56 +1,107 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
-import { SessionContext } from '../src/runner/session-context';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { SessionContext } from '../../ralph-ui/src/runner/session-context';
 
 describe('SessionContext', () => {
+  let originalEnv: Record<string, string | undefined>;
+
   beforeEach(() => {
-    // Clear environment variables
-    delete process.env.RALPH_SESSION;
+    // Save original environment
+    originalEnv = {
+      RALPH_SESSION: process.env.RALPH_SESSION,
+      RALPH_NOTIFY: process.env.RALPH_NOTIFY,
+    };
   });
 
-  describe('create()', () => {
-    it('returns valid context object with all required properties', () => {
-      const ctx = SessionContext.create({});
+  afterEach(() => {
+    // Restore original environment
+    process.env.RALPH_SESSION = originalEnv.RALPH_SESSION;
+    process.env.RALPH_NOTIFY = originalEnv.RALPH_NOTIFY;
+  });
+
+  describe('SessionContext.create()', () => {
+    test('returns valid context with default values', () => {
+      // Ensure clean environment for this test
+      delete process.env.RALPH_SESSION;
       
-      expect(ctx).toHaveProperty('runner');
-      expect(ctx).toHaveProperty('model');
-      expect(ctx).toHaveProperty('interactive');
-      expect(ctx).toHaveProperty('notifications');
-      expect(ctx.notifications).toHaveProperty('enabled');
+      const context = SessionContext.create();
+      
+      expect(context).toBeDefined();
+      expect(context.runner).toBe('direct'); // No RALPH_SESSION set
+      expect(context.model).toBe('opus');
+      expect(context.interactive).toBe(true); // direct mode is interactive
+      expect(context.notifications).toEqual({
+        enabled: false,
+        topic: undefined,
+      });
     });
   });
 
   describe('detectRunner()', () => {
-    it('returns "ralph" when RALPH_SESSION is set', () => {
-      process.env.RALPH_SESSION = 'test-session-123';
+    test('returns "ralph" when RALPH_SESSION is set', () => {
+      process.env.RALPH_SESSION = '1';
       
-      const ctx = SessionContext.create({});
-      expect(ctx.runner).toBe('ralph');
+      const context = SessionContext.create();
+      
+      expect(context.runner).toBe('ralph');
+      expect(context.interactive).toBe(false); // ralph mode is not interactive
     });
 
-    it('returns "direct" when no RALPH_SESSION', () => {
+    test('returns "direct" when no RALPH_SESSION', () => {
       delete process.env.RALPH_SESSION;
       
-      const ctx = SessionContext.create({});
-      expect(ctx.runner).toBe('direct');
+      const context = SessionContext.create();
+      
+      expect(context.runner).toBe('direct');
+      expect(context.interactive).toBe(true); // direct mode is interactive
     });
   });
 
-  describe('resolveNotifyConfig()', () => {
-    it('merges env + config + flags correctly', () => {
-      const config = { notifications: { enabled: true, topic: 'config-topic' } };
-      const flags = { quiet: false, notify: true };
+  describe('notifications.enabled', () => {
+    test('reflects RALPH_NOTIFY env via flags.notify', () => {
+      process.env.RALPH_NOTIFY = '1';
       
-      const ctx = SessionContext.create({ config, flags });
+      const context = SessionContext.create({
+        flags: { notify: true }
+      });
       
-      expect(ctx.notifications.enabled).toBe(true);
+      expect(context.notifications.enabled).toBe(true);
     });
 
-    it('reflects -QN flag in ctx.notifications.enabled', () => {
-      const flags = { quiet: true, notify: true }; // -QN equivalent
+    test('is false when no notification flags set', () => {
+      delete process.env.RALPH_NOTIFY;
       
-      const ctx = SessionContext.create({ flags });
+      const context = SessionContext.create();
       
-      expect(ctx.notifications.enabled).toBe(true);
+      expect(context.notifications.enabled).toBe(false);
+    });
+
+    test('config.notifications.enabled is respected', () => {
+      const context = SessionContext.create({
+        config: {
+          notifications: {
+            enabled: true,
+            topic: 'test-topic'
+          }
+        }
+      });
+      
+      expect(context.notifications.enabled).toBe(true);
+      expect(context.notifications.topic).toBe('test-topic');
+    });
+
+    test('flags.notify overrides config.notifications.enabled', () => {
+      const context = SessionContext.create({
+        config: {
+          notifications: {
+            enabled: false
+          }
+        },
+        flags: {
+          notify: true
+        }
+      });
+      
+      expect(context.notifications.enabled).toBe(true);
     });
   });
 });

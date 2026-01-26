@@ -1,0 +1,18 @@
+{
+  "id": "US-130",
+  "title": "Research: Ink UI Rendering Stability",
+  "description": "Research why ralph-ui has display glitches - flashing, inconsistent rendering, visual artifacts. Document root causes and recommended fixes.",
+  "acceptanceCriteria": [
+    {"text": "Document current symptoms: flashing, partial renders, artifacts", "checked": false},
+    {"text": "Review Ink documentation for rendering best practices", "checked": false},
+    {"text": "Analyze ralph-ui/src/components/*.tsx for render triggers", "checked": false},
+    {"text": "Identify which components cause most re-renders (useEffect, state changes)", "checked": false},
+    {"text": "Research Ink throttling/batching options", "checked": false},
+    {"text": "Document findings in docs.local/research/US-130-ink-stability.md", "checked": false},
+    {"text": "Propose specific fixes for MP-131", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: docs: US-130 research ink ui rendering stability", "checked": false}
+  ],
+  "storyType": "research",
+  "passes": false
+}

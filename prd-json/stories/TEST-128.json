@@ -13,49 +13,51 @@
     },
     {
       "text": "Use /context7 to look up testing patterns for TypeScript/Bun",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Write bun/tests/session-context.test.ts",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: SessionContext.create() returns valid context",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: detectRunner() returns 'ralph' when RALPH_SESSION set",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: detectRunner() returns 'direct' when no RALPH_SESSION",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Test: notifications.enabled reflects RALPH_NOTIFY env",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run: bun test bun/tests/session-context.test.ts - document any failures",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Write test report to docs.local/research/TEST-128-results.md",
-      "checked": false
+      "checked": true
     },
     {
       "text": "If tests fail: document what MP-128 needs to fix",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Run CodeRabbit review - must pass (or create BUG if unfixable)",
-      "checked": false
+      "checked": true
     },
     {
       "text": "Commit: test: TEST-128 session context tests",
-      "checked": false
+      "checked": true
     }
   ],
   "storyType": "test",
-  "passes": false
+  "passes": true,
+  "completedAt": "2026-01-26T15:28:23.664Z",
+  "completedBy": "kiro"
 }
