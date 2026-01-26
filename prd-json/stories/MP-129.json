@@ -19,5 +19,7 @@
     {"text": "Commit: feat: MP-129 add notify system for agent-user communication", "checked": false}
   ],
   "storyType": "infrastructure",
+  "blockedBy": "US-129",
+  "notes": "Uses SessionContext from MP-128. Notify reads ctx.notifications.enabled and ctx.notifications.topic.",
   "passes": false
 }

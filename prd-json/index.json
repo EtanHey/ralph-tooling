@@ -6,22 +6,26 @@
     "BUG-001",
     "BUG-002",
     "V-002",
+    "US-128",
     "MP-128",
-    "MP-129",
+    "TEST-128",
     "AUDIT-128",
+    "US-129",
+    "MP-129",
+    "TEST-129",
     "AUDIT-129",
     "US-115",
     "US-116",
     "US-117",
     "US-118"
   ],
-  "pending": ["BUG-002", "MP-128", "MP-129", "US-115", "US-116", "US-117", "US-118"],
-  "blocked": ["V-002", "AUDIT-128", "AUDIT-129"],
+  "pending": ["BUG-002", "US-128", "US-115", "US-116", "US-117", "US-118"],
+  "blocked": ["V-002", "MP-128", "TEST-128", "AUDIT-128", "US-129", "MP-129", "TEST-129", "AUDIT-129"],
   "completed": ["BUG-001"],
   "stats": {
-    "total": 11,
+    "total": 15,
     "completed": 1,
-    "pending": 7,
-    "blocked": 3
+    "pending": 6,
+    "blocked": 8
   }
 }

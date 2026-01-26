@@ -8,6 +8,7 @@
     {"text": "Direct test: curl -s ntfy.sh/etanheys-ralph-claude-golem-notify -d 'V-002 verification' - returns 200", "checked": false},
     {"text": "Verify [NTFY] verbose log is added to sendNotification function", "checked": false},
     {"text": "Grep codebase: notification chain has no gaps from config → runner → ntfy.ts", "checked": false},
+    {"text": "Typecheck passes", "checked": false},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
     {"text": "Commit: test: V-002 verify ntfy notifications end-to-end", "checked": false}
   ],

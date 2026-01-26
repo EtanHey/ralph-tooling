@@ -11,10 +11,11 @@
     {"text": "Add verbose log: '[SESSION] runner={runner} model={model} notify={enabled}'", "checked": false},
     {"text": "Test: Add unit test for [SESSION] log output with expected values", "checked": false},
     {"text": "Run full test suite: bun test - all tests pass", "checked": false},
+    {"text": "Typecheck passes", "checked": false},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
     {"text": "Commit: test: AUDIT-128 verify session context system", "checked": false}
   ],
   "storyType": "audit",
-  "blockedBy": "MP-128",
+  "blockedBy": "TEST-128",
   "passes": false
 }

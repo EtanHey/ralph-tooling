@@ -1,12 +1,29 @@
-# AI Agent Instructions for PRD: Self-Improvement Dogfooding
+# AI Agent Instructions for PRD: Session Context & Notify System
 
 ## Overview
 
-This PRD makes claude-golem eat its own dogfood:
-- Use its own context system
-- Make the repo's purpose obvious to AI
-- Auto-load contexts via registry
-- Test and improve the context-audit skill
+This PRD implements:
+1. **Session Context Manager** - Unified context for runner type, model, and notifications
+2. **Notify System** - ntfy-based agent-to-user communication
+3. **TDD Pattern** - US (Research) → MP (Implementation) → TEST → AUDIT
+
+## Story Dependencies
+
+```
+BUG-001 ✅ (completed)
+   └── BUG-002 → V-002 (blocked)
+
+US-128 (Research: Session Context)
+   └── MP-128 (TDD: Session Context Manager)
+         └── TEST-128 (Tests)
+               └── AUDIT-128 (Verify)
+                     └── US-129 (Research: Notify System)
+                           └── MP-129 (TDD: Notify System)
+                                 ├── TEST-129 (Tests)
+                                 └── AUDIT-129 (Verify)
+
+US-115, US-116, US-117, US-118 (Features - independent)
+```
 
 ## Relevant Skills
 
@@ -14,73 +31,53 @@ This PRD makes claude-golem eat its own dogfood:
 |-------|-------------|
 | `/golem-powers:ralph-commit` | For "Commit:" criteria - atomic commit + criterion check |
 | `/golem-powers:coderabbit` | Code review before commits - iterate until clean |
-| `/golem-powers:context-audit` | Diagnose missing contexts in a project |
-| `/golem-powers:prd-manager` | Manage PRD stories - list, show, stats |
 | `/golem-powers:context7` | Look up library docs when unsure about APIs |
+| `/golem-powers:prd-manager` | Manage PRD stories - list, show, stats |
 | `/golem-powers:catchup` | Recover context after long breaks |
 
-## Project Contexts (Auto-Loaded by Ralph)
+## TDD Pattern (CRITICAL for MP stories)
 
-Ralph automatically loads these contexts from the registry (`~/.config/ralphtools/registry.json`):
-- `base` - Universal rules (scratchpad, AIDEV-NOTE, type safety)
-- `skill-index` - Available skills reference
-- `workflow/interactive` - CLAUDE_COUNTER, git safety
+MP stories follow strict TDD:
+1. **FIRST**: Write tests (bun/tests/{feature}.test.ts)
+2. **THEN**: Implement to make tests pass
+3. **VERIFY**: Run test suite, typecheck, CodeRabbit
 
-To modify contexts, update the project's `contexts` array in the registry.
-
-## Key Files for This PRD
+## Key Files
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md` | Add @context: refs and setup header here |
-| `contexts/` | Shared context files |
-| `lib/ralph-registry.zsh` | Update repoGolem for auto-loading |
-| `~/.config/ralphtools/registry.json` | Add contexts field to projects |
-| `skills/golem-powers/context-audit/` | Fix and test this skill |
-| `skills/golem-powers/prd-manager/` | Add summary action |
+| `ralph-ui/src/runner/session-context.ts` | MP-128: SessionContext implementation |
+| `ralph-ui/src/runner/notify.ts` | MP-129: Notify system |
+| `bun/tests/session-context.test.ts` | Tests for session context |
+| `bun/tests/notify.test.ts` | Tests for notify system |
+| `docs.local/research/` | Research outputs from US stories |
 
-## Worktree Workflow (CRITICAL)
+## Session Context Interface (MP-128)
 
-Stories with `SETUP:` and `CLEANUP:` criteria use git worktrees for isolation:
-
-### SETUP Phase
-```bash
-# Create worktree with new branch
-git worktree add ~/worktrees/claude-golem/{branch-name} -b {branch-name}
-cd ~/worktrees/claude-golem/{branch-name}
-
-# Log location
-echo "[$(date -Iseconds)] WORKTREE CREATED: ~/worktrees/claude-golem/{branch-name}" >> prd-json/execution.log
-
-# Install deps if needed
-bun install
+```typescript
+interface SessionContext {
+  runner: 'ralph' | 'direct';  // detectRunner() checks RALPH_SESSION env
+  model: string;               // Current model (opus, sonnet, kiro, etc.)
+  interactive: boolean;        // Running in TTY?
+  notifications: {
+    enabled: boolean;          // RALPH_NOTIFY env or -QN flag
+    topic: string;             // Auto-derived from project
+  };
+}
 ```
 
-### CLEANUP Phase (Before completing iteration)
-```bash
-# In worktree directory
-git add -A
-git commit -m "feat: {STORY-ID} {description}"
-git push -u origin {branch-name}
+## Notify Topic Format (MP-129)
 
-# Return to main repo
-cd /Users/etanheyman/Gits/claude-golem
-git checkout master
-
-# Log completion
-echo "[$(date -Iseconds)] WORKTREE COMPLETE: {branch-name} pushed to origin" >> prd-json/execution.log
+```
+etanheys-ralph-{project}-notify
 ```
 
-### Why Worktrees?
-- Prevents cross-contamination between parallel stories
-- Each story has isolated working directory
-- Main repo stays on master for Ralph to track progress
-- Branches can be merged via PR after review
+Example: `etanheys-ralph-claude-golem-notify`
 
 ## CodeRabbit Iteration Rule
 
 For "Run CodeRabbit review" criteria:
-1. Run: `cr review --prompt-only --type uncommitted`
+1. Run: `cr review --plain --prompt-only --type uncommitted`
 2. If issues found → Fix them
 3. Run CR again
 4. Repeat until clean or only intentional patterns remain
@@ -92,31 +89,31 @@ Use `update.json` instead:
 2. Write changes to `update.json`
 3. Ralph merges automatically
 
-## Story Dependencies
+## Example update.json
 
-```
-US-116 (dogfood CLAUDE.md)
-   └── US-118 (registry contexts)
-          └── US-119 (Ralph contexts)
-          └── V-116 (verify dogfooding)
-          └── US-123 (setup docs)
-
-US-120 (TDD context-audit)
-   └── US-121 (fix monorepo detection)
-
-US-122 (contexts README) ← US-116
-
-US-124 (TDD prd-manager)
-   └── US-125 (summary action)
-
-US-126 (AI-friendly README) - independent
+```json
+{
+  "storyOrder": ["existing...", "NEW-001"],
+  "pending": ["existing...", "NEW-001"],
+  "stats": { "total": X, "pending": Y }
+}
 ```
 
-## Testing (CRITICAL)
+## Verification Commands
 
-- **Test file for context-audit:** `tests/test-context-audit.sh`
-- **Test file for prd-manager:** `tests/test-prd-manager.sh`
-- TDD: Write tests FIRST, then implement
+```bash
+# Run all tests
+bun test
+
+# Run specific test file
+bun test bun/tests/session-context.test.ts
+
+# Typecheck
+bun run typecheck
+
+# Direct ntfy test
+curl -s ntfy.sh/etanheys-ralph-claude-golem-notify -d 'test message'
+```
 
 ## Self-Improvement Loop
 
@@ -124,5 +121,3 @@ When you find something broken or missing:
 1. **Ask the user** - "I found X is missing, should I create a story?"
 2. **Create a PRD story** - Use /golem-powers:prd-manager
 3. **Ralph fixes it** - The system improves itself
-
-This is the core purpose of this repo.
