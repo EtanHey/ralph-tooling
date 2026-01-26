@@ -113,3 +113,17 @@ Started: Mon Jan 26 00:22:11 IST 2026
 - TypeScript compilation successful in both ralph-ui and bun directories
 - CodeRabbit: Fixed identified issues (flag handling and config structure)
 - Replaces scattered env/flag/config checks with single source of truth for session management
+
+## Iteration 11 - US-116: Add timestamp tracking to PRD criteria
+- Model: kiro
+- Created worktree at ~/worktrees/claude-golem/us-116-timestamps for isolated development
+- Added completedAt field to AcceptanceCriterion interface in bun/core/stories.ts
+- Updated checkCriterion() function to automatically add ISO timestamp when marking criteria as checked
+- Enhanced ralph-ui runner to log iteration start/end times to execution.log with format: [ISO] ITERATION START/END: {story} (criteria X/Y) - {duration}ms
+- Added comprehensive logging for both successful iterations and blocked stories
+- TypeScript compilation successful for both bun and ralph-ui directories
+- CodeRabbit review rate limited but code compiles without errors
+- All tests pass except one unrelated ntfy test (pre-existing issue)
+- Committed changes and pushed worktree branch to origin
+- Returned to master branch and marked story complete
+- This enables better debugging of slow stories and measurement of model performance through detailed timing data
