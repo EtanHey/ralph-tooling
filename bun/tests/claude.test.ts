@@ -77,9 +77,11 @@ describe("buildCliArgs", () => {
     };
 
     const args = buildCliArgs(options);
-    expect(args).toContain("--prompt");
-    expect(args).toContain("--model");
+    // Gemini uses --yolo, -o json, -m for model, positional prompt
+    expect(args).toContain("--yolo");
+    expect(args).toContain("-m");
     expect(args).toContain("gemini-2.0-flash-exp");
+    expect(args).toContain("Test prompt");
   });
 
   test("builds Kiro CLI args", () => {
@@ -90,7 +92,10 @@ describe("buildCliArgs", () => {
     };
 
     const args = buildCliArgs(options);
-    expect(args).toContain("-p");
+    // Kiro uses: chat --trust-all-tools --no-interactive [prompt]
+    expect(args).toContain("chat");
+    expect(args).toContain("--trust-all-tools");
+    expect(args).toContain("--no-interactive");
     expect(args).toContain("Test prompt");
   });
 });

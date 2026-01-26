@@ -134,7 +134,7 @@ export function getCliForModel(model: Model): string {
     return "gemini";
   }
   if (isKiroModel(model)) {
-    return "kiro";
+    return "kiro-cli";
   }
   return "claude";
 }

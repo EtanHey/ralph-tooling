@@ -146,7 +146,7 @@ describe("getCliForModel", () => {
     expect(getCliForModel("haiku")).toBe("claude");
     expect(getCliForModel("gemini-flash")).toBe("gemini");
     expect(getCliForModel("gemini-pro")).toBe("gemini");
-    expect(getCliForModel("kiro")).toBe("kiro");
+    expect(getCliForModel("kiro")).toBe("kiro-cli");
   });
 });
 

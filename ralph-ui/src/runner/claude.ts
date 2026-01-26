@@ -14,25 +14,43 @@ import { detectError, hasCompletionSignal, hasBlockedSignal } from "./errors";
 
 export function buildCliArgs(options: SpawnOptions): string[] {
   const args: string[] = [];
+  const cli = getCliForModel(options.model);
 
-  // Core options (--print for pipe-friendly output, --dangerously-skip-permissions for autonomy)
-  args.push("--print", "--dangerously-skip-permissions");
+  if (cli === "claude") {
+    // Claude CLI arguments
+    args.push("--print", "--dangerously-skip-permissions");
+    args.push("--model", options.model);
 
-  // Model
-  args.push("--model", options.model);
+    if (options.contextFile) {
+      args.push("--append-system-prompt", options.contextFile);
+    }
 
-  // Context content (system prompt append) - passed as content, not file path
-  if (options.contextFile) {
-    args.push("--append-system-prompt", options.contextFile);
+    if (options.maxTurns) {
+      args.push("--max-turns", options.maxTurns.toString());
+    }
+
+    args.push("-p", options.prompt);
+  } else if (cli === "gemini") {
+    // Gemini CLI arguments: gemini [query..] [options]
+    args.push("--yolo");  // Auto-approve all tools
+    args.push("-o", "json");  // JSON output format
+
+    // Model selection for gemini
+    if (options.model === "gemini-pro") {
+      args.push("-m", "gemini-2.0-pro-exp");
+    } else {
+      args.push("-m", "gemini-2.0-flash-exp");
+    }
+
+    // Prompt as positional argument (at end)
+    args.push(options.prompt);
+  } else if (cli === "kiro-cli") {
+    // Kiro CLI arguments: kiro-cli chat [OPTIONS] [INPUT]
+    args.push("chat");
+    args.push("--trust-all-tools");  // Like --dangerously-skip-permissions
+    args.push("--no-interactive");   // Non-interactive mode
+    args.push(options.prompt);       // Prompt as positional argument
   }
-
-  // Max turns
-  if (options.maxTurns) {
-    args.push("--max-turns", options.maxTurns.toString());
-  }
-
-  // Prompt (required) - use -p flag
-  args.push("-p", options.prompt);
 
   return args;
 }
@@ -41,10 +59,13 @@ export async function spawnClaude(options: SpawnOptions): Promise<SpawnResult> {
   const startTime = Date.now();
   const args = buildCliArgs(options);
 
-  // Find the Claude CLI - use which to locate it
-  let cli = "claude";
+  // Get the right CLI for this model (claude, gemini, or kiro-cli)
+  const cliName = getCliForModel(options.model);
+  let cli = cliName;
+
+  // Find the CLI path - use which to locate it
   try {
-    const whichProc = bunSpawn(["which", "claude"], {
+    const whichProc = bunSpawn(["which", cliName], {
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -53,7 +74,7 @@ export async function spawnClaude(options: SpawnOptions): Promise<SpawnResult> {
       cli = whichOutput.trim();
     }
   } catch {
-    // Use default "claude" if which fails
+    // Use default CLI name if which fails
   }
 
   try {
@@ -199,8 +220,32 @@ const MODEL_NAMES: Record<Model, string> = {
   haiku: "haiku",
   sonnet: "sonnet",
   opus: "opus",
+  "gemini-flash": "gemini-2.0-flash-exp",
+  "gemini-pro": "gemini-2.0-pro-exp",
+  kiro: "kiro",
 };
 
 export function getModelName(model: Model): string {
   return MODEL_NAMES[model] || "sonnet";
+}
+
+// Check if model is a Gemini model
+export function isGeminiModel(model: Model): boolean {
+  return model === "gemini-flash" || model === "gemini-pro";
+}
+
+// Check if model is Kiro
+export function isKiroModel(model: Model): boolean {
+  return model === "kiro";
+}
+
+// Get the CLI command for a specific model
+export function getCliForModel(model: Model): string {
+  if (isGeminiModel(model)) {
+    return "gemini";
+  }
+  if (isKiroModel(model)) {
+    return "kiro-cli";
+  }
+  return "claude";
 }

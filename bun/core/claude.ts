@@ -63,18 +63,25 @@ export function buildCliArgs(options: ClaudeSpawnOptions): string[] {
     // Output format
     args.push("--output-format", "json");
   } else if (cli === "gemini") {
-    // Gemini CLI arguments
-    args.push("--prompt", options.prompt);
+    // Gemini CLI arguments: gemini [query..] [options]
+    args.push("--yolo");  // Auto-approve all tools
+    args.push("-o", "json");  // JSON output format
 
-    // Model selection
+    // Model selection for gemini
     if (options.model === "gemini-pro") {
-      args.push("--model", "gemini-2.0-pro-exp");
+      args.push("-m", "gemini-2.0-pro-exp");
     } else {
-      args.push("--model", "gemini-2.0-flash-exp");
+      args.push("-m", "gemini-2.0-flash-exp");
     }
-  } else if (cli === "kiro") {
-    // Kiro CLI arguments
-    args.push("-p", options.prompt);
+
+    // Prompt as positional argument (at end)
+    args.push(options.prompt);
+  } else if (cli === "kiro-cli") {
+    // Kiro CLI arguments: kiro-cli chat [OPTIONS] [INPUT]
+    args.push("chat");
+    args.push("--trust-all-tools");  // Like --dangerously-skip-permissions
+    args.push("--no-interactive");   // Non-interactive mode
+    args.push(options.prompt);       // Prompt as positional argument
   }
 
   return args;
