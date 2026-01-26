@@ -3,6 +3,8 @@
   "title": "Add timestamp tracking to PRD criteria",
   "description": "Track when each criterion is completed and when iterations start/end. This helps debug slow stories and measure model performance.",
   "acceptanceCriteria": [
+    {"text": "SETUP: Create worktree at ~/worktrees/claude-golem/us-116-timestamps", "checked": false},
+    {"text": "SETUP: Log worktree location to execution.log", "checked": false},
     {"text": "Add `completedAt` field to criteria in story JSON when checked", "checked": false},
     {"text": "Log iteration start time to execution.log: `[ISO] ITERATION START: {story} (criteria X/Y)`", "checked": false},
     {"text": "Log iteration end time: `[ISO] ITERATION END: {story} (criteria X/Y) - {duration}`", "checked": false},
@@ -10,7 +12,9 @@
     {"text": "Update ralph-ui runner to log start/end times", "checked": false},
     {"text": "Typecheck passes", "checked": false},
     {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
-    {"text": "Commit: feat: US-116 add timestamp tracking to PRD criteria", "checked": false}
+    {"text": "CLEANUP: Commit in worktree: feat: US-116 add timestamp tracking to PRD criteria", "checked": false},
+    {"text": "CLEANUP: Push worktree branch to origin", "checked": false},
+    {"text": "CLEANUP: Return to master branch in main repo before completing", "checked": false}
   ],
   "storyType": "feature"
 }

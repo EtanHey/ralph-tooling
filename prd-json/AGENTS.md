@@ -39,6 +39,44 @@ To modify contexts, update the project's `contexts` array in the registry.
 | `skills/golem-powers/context-audit/` | Fix and test this skill |
 | `skills/golem-powers/prd-manager/` | Add summary action |
 
+## Worktree Workflow (CRITICAL)
+
+Stories with `SETUP:` and `CLEANUP:` criteria use git worktrees for isolation:
+
+### SETUP Phase
+```bash
+# Create worktree with new branch
+git worktree add ~/worktrees/claude-golem/{branch-name} -b {branch-name}
+cd ~/worktrees/claude-golem/{branch-name}
+
+# Log location
+echo "[$(date -Iseconds)] WORKTREE CREATED: ~/worktrees/claude-golem/{branch-name}" >> prd-json/execution.log
+
+# Install deps if needed
+bun install
+```
+
+### CLEANUP Phase (Before completing iteration)
+```bash
+# In worktree directory
+git add -A
+git commit -m "feat: {STORY-ID} {description}"
+git push -u origin {branch-name}
+
+# Return to main repo
+cd /Users/etanheyman/Gits/claude-golem
+git checkout master
+
+# Log completion
+echo "[$(date -Iseconds)] WORKTREE COMPLETE: {branch-name} pushed to origin" >> prd-json/execution.log
+```
+
+### Why Worktrees?
+- Prevents cross-contamination between parallel stories
+- Each story has isolated working directory
+- Main repo stays on master for Ralph to track progress
+- Branches can be merged via PR after review
+
 ## CodeRabbit Iteration Rule
 
 For "Run CodeRabbit review" criteria:

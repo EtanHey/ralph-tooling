@@ -2,14 +2,14 @@
   "$schema": "https://ralph.dev/schemas/prd-index.schema.json",
   "generatedAt": "2026-01-26T12:15:00Z",
   "nextStory": "US-115",
-  "storyOrder": ["US-115", "US-116", "US-117"],
-  "pending": ["US-115", "US-116", "US-117"],
+  "storyOrder": ["US-115", "US-116", "US-117", "US-118"],
+  "pending": ["US-115", "US-116", "US-117", "US-118"],
   "blocked": [],
   "completed": [],
   "stats": {
-    "total": 3,
+    "total": 4,
     "completed": 0,
-    "pending": 3,
+    "pending": 4,
     "blocked": 0
   }
 }

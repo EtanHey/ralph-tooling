@@ -1,0 +1,19 @@
+{
+  "id": "US-118",
+  "title": "Add ntfy notifications for parallel agent execution",
+  "description": "Send ntfy notifications when parallel agents are spawned and when they complete. Helps track multi-agent PRD execution.",
+  "acceptanceCriteria": [
+    {"text": "SETUP: Create worktree at ~/worktrees/claude-golem/us-118-parallel-ntfy", "checked": false},
+    {"text": "SETUP: Log worktree location to execution.log", "checked": false},
+    {"text": "Add notifyParallelStart(topic, agentCount, storyId) to ntfy.ts", "checked": false},
+    {"text": "Add notifyParallelComplete(topic, agentCount, successCount, storyId) to ntfy.ts", "checked": false},
+    {"text": "Include agent IDs in notification body", "checked": false},
+    {"text": "Use tags: parallel, robot for parallel notifications", "checked": false},
+    {"text": "Typecheck passes", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "CLEANUP: Commit in worktree: feat: US-118 add parallel ntfy notifications", "checked": false},
+    {"text": "CLEANUP: Push worktree branch to origin", "checked": false},
+    {"text": "CLEANUP: Return to master branch in main repo before completing", "checked": false}
+  ],
+  "storyType": "feature"
+}
