@@ -1,0 +1,16 @@
+{
+  "id": "US-116",
+  "title": "Add timestamp tracking to PRD criteria",
+  "description": "Track when each criterion is completed and when iterations start/end. This helps debug slow stories and measure model performance.",
+  "acceptanceCriteria": [
+    {"text": "Add `completedAt` field to criteria in story JSON when checked", "checked": false},
+    {"text": "Log iteration start time to execution.log: `[ISO] ITERATION START: {story} (criteria X/Y)`", "checked": false},
+    {"text": "Log iteration end time: `[ISO] ITERATION END: {story} (criteria X/Y) - {duration}`", "checked": false},
+    {"text": "Update bun/core/stories.ts checkCriterion() to add timestamp", "checked": false},
+    {"text": "Update ralph-ui runner to log start/end times", "checked": false},
+    {"text": "Typecheck passes", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: US-116 add timestamp tracking to PRD criteria", "checked": false}
+  ],
+  "storyType": "feature"
+}

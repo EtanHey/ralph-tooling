@@ -1,0 +1,16 @@
+{
+  "id": "US-117",
+  "title": "Add hang detection logging",
+  "description": "Log when Ralph detects a hang and when it breaks it. Helps post-mortem analysis of stuck iterations.",
+  "acceptanceCriteria": [
+    {"text": "Log hang detection: `[ISO] HANG DETECTED: No activity for {duration}`", "checked": false},
+    {"text": "Log hang recovery: `[ISO] HANG BROKEN: Restarting Claude session`", "checked": false},
+    {"text": "Include story ID and criteria progress in hang logs", "checked": false},
+    {"text": "Send ntfy notification on hang detection (use existing notifyError)", "checked": false},
+    {"text": "Write logs to prd-json/execution.log (append mode)", "checked": false},
+    {"text": "Typecheck passes", "checked": false},
+    {"text": "Run CodeRabbit review - must pass (or create BUG if unfixable)", "checked": false},
+    {"text": "Commit: feat: US-117 add hang detection logging", "checked": false}
+  ],
+  "storyType": "feature"
+}
