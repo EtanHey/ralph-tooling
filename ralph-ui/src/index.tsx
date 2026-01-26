@@ -115,7 +115,7 @@ function parseArgs(): CLIConfig {
     mode: 'live',
     iterations: parseInt(process.env.RALPH_ITERATIONS || '100', 10),
     gap: parseInt(process.env.RALPH_SLEEP_SECONDS || '5', 10),
-    model: (process.env.RALPH_MODEL as Model) || 'sonnet',
+    model: (process.env.RALPH_MODEL as Model) || ralphConfig.defaultModel || 'sonnet',
     quiet: false,
     verbose: false,
     notify: !!process.env.RALPH_NOTIFY || notifyFromConfig,
@@ -147,16 +147,16 @@ function parseArgs(): CLIConfig {
     } else if (arg.startsWith('--gap=')) {
       config.gap = parseInt(arg.split('=')[1], 10) || 5;
     }
-    // --model
+    // --model (accepts: haiku, sonnet, opus, gemini-flash, gemini-pro, kiro)
     else if (arg === '--model') {
       const modelVal = args[++i];
-      if (modelVal === 'haiku' || modelVal === 'sonnet' || modelVal === 'opus') {
-        config.model = modelVal;
+      if (['haiku', 'sonnet', 'opus', 'gemini-flash', 'gemini-pro', 'kiro'].includes(modelVal)) {
+        config.model = modelVal as Model;
       }
     } else if (arg.startsWith('--model=')) {
       const modelVal = arg.split('=')[1];
-      if (modelVal === 'haiku' || modelVal === 'sonnet' || modelVal === 'opus') {
-        config.model = modelVal;
+      if (['haiku', 'sonnet', 'opus', 'gemini-flash', 'gemini-pro', 'kiro'].includes(modelVal)) {
+        config.model = modelVal as Model;
       }
     }
     // --quiet

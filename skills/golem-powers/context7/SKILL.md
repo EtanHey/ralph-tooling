@@ -48,22 +48,26 @@ Then use the library ID to query specific documentation:
 
 Output: Markdown-formatted documentation snippets with code examples.
 
-## Environment Variables
+## Authentication
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `CONTEXT7_API_KEY` | **Yes** | API key from context7.com (must start with `ctx7sk`) |
+The scripts automatically get the API key from:
 
-### Getting an API Key
+1. **Environment variable** `CONTEXT7_API_KEY` (if set)
+2. **1Password** - item `context7` in vault `development`, field `API_KEY`
 
-1. Go to [context7.com](https://context7.com)
-2. Sign up or log in
-3. Navigate to API settings
-4. Generate a new API key
-5. Set in your environment:
-   ```bash
-   export CONTEXT7_API_KEY="ctx7sk_your_key_here"
-   ```
+### 1Password Setup (Recommended)
+
+The key is already stored in 1Password. No setup needed if you have `op` CLI authenticated.
+
+### Manual Setup
+
+If not using 1Password, set the environment variable:
+
+```bash
+export CONTEXT7_API_KEY="ctx7sk_your_key_here"
+```
+
+Get a key from [context7.com](https://context7.com) → API settings.
 
 ## Disabling Context7 MCP
 

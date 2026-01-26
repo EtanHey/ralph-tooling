@@ -9,7 +9,14 @@ set -euo pipefail
 API_BASE="https://context7.com/api"
 ENDPOINT="/v2/libs/search"
 
-# Check for API key
+# Check for API key - try environment, then 1Password
+if [[ -z "${CONTEXT7_API_KEY:-}" ]]; then
+    # Try 1Password
+    if command -v op &>/dev/null; then
+        CONTEXT7_API_KEY=$(op read "op://development/context7/API_KEY" 2>/dev/null) || true
+    fi
+fi
+
 if [[ -z "${CONTEXT7_API_KEY:-}" ]]; then
     echo "## Error: Missing API Key"
     echo ""
@@ -22,6 +29,8 @@ if [[ -z "${CONTEXT7_API_KEY:-}" ]]; then
     echo "   \`\`\`bash"
     echo "   export CONTEXT7_API_KEY=\"ctx7sk_your_key_here\""
     echo "   \`\`\`"
+    echo ""
+    echo "Or store in 1Password as 'context7' in 'development' vault with 'API_KEY' field."
     exit 1
 fi
 
