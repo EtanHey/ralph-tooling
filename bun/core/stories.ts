@@ -177,6 +177,7 @@ export function completeStory(prdJsonDir: string, storyId: string): boolean {
     // Check if story was in pending or blocked
     const wasInPending = index.pending.includes(storyId);
     const wasInBlocked = index.blocked.includes(storyId);
+    const pendingWasEmpty = index.pending.length === 0;
 
     // Remove from pending
     index.pending = index.pending.filter(id => id !== storyId);
@@ -192,9 +193,36 @@ export function completeStory(prdJsonDir: string, storyId: string): boolean {
       index.stats.blocked = Math.max(0, index.stats.blocked - 1);
     }
 
+    // Auto-unblock stories that were blocked by this completed story
+    const unblockedStories: string[] = [];
+    for (const blockedStoryId of [...index.blocked]) {
+      const blockedStory = readStory(prdJsonDir, blockedStoryId);
+      if (blockedStory && blockedStory.blockedBy === storyId) {
+        // Remove blockedBy field from story
+        delete blockedStory.blockedBy;
+        writeStory(prdJsonDir, blockedStory);
+
+        // Move from blocked to pending
+        index.blocked = index.blocked.filter(id => id !== blockedStoryId);
+        index.pending.push(blockedStoryId);
+        
+        // Update stats
+        index.stats.blocked = Math.max(0, index.stats.blocked - 1);
+        index.stats.pending++;
+
+        unblockedStories.push(blockedStoryId);
+        console.log(`[PRD] Auto-unblocked ${blockedStoryId} (blocker ${storyId} done)`);
+      }
+    }
+
     // Set next story
     if (index.pending.length > 0) {
-      index.nextStory = index.pending[0];
+      // If pending was empty before and we unblocked stories, update nextStory
+      if (pendingWasEmpty && unblockedStories.length > 0) {
+        index.nextStory = index.pending[0];
+      } else if (!pendingWasEmpty) {
+        index.nextStory = index.pending[0];
+      }
     } else {
       index.nextStory = undefined;
     }

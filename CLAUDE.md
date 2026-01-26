@@ -89,6 +89,30 @@ claude-golem/
 
 **Exception:** Modifying existing installed files (like user's `~/.claude/CLAUDE.md`) is fine when the story explicitly requires it.
 
+### Skills: Edit vs Use
+
+| Action | Location | Example |
+|--------|----------|---------|
+| **EDIT** skills | `skills/golem-powers/` (this repo) | `skills/golem-powers/prd-manager/SKILL.md` |
+| **USE** skills | `~/.claude/commands/golem-powers/` (installed) | `~/.claude/commands/golem-powers/prd-manager/scripts/run.sh` |
+
+**When invoking a skill's script**, use the full installed path:
+```bash
+# CORRECT - full path to installed skill
+~/.claude/commands/golem-powers/prd-manager/scripts/run.sh --action=stats
+
+# WRONG - relative path (cwd is repo, not skill dir)
+./scripts/run.sh --action=stats
+```
+
+**When editing a skill**, edit in the repo then sync to installed:
+```bash
+# Edit in repo
+vim skills/golem-powers/prd-manager/SKILL.md
+
+# Changes auto-sync if symlinked, otherwise copy manually
+```
+
 ---
 
 ## Files

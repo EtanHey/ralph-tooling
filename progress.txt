@@ -86,3 +86,17 @@ Started: Mon Jan 26 00:22:11 IST 2026
 - CodeRabbit review rate limited but TypeScript compilation validates code quality
 - Root cause: During error loops with rapid status changes, Ink was not properly clearing previous renders
 - Learning: Use stable keys that change when visual content should be completely refreshed to prevent UI artifacts
+
+## Iteration 9 - BUG-006: Auto-unblock stories when their blocker completes
+- Model: kiro
+- Fixed completeStory() function in bun/core/stories.ts to automatically unblock dependent stories
+- Added logic to scan blocked array for stories with blockedBy === completedStoryId
+- For each match: removes blockedBy field from story file and moves from blocked to pending array
+- Logs auto-unblock actions: '[PRD] Auto-unblocked {storyId} (blocker {completedId} done)'
+- Updates nextStory if pending was empty before unblock
+- Added comprehensive tests for auto-unblock functionality including chain reactions
+- All tests pass: Ralph test suite (205 passed), Bun tests (24 passed)
+- TypeScript compilation passes in both bun/ and ralph-ui/ directories
+- CodeRabbit review rate limited but tests verify functionality works correctly
+- Root cause: Stories blocked by other stories required manual intervention to unblock when blocker completed
+- Learning: Auto-unblock prevents manual intervention and enables chain reactions where A blocks B blocks C

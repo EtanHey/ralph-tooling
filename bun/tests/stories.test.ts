@@ -179,6 +179,91 @@ describe("completeStory", () => {
     expect(index!.pending).not.toContain("US-COMPLETE");
     expect(index!.nextStory).toBe("US-002");
   });
+
+  test("auto-unblocks stories when their blocker completes", () => {
+    // Setup: US-BLOCKER is pending, US-BLOCKED is blocked by US-BLOCKER
+    createTestIndex({ 
+      pending: ["US-BLOCKER"], 
+      blocked: ["US-BLOCKED"],
+      nextStory: "US-BLOCKER",
+      stats: { total: 2, completed: 0, pending: 1, blocked: 1 }
+    });
+    createTestStory({ id: "US-BLOCKER", title: "Blocker Story" });
+    createTestStory({ id: "US-BLOCKED", title: "Blocked Story", blockedBy: "US-BLOCKER" });
+
+    // Complete the blocker story
+    const result = completeStory(TEST_DIR, "US-BLOCKER");
+    expect(result).toBe(true);
+
+    // Verify blocker is complete
+    const blockerStory = readStory(TEST_DIR, "US-BLOCKER");
+    expect(blockerStory!.passes).toBe(true);
+
+    // Verify blocked story is now unblocked and moved to pending
+    const blockedStory = readStory(TEST_DIR, "US-BLOCKED");
+    expect(blockedStory!.blockedBy).toBeUndefined();
+
+    // Verify index is updated correctly
+    const index = readIndex(TEST_DIR);
+    expect(index!.pending).toContain("US-BLOCKED");
+    expect(index!.blocked).not.toContain("US-BLOCKED");
+    expect(index!.nextStory).toBe("US-BLOCKED");
+    expect(index!.stats.pending).toBe(1);
+    expect(index!.stats.blocked).toBe(0);
+    expect(index!.stats.completed).toBe(1);
+  });
+
+  test("handles chain reaction unblocking (A blocks B blocks C)", () => {
+    // Setup: A is pending, B is blocked by A, C is blocked by B
+    createTestIndex({ 
+      pending: ["US-A"], 
+      blocked: ["US-B", "US-C"],
+      nextStory: "US-A",
+      stats: { total: 3, completed: 0, pending: 1, blocked: 2 }
+    });
+    createTestStory({ id: "US-A", title: "Story A" });
+    createTestStory({ id: "US-B", title: "Story B", blockedBy: "US-A" });
+    createTestStory({ id: "US-C", title: "Story C", blockedBy: "US-B" });
+
+    // Complete A - should unblock B
+    completeStory(TEST_DIR, "US-A");
+    
+    let index = readIndex(TEST_DIR);
+    expect(index!.pending).toContain("US-B");
+    expect(index!.blocked).toContain("US-C"); // C still blocked by B
+    expect(index!.nextStory).toBe("US-B");
+
+    // Complete B - should unblock C
+    completeStory(TEST_DIR, "US-B");
+    
+    index = readIndex(TEST_DIR);
+    expect(index!.pending).toContain("US-C");
+    expect(index!.blocked).not.toContain("US-C");
+    expect(index!.nextStory).toBe("US-C");
+    expect(index!.stats.pending).toBe(1);
+    expect(index!.stats.blocked).toBe(0);
+    expect(index!.stats.completed).toBe(2);
+  });
+
+  test("updates nextStory when pending was empty before unblock", () => {
+    // Setup: no pending stories, one blocked story
+    createTestIndex({ 
+      pending: [], 
+      blocked: ["US-BLOCKED"],
+      nextStory: undefined,
+      stats: { total: 2, completed: 1, pending: 0, blocked: 1 }
+    });
+    createTestStory({ id: "US-BLOCKER", title: "Blocker Story" });
+    createTestStory({ id: "US-BLOCKED", title: "Blocked Story", blockedBy: "US-BLOCKER" });
+
+    // Complete the blocker (it's not in pending, simulating completion from blocked state)
+    completeStory(TEST_DIR, "US-BLOCKER");
+
+    // Verify nextStory is set to the newly unblocked story
+    const index = readIndex(TEST_DIR);
+    expect(index!.nextStory).toBe("US-BLOCKED");
+    expect(index!.pending).toContain("US-BLOCKED");
+  });
 });
 
 describe("blockStory", () => {
