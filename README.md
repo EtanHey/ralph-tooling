@@ -19,6 +19,7 @@
 - **🔀 Smart Model Routing:** Automatically switch between Opus (planning), Sonnet (implementation), and Haiku (validation) to optimize cost and speed.
 - **🔐 1Password Integration:** Securely injects environment variables and API keys directly from your vaults.
 - **📋 Spec-Driven Workflow:** Native support for User Stories (US), Bugs, and PRDs with automated context loading.
+- **⚡ Live Criteria Sync:** `fswatch` file watching with ANSI cursor updates for a seamless dev experience.
 
 ---
 
@@ -32,6 +33,7 @@ cd ~/Gits/claude-golem
 
 # Run the interactive setup wizard (creates ~/.config/ralphtools/)
 source ralph.zsh && ralph-setup
+
 ```
 
 ### 2. Configuration
@@ -48,7 +50,8 @@ The setup wizard will help you configure:
 Start an autonomous loop for 50 iterations using Sonnet:
 
 ```bash
-ralph 50 -S    # -S for Sonnet, -O for Opus
+ralph 50 --sonnet
+
 ```
 
 ---
@@ -66,7 +69,9 @@ ralph 50 -S    # -S for Sonnet, -O for Opus
 | `ralph-kill-orphans` | Force-kill stuck `fswatch` or `bun` processes. |
 | `ralph-cleanup` | Finish a session, merge the worktree, and clean up. |
 | `ralph-costs` | Show estimated token usage and cost for the current session. |
+| `ralph-watch` | View raw sub-agent output for the current session. |
 | `ralph-init` | Generate a PRD and project context from a prompt file. |
+| `ralph-terminal-check` | Verify your terminal supports the TUI and required tools. |
 
 ---
 
@@ -89,32 +94,27 @@ Ralph is optimized for a **Spec-Driven** approach. Before running the agent:
 
 ---
 
-## ⚙️ Environment Variables
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `RALPH_CONFIG_DIR` | `~/.config/ralphtools` | Primary configuration and library directory. |
-| `RALPH_DEFAULT_MODEL` | `claude-3-5-sonnet` | Default model for autonomous execution. |
-| `RALPH_NTFY_TOPIC` | *(None)* | Topic name for mobile/desktop notifications. |
-| `RALPH_MAX_ITERATIONS` | `100` | Safety limit for autonomous loops. |
-| `RALPH_NOTIFY` | `false` | Enable/disable system notifications. |
-
----
-
 ## 🧩 Advanced Features
 
-### Smart Model Routing
+### 🔀 Smart Model Routing
 
-Use flags to override the default model for specific tasks:
+Override the default model for specific tasks using flags:
 
-* `-O`: Opus - best for architecture and complex debugging
-* `-S`: Sonnet - the default for implementation
-* `-K`: Kiro - local LLMs via Ollama (qwen3-coder)
-* `-G`: Gemini - Google's models via Gemini CLI
+* `-O, --opus`: Best for high-level architecture and complex debugging.
+* `-S, --sonnet`: The gold standard for implementation.
+* `-H, --haiku`: Fastest for unit tests and documentation.
+* `-K, --kiro-cli`: Amazons cli, wrapping Claude.
+* `-G, --gemini`: Google's models via Gemini CLI.
+* `-L, --local`: Use local LLMs via Ollama/Aider.
 
-Smart routing auto-selects: `AUDIT`→Opus, `US`→Sonnet, `V/TEST`→Haiku
+### 🛠️ Custom Golem Powers (Extensibility)
 
-### 1Password Secrets
+Ralph is a platform for agentic workflows. You can inject custom behaviors into Claude:
+
+* **Custom Skills:** Drop any script into `skills/golem-powers/` and Ralph will automatically register it as a tool for Claude.
+* **Context Rules:** Use `contexts/` to define per-project rules Claude must follow (e.g., "Always use Tailwind for styling").
+
+### 🔐 1Password Secrets
 
 Ralph can fetch your `ANTHROPIC_API_KEY` securely. In your `config.json`:
 
@@ -127,17 +127,30 @@ Ralph can fetch your `ANTHROPIC_API_KEY` securely. In your `config.json`:
 
 ```
 
-### Process Monitoring & Cleanup
+---
 
-If a session hangs, use `ralph-watch` to see the raw sub-agent output, or `ralph-kill-orphans --all` to reset the environment by clearing untracked `fswatch` and `bun` processes.
+## ⚙️ Internal Architecture (For Contributors)
+
+For developers looking to extend the core loop or modify shell integration:
+
+### Core Functions
+
+* **`repoGolem()`**: The "Master Hook." Scans the environment, loads `config.json`, and prepares session state.
+* **`ralph-loop`**: Manages the iterative logic and handles Claude's exit codes to decide on restarts.
+* **`ralph-check-health`**: Internal diagnostic tool ensuring `fswatch` and `bun` are communicating.
+
+### Process Monitoring
+
+If a session hangs, use `ralph-watch` to see raw sub-agent output, or `ralph-kill-orphans --all` to reset the environment by clearing untracked `fswatch` and `bun` processes.
 
 ---
 
 ## 🤝 Contributing
 
 1. Check `ralph-logs` for any current system bugs.
-2. Run `ralph-terminal-check` to verify your environment.
-3. Use the spec-driven workflow: create story in `prd-json/`, run `ralph`.
+2. Follow the [Spec-Driven Development Methodology](https://www.google.com/search?q=docs/methodology.md) guide.
+3. Run `ralph-terminal-check` to verify your environment before submitting PRs.
+
 ---
 
 ## 🔄 Changelog

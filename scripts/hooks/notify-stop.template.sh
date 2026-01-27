@@ -1,7 +1,7 @@
 #!/bin/bash
 # Claude Code Stop notification - per-project topics
 # Called by: ~/.claude/hooks/notify_stop.sh
-# Topic format: {user}-{ralph|claude}-{project}
+# Topic: {user}s-golem (single topic for all notifications)
 #
 # Usage: echo '{"cwd":"/path/to/project"}' | ./notify-stop.sh
 #    or: ./notify-stop.sh (uses PWD)
@@ -195,7 +195,7 @@ main() {
     local mode project topic
     mode=$(get_mode)
     project=$(get_project_name "$cwd")
-    topic="etanheys-golem"  # Single topic for all notifications
+    topic="{user}s-golem"  # Single topic for all notifications
 
     # Check if waiting for input (returns "type:context")
     local waiting_result waiting_type waiting_context

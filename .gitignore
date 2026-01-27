@@ -23,3 +23,6 @@ claude.scratchpad.md
 .claude/
 .aider*
 session-*.md
+
+
+scripts/hooks/notify-stop.sh
