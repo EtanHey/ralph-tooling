@@ -35,10 +35,6 @@ get_mode() {
     fi
 }
 
-# Get username (configurable)
-get_user() {
-    echo "${NTFY_USER:-etanheys}"
-}
 
 # Build human-readable summary from transcript
 get_summary() {
@@ -193,11 +189,10 @@ main() {
     transcript=$(echo "$hook_data" | grep -o '"transcript_path":"[^"]*"' 2>/dev/null | cut -d'"' -f4 || true)
 
     # Build components
-    local user mode project topic
-    user=$(get_user)
+    local mode project topic
     mode=$(get_mode)
     project=$(get_project_name "$cwd")
-    topic="${user}-${mode}-${project}"
+    topic="etanheys-golem"  # Single topic for all notifications
 
     # Check if waiting for input (returns "type:context")
     local waiting_result waiting_type waiting_context
