@@ -88,6 +88,19 @@ get_summary() {
     echo "$msg" | tr -d '\n\r' | sed 's/[`]//g' | head -c 60
 }
 
+# Sanitize text for notification (remove markdown, escapes, etc)
+sanitize() {
+    echo "$1" | \
+        sed 's/\\n/ /g' | \
+        sed 's/\\r//g' | \
+        sed 's/```//g' | \
+        sed 's/`//g' | \
+        sed 's/\*\*//g' | \
+        sed 's/##*//g' | \
+        tr -s ' ' | \
+        head -c 80
+}
+
 # Check if Claude is waiting for user input, return type and context
 check_waiting_for_input() {
     local transcript="$1"
@@ -96,9 +109,9 @@ check_waiting_for_input() {
     # Check for AskUserQuestion tool - extract the question
     if tail -200 "$transcript" 2>/dev/null | grep -q '"name":"AskUserQuestion"'; then
         local question
-        question=$(tail -200 "$transcript" 2>/dev/null | grep -o '"question":"[^"]*"' | tail -1 | cut -d'"' -f4 | head -c 60)
+        question=$(tail -200 "$transcript" 2>/dev/null | grep -o '"question":"[^"]*"' | tail -1 | cut -d'"' -f4)
         if [ -n "$question" ]; then
-            echo "question:$question"
+            echo "question:$(sanitize "$question")"
         else
             echo "question:Needs your input"
         fi
@@ -113,9 +126,9 @@ check_waiting_for_input() {
 
     # Check if last assistant message ends with question mark - extract it
     local last_question
-    last_question=$(tail -100 "$transcript" 2>/dev/null | grep -o '"text":"[^"]*\?"' | tail -1 | cut -d'"' -f4 | head -c 80)
+    last_question=$(tail -100 "$transcript" 2>/dev/null | grep -o '"text":"[^"]*\?"' | tail -1 | cut -d'"' -f4)
     if [ -n "$last_question" ]; then
-        echo "question:$last_question"
+        echo "question:$(sanitize "$last_question")"
         return 0
     fi
 
