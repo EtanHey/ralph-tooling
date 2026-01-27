@@ -1,3 +1,8 @@
+---
+name: ntfy
+description: Send push notifications via ntfy.sh. Use for alerting user about completion, errors, or when input is needed. Covers sending notifications, subscribing to topics, priority levels, tags/emojis.
+---
+
 # ntfy - Push Notifications
 
 Simple HTTP-based pub-sub notification service. Send notifications to your phone/desktop with a single curl command.
