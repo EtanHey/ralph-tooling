@@ -40,43 +40,79 @@ get_user() {
     echo "${NTFY_USER:-etanheys}"
 }
 
-# Build stats from transcript
-get_stats() {
+# Build human-readable summary from transcript
+get_summary() {
     local transcript="$1"
     [ -z "$transcript" ] || [ ! -f "$transcript" ] && return
 
-    local edits writes bashes stats=""
+    local summary=""
+
+    # Check for git commit (most meaningful action)
+    local commit_msg
+    commit_msg=$(grep -o 'git commit.*-m[[:space:]]*"[^"]*"' "$transcript" 2>/dev/null | tail -1 | sed 's/.*-m[[:space:]]*"//' | sed 's/"$//' | head -c 50)
+    if [ -n "$commit_msg" ]; then
+        echo "Committed: $commit_msg"
+        return
+    fi
+
+    # Check for git push
+    if grep -q 'git push' "$transcript" 2>/dev/null; then
+        summary="Pushed to remote"
+    fi
+
+    # Get edited files (unique basenames)
+    local files
+    files=$(grep -o '"file_path":"[^"]*"' "$transcript" 2>/dev/null | cut -d'"' -f4 | xargs -I{} basename {} 2>/dev/null | sort -u | head -3 | tr '\n' ', ' | sed 's/,$//')
+    if [ -n "$files" ]; then
+        if [ -n "$summary" ]; then
+            echo "$summary ($files)"
+        else
+            echo "Edited: $files"
+        fi
+        return
+    fi
+
+    # Fallback to counts
+    local edits writes
     edits=$(grep -c '"name":"Edit"' "$transcript" 2>/dev/null || echo 0)
     writes=$(grep -c '"name":"Write"' "$transcript" 2>/dev/null || echo 0)
-    bashes=$(grep -c '"name":"Bash"' "$transcript" 2>/dev/null || echo 0)
 
-    [ "$edits" -gt 0 ] && stats="${edits}e"
-    [ "$writes" -gt 0 ] && stats="${stats:+$stats }${writes}w"
-    [ "$bashes" -gt 0 ] && stats="${stats:+$stats }${bashes}b"
+    if [ "$edits" -gt 0 ] || [ "$writes" -gt 0 ]; then
+        echo "Made $edits edits, $writes new files"
+        return
+    fi
 
-    echo "$stats"
+    echo "Session complete"
 }
 
-# Check if Claude is waiting for user input
+# Check if Claude is waiting for user input, return type and context
 check_waiting_for_input() {
     local transcript="$1"
     [ -z "$transcript" ] || [ ! -f "$transcript" ] && return 1
 
-    # Check for AskUserQuestion tool in last few lines
-    if tail -100 "$transcript" 2>/dev/null | grep -q '"name":"AskUserQuestion"'; then
-        echo "question"
+    # Check for AskUserQuestion tool - extract the question
+    if tail -200 "$transcript" 2>/dev/null | grep -q '"name":"AskUserQuestion"'; then
+        local question
+        question=$(tail -200 "$transcript" 2>/dev/null | grep -o '"question":"[^"]*"' | tail -1 | cut -d'"' -f4 | head -c 60)
+        if [ -n "$question" ]; then
+            echo "question:$question"
+        else
+            echo "question:Needs your input"
+        fi
         return 0
     fi
 
-    # Check for EnterPlanMode (waiting for plan approval)
+    # Check for ExitPlanMode (waiting for plan approval)
     if tail -100 "$transcript" 2>/dev/null | grep -q '"name":"ExitPlanMode"'; then
-        echo "plan"
+        echo "plan:Review implementation plan"
         return 0
     fi
 
-    # Check if last assistant message ends with question mark
-    if tail -50 "$transcript" 2>/dev/null | grep -o '"text":"[^"]*"' | tail -1 | grep -q '\?'; then
-        echo "question"
+    # Check if last assistant message ends with question mark - extract it
+    local last_question
+    last_question=$(tail -100 "$transcript" 2>/dev/null | grep -o '"text":"[^"]*\?"' | tail -1 | cut -d'"' -f4 | tail -c 80)
+    if [ -n "$last_question" ]; then
+        echo "question:$last_question"
         return 0
     fi
 
@@ -147,35 +183,33 @@ main() {
     project=$(get_project_name "$cwd")
     topic="${user}-${mode}-${project}"
 
-    # Check if waiting for input
-    local waiting_type tags priority
-    waiting_type=$(check_waiting_for_input "$transcript" || true)
+    # Check if waiting for input (returns "type:context")
+    local waiting_result waiting_type waiting_context
+    waiting_result=$(check_waiting_for_input "$transcript" || true)
+    waiting_type="${waiting_result%%:*}"
+    waiting_context="${waiting_result#*:}"
+
+    local tags priority title body
     tags="${mode},robot"
     priority="default"
 
     # Build message based on state
-    local stats title body last_action
-    stats=$(get_stats "$transcript")
-    last_action=$(get_last_action "$transcript")
-
     if [ "$waiting_type" = "question" ]; then
         title="[$mode] $project - WAITING"
-        body="Needs your input"
+        body="$waiting_context"
         tags="question,${mode}"
         priority="high"
     elif [ "$waiting_type" = "plan" ]; then
         title="[$mode] $project - PLAN READY"
-        body="Review and approve plan"
+        body="$waiting_context"
         tags="clipboard,${mode}"
         priority="high"
     else
-        title="[$mode] $project done"
-        [ -n "$stats" ] && title="$title ($stats)"
-        if [ -n "$last_action" ]; then
-            body="Last: $last_action"
-        else
-            body="Session complete"
-        fi
+        # Get human-readable summary
+        local summary
+        summary=$(get_summary "$transcript")
+        title="[$mode] $project"
+        body="$summary"
     fi
 
     # Send
