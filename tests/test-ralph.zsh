@@ -4634,7 +4634,7 @@ test_repogolem_ntfy_topic() {
 
   local func_def=$(which topictestClaude 2>/dev/null)
 
-  if [[ "$func_def" != *'ntfy_topic="etans-topictestClaude"'* ]]; then
+  if [[ "$func_def" != *'ntfy_topic="example-topictestClaude"'* ]]; then
     test_fail "ntfy topic not set correctly"
     return
   fi

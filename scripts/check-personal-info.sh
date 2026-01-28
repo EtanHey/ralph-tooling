@@ -67,19 +67,25 @@ FLAG these security risks:
 - Database connection strings with real credentials
 - Real file paths that expose system structure (like /Users/realname/.ssh/, /home/user/.config/secrets/)
 - Internal network IPs, server hostnames that reveal infrastructure
+- Real notification topic names (ntfy, etc.)—exposing them lets others send to that topic and bombard the user
 
 DO NOT FLAG (these are SAFE):
 - Author names, usernames, GitHub usernames (attribution is normal)
-- Notification topic names (etans-projectClaude is just an identifier)
+- Generic/placeholder topic names (e.g. \"my-project-topic\", \"your-ntfy-topic\") in docs or examples
 - Project paths in COMMENTS or DOCUMENTATION showing examples
 - Paths inside the repo itself (./scripts/, ./tests/)
 - Example/placeholder values (YOUR_KEY_HERE, sk-1234...)
 - Public clone URLs (github.com/...)
 - Credits sections, personal branding
+- 1Password op:// references (op://Vault/item/field)—these are lookup syntax, not embedded secrets
 
 KEY DISTINCTION for paths:
 - FLAG: Real paths to sensitive dirs like ~/.ssh, ~/.aws, ~/.config/secrets
 - OK: Project paths in docs showing structure, /Users/name/Desktop/Gits/reponame is fine (just shows where repo lives)
+- OK: Paths in workflow/skill examples (e.g. VAULT=\"/Users/foo/.../iCloud~md~obsidian/...\")—documentation, not leaked config
+
+EXAMPLE FALSE POSITIVE (do NOT flag):
+- skills/golem-powers/obsidian/workflows/write.md contains \"VAULT=/Users/etanheyman/Library/Mobile Documents/iCloud~md~obsidian/Documents/personal\". This is a workflow example showing where Obsidian stores vaults; it is documentation, not a secret. RESULT: PASS.
 
 The goal is SECURITY - preventing actual exploitation, not anonymity.
 
